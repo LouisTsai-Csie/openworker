@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.providers.anthropic_provider import AnthropicProvider
@@ -54,7 +54,7 @@ class ProviderField:
     choices: tuple = ()
     # {"other_field_key": "value"} → the field only renders while that other field holds
     # that value. Drives auth-method switching (Bedrock) without a per-provider form.
-    show_when: Optional[dict] = None
+    show_when: dict | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -79,10 +79,10 @@ class ProviderDescriptor:
     needs_key: bool
     fields: list[ProviderField]
     build: Callable[[dict[str, Any], Any], ProviderClient] = field(repr=False)
-    recommended_model: Optional[str] = (
+    recommended_model: str | None = (
         None  # pre-filled in the UI; auto-added on configure
     )
-    env_key: Optional[str] = (
+    env_key: str | None = (
         None  # env var that can supply the API key (e.g. ANTHROPIC_API_KEY)
     )
     # One-line note under the provider title (e.g. "Connects through X's OpenAI-compatible API").
@@ -90,7 +90,7 @@ class ProviderDescriptor:
     # "oauth" → no key form at all: the provider is configured by a browser sign-in
     # (tokens in its `provider:<name>` profile) and the GUI renders connect/sign-out
     # instead of fields. None → the usual key/field form.
-    auth: Optional[str] = None
+    auth: str | None = None
     # How the GUI groups it: "local" (a server on the user's own hardware), "subscription"
     # (a plan signed into), or "api_key" (everything else).
     kind: str = "api_key"
@@ -108,7 +108,7 @@ class ProviderDescriptor:
         }
 
 
-def _normalize_ollama_url(url: Optional[str]) -> str:
+def _normalize_ollama_url(url: str | None) -> str:
     """Accept `http://host:11434` or `.../v1` and return an OpenAI-compatible base URL.
 
     Ollama serves its OpenAI-compatible API under `/v1`; the native API lives at the root, so we
@@ -170,7 +170,7 @@ def _build_bedrock(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     # named profile → ambient chain (env / ~/.aws default / instance role).
     p = profile or {}
 
-    def get(key: str) -> Optional[str]:
+    def get(key: str) -> str | None:
         return (p.get(key) or "").strip() or None
 
     return BedrockProvider(
@@ -187,7 +187,7 @@ def _build_bedrock(profile: dict[str, Any], secrets: Any) -> ProviderClient:
 def _build_vertex(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     p = profile or {}
 
-    def get(key: str) -> Optional[str]:
+    def get(key: str) -> str | None:
         return (p.get(key) or "").strip() or None
 
     return VertexProvider(
@@ -245,7 +245,7 @@ def _build_openrouter_account(profile: dict[str, Any], secrets: Any) -> Provider
     return OpenAIProvider(api_key=api_key, base_url=OPENROUTER_BASE_URL)
 
 
-def _openai_compat(vendor: str, default_base_url: str, env_key: Optional[str] = None):
+def _openai_compat(vendor: str, default_base_url: str, env_key: str | None = None):
     """Builder factory for vendors reached through their OpenAI-compatible API (Z AI, DeepSeek,
     Kimi, MiniMax, Qwen, xAI, Mistral). The key is resolved from the vendor's OWN profile (or its
     env var) — deliberately NOT from the OpenAI env/SecretStore fallback, so a configured OpenAI
@@ -270,7 +270,7 @@ def _openai_compat(vendor: str, default_base_url: str, env_key: Optional[str] = 
 def _openai_responses_compat(
     vendor: str,
     default_base_url: str,
-    env_key: Optional[str] = None,
+    env_key: str | None = None,
     *,
     reasoning_summary: bool = True,
 ):
@@ -811,7 +811,7 @@ def provider_names() -> list[str]:
     return [d.name for d in DESCRIPTORS]
 
 
-def get_descriptor(name: str) -> Optional[ProviderDescriptor]:
+def get_descriptor(name: str) -> ProviderDescriptor | None:
     return _BY_NAME.get(name)
 
 
@@ -842,7 +842,7 @@ def descriptor_configured(d: ProviderDescriptor, profile: dict[str, Any]) -> boo
     return all(profile.get(f.key) for f in d.fields if f.required)
 
 
-def detect_provider(api_key: str) -> Optional[str]:
+def detect_provider(api_key: str) -> str | None:
     """Best-effort provider guess from an API key's shape, for the onboarding auto-detect.
     Returns a known provider name or None. Mirrors the GUI's client-side detection so both agree.
     """
@@ -865,7 +865,7 @@ def _verify_bedrock(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
     ambient credential resolution the provider itself uses."""
     from coworker.providers.bedrock_provider import _session_kwargs
 
-    def get(key: str) -> Optional[str]:
+    def get(key: str) -> str | None:
         return (fields.get(key) or "").strip() or None
 
     # Exactly one auth method is exercised — the one the form has selected. Per-method
@@ -1081,9 +1081,9 @@ def _describe_transport_error(exc: Exception) -> str:
 def verify_provider_key(
     name: str,
     *,
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
-    fields: Optional[dict[str, Any]] = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    fields: dict[str, Any] | None = None,
     timeout: float = 10.0,
 ) -> dict[str, Any]:
     """Validate a provider's credentials with one cheap call — usually list models.

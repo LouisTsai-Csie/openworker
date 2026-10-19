@@ -17,7 +17,6 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 from collections.abc import Callable
 
 from coworker.agents.base import Agent
@@ -69,8 +68,8 @@ class PersonaEntry:
     ships: bool = True
     # Settings-page grouping ("general" | "security") — cosmetic only.
     group: str = "general"
-    _builder: Optional[Callable[[], Agent]] = None
-    manifest: Optional[PersonaManifest] = None
+    _builder: Callable[[], Agent] | None = None
+    manifest: PersonaManifest | None = None
 
     def agent(self) -> Agent:
         if self._builder is not None:
@@ -83,16 +82,16 @@ class PersonaRegistry:
     def __init__(
         self,
         *,
-        builtin_dir: Optional[str | Path] = None,
-        extra_dirs: Optional[list[str | Path]] = None,
-        state_path: Optional[str | Path] = None,
-        installed_dir: Optional[str | Path] = None,
+        builtin_dir: str | Path | None = None,
+        extra_dirs: list[str | Path] | None = None,
+        state_path: str | Path | None = None,
+        installed_dir: str | Path | None = None,
     ) -> None:
         self.state_path = Path(state_path) if state_path else None
         # Managed area where installed personas are *snapshotted* (copied) at install time, so a
         # persona's definition is stable and self-contained — independent of the user's source dir.
         if installed_dir is not None:
-            self.installed_dir: Optional[Path] = Path(installed_dir)
+            self.installed_dir: Path | None = Path(installed_dir)
         elif self.state_path is not None:
             self.installed_dir = self.state_path.parent / "personas-installed"
         else:
@@ -142,7 +141,7 @@ class PersonaRegistry:
             _builder=builder,
         )
 
-    def _load_builtin(self, builtin_dir: Optional[str | Path]) -> None:
+    def _load_builtin(self, builtin_dir: str | Path | None) -> None:
         # Core surfaces keep their exact prompts via the existing builders. Cowork (the
         # default) leads. Chat is GONE (owner call 2026-08-21; retired-but-listed since
         # 2026-08-11) — stray `persona=chat` session ids resolve to the default via
@@ -253,10 +252,10 @@ class PersonaRegistry:
     def ids(self) -> list[str]:
         return list(self._entries)
 
-    def get(self, persona_id: str) -> Optional[PersonaEntry]:
+    def get(self, persona_id: str) -> PersonaEntry | None:
         return self._entries.get(persona_id)
 
-    def media_dir(self, persona_id: str) -> Optional[Path]:
+    def media_dir(self, persona_id: str) -> Path | None:
         """The persona bundle's media/ folder (screenshots for the detail page), if any.
         Only manifest-backed personas have one — it sits beside their manifest.md."""
         entry = self._entries.get(persona_id)
@@ -296,7 +295,7 @@ class PersonaRegistry:
                 return pid
         return DEFAULT_PERSONA_ID
 
-    def agent(self, persona_id: Optional[str]) -> Agent:
+    def agent(self, persona_id: str | None) -> Agent:
         """Resolve a persona id to its Agent. Unknown ids fall back to the default persona;
         a known-but-disabled id still resolves (live sessions keep working)."""
         entry = self._entries.get(persona_id or "")
@@ -441,7 +440,7 @@ class PersonaRegistry:
 
         return date.today().isoformat()
 
-    def _replaces_of(self, incoming) -> Optional[dict]:
+    def _replaces_of(self, incoming) -> dict | None:
         """When re-installing an already-installed persona id: what the new copy
         replaces ({version, installed_at, capabilities_grew}), else None."""
         from coworker.personas.loading import capability_set
@@ -517,7 +516,7 @@ class PersonaRegistry:
                 f"no persona manifest found in {filename or 'the archive'}"
             )
 
-    def _snapshot(self, md: Path, persona_id: str) -> Optional[Path]:
+    def _snapshot(self, md: Path, persona_id: str) -> Path | None:
         """Copy a manifest into the managed install area; return the snapshot path (or None if no
         managed area is configured, e.g. an ephemeral in-memory registry)."""
         if self.installed_dir is None:
@@ -534,7 +533,7 @@ class PersonaRegistry:
         return dest
 
     def install_from_git(
-        self, url: str, *, cache_base: Optional[str | Path] = None, clone=None
+        self, url: str, *, cache_base: str | Path | None = None, clone=None
     ) -> list[dict]:
         """Clone a persona repo and install its personas (disabled pending consent)."""
         from coworker.personas.loading import clone_persona_repo, git_clone
@@ -552,7 +551,7 @@ class PersonaRegistry:
 
 
 # -- module singleton (used by agents.get_agent / list_agents) ------------------
-_singleton: Optional[PersonaRegistry] = None
+_singleton: PersonaRegistry | None = None
 
 
 def get_registry() -> PersonaRegistry:

@@ -20,7 +20,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker import model_config as _model_config
 from coworker.agent import build_engine
@@ -212,7 +212,7 @@ def _stable_error(error: str) -> str:
     return re.sub(r"\d{4,}", "N", stable)
 
 
-def mention_opening(src, text: str, thread: Optional[str] = None, context: str = "") -> str:
+def mention_opening(src, text: str, thread: str | None = None, context: str = "") -> str:
     """The opening turn of a mention-spawned session: the origin block (where it came
     from, the exact reply call, pre-approved) framed for the platform the mention
     came from. GitHub mentions read "on GitHub in owner/repo#12", never "on Slack"
@@ -308,11 +308,11 @@ class SessionManager:
     def __init__(
         self,
         *,
-        workspace: Optional[str | Path] = None,  # default/seed workspace (e.g. --cwd)
-        data_dir: Optional[str | Path] = None,
+        workspace: str | Path | None = None,  # default/seed workspace (e.g. --cwd)
+        data_dir: str | Path | None = None,
         model: str = "gpt-5.6-sol",
         mode: Mode = Mode.INTERACTIVE,
-        provider: Optional[ProviderClient] = None,
+        provider: ProviderClient | None = None,
     ) -> None:
         self.default_workspace = (
             str(Path(workspace).expanduser().resolve()) if workspace else None
@@ -393,14 +393,14 @@ class SessionManager:
         # ChatGPT-subscription provider sign-in in flight / its last error — feeds
         # the providers list + status route so the GUI can show "authorizing…".
         self._codex_authorizing = False
-        self._codex_error: Optional[str] = None
+        self._codex_error: str | None = None
         # http servers whose anonymous connect came back 401/403 — the failure is
         # "needs sign-in", so the GUI offers the OAuth switch instead of a raw error.
         self._mcp_auth_hints: set[str] = set()
         # Servers that failed to connect while preparing a session's tools —
         # drained once by the WS handler to append a transcript notice.
         self._mcp_session_failures: dict[str, list[str]] = {}
-        self.gateway: Optional[Gateway] = None
+        self.gateway: Gateway | None = None
         self._data_base = base
         # Desktop/UI prefs (default model, onboarding state) — not secrets; a plain JSON file.
         self._prefs = self._load_prefs()
@@ -447,7 +447,7 @@ class SessionManager:
         # wall clock; restart resets the clock rather than firing a wake storm).
         self._team_last_alive: dict[str, float] = {}
         self._team_watchdog_alerted: dict[str, tuple] = {}
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         # Personas: registry + lifecycle state under this manager's data dir. Installed as the
         # process singleton so agents.get_agent resolves persona ids (incl. third-party) here.
         self.personas = PersonaRegistry(state_path=base / "personas.json")
@@ -558,7 +558,7 @@ class SessionManager:
             "required": bool(commands and not trusted),
         }
 
-    def _mcp_workspace_trusted(self, workspace: Optional[str | Path]) -> bool:
+    def _mcp_workspace_trusted(self, workspace: str | Path | None) -> bool:
         """Whether workspace `.coworker/mcp.json` may be loaded (#213).
 
         Same consent boundary as repository ``allowed_commands``: an untrusted
@@ -648,7 +648,7 @@ class SessionManager:
 
     _SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
-    def is_temp_workspace(self, path: Optional[str]) -> bool:
+    def is_temp_workspace(self, path: str | None) -> bool:
         """True when `path` is a per-conversation temporary directory (lives under the
         scratch base). The GUI uses this to label the folder "Temporary folder" instead
         of exposing its raw path."""
@@ -719,7 +719,7 @@ class SessionManager:
         self.session_store.touch_workspace(new_path)
         return {"ok": True, "path": new_path}
 
-    def resolve_workspace(self, requested: Optional[str]) -> Optional[str]:
+    def resolve_workspace(self, requested: str | None) -> str | None:
         if requested:
             p = Path(requested).expanduser()
             if p.is_dir():
@@ -732,8 +732,8 @@ class SessionManager:
 
     # -- engines ----------------------------------------------------------------
     def engine_workspace(
-        self, session_id: str, *, workspace: Optional[str] = None, agent: str = "code"
-    ) -> Optional[str]:
+        self, session_id: str, *, workspace: str | None = None, agent: str = "code"
+    ) -> str | None:
         """The workspace `get_engine` would bind — for prepping MCP tools beforehand."""
         record = self.session_store.load(session_id)
         if record:
@@ -774,7 +774,7 @@ class SessionManager:
         with self._engine_build_locks_guard:
             return self._engine_build_locks.setdefault(session_id, threading.Lock())
 
-    def get_engine(self, session_id: str, **kwargs: Any) -> Optional[TurnEngine]:
+    def get_engine(self, session_id: str, **kwargs: Any) -> TurnEngine | None:
         """The session's engine, built on first use. A build is serialized per session
         (see `_engine_build_locks`); an engine that exists is returned without waiting."""
         if session_id in self._engines:
@@ -786,18 +786,18 @@ class SessionManager:
         self,
         session_id: str,
         *,
-        workspace: Optional[str] = None,
+        workspace: str | None = None,
         agent: str = "code",
-        approver: Optional[Approver] = None,
-        extra_tools: Optional[list[Any]] = None,
-        directory_requester: Optional[Any] = None,
-        plan_approver: Optional[Any] = None,
-        question_asker: Optional[Any] = None,
-        tool_requester: Optional[Any] = None,
-        team_approver: Optional[Any] = None,
-        items_approver: Optional[Any] = None,
-        connector_requester: Optional[Any] = None,
-    ) -> Optional[TurnEngine]:
+        approver: Approver | None = None,
+        extra_tools: list[Any] | None = None,
+        directory_requester: Any | None = None,
+        plan_approver: Any | None = None,
+        question_asker: Any | None = None,
+        tool_requester: Any | None = None,
+        team_approver: Any | None = None,
+        items_approver: Any | None = None,
+        connector_requester: Any | None = None,
+    ) -> TurnEngine | None:
         engine = self._engines.get(session_id)
         self.reconcile_obsolete_prompts(session_id)
         self.reconcile_activity_receipts(session_id)
@@ -1028,7 +1028,7 @@ class SessionManager:
         return [f"{binding.channel}:{binding.target}"] if binding.channel else []
 
     # -- connection hierarchy (UI-REFRESH §4) -----------------------------------
-    def _persona_of(self, session_id: str, persona_id: Optional[str] = None) -> str:
+    def _persona_of(self, session_id: str, persona_id: str | None = None) -> str:
         if persona_id:
             return persona_id
         # The live engine is the freshest truth — a brand-new session has no record row
@@ -1040,7 +1040,7 @@ class SessionManager:
         record = self.session_store.load(session_id)
         return (record.agent if record else None) or self.personas.default_id()
 
-    def _persona_connector_grant(self, persona_id: str) -> Optional[set[str]]:
+    def _persona_connector_grant(self, persona_id: str) -> set[str] | None:
         """The persona's declared connector allowlist (OPE-93). None = unrestricted (the
         `all` sentinel of general builtins); a set = only these ids can ever be effective
         for its sessions — the empty set means no connector access at all."""
@@ -1056,7 +1056,7 @@ class SessionManager:
         return set(declared or ())
 
     def effective_connectors(
-        self, session_id: str, persona_id: Optional[str] = None
+        self, session_id: str, persona_id: str | None = None
     ) -> set[str]:
         """The connectors effectively enabled for this session (§4.1): connected AND not muted by
         the session override / persona default AND within the persona's declared grant (OPE-93).
@@ -1128,7 +1128,7 @@ class SessionManager:
         return self.connector_lists(persona_id)["ready"]
 
     def _grant_worker_connectors(
-        self, worker_sid: str, persona_id: str, wanted: list[str], *, reasons: Optional[dict] = None,
+        self, worker_sid: str, persona_id: str, wanted: list[str], *, reasons: dict | None = None,
         approved_by: str = "", via: str = "propose_team",
     ) -> list[str]:
         """Turn the human's ticks into the worker's connectors: anything connected and not
@@ -1168,7 +1168,7 @@ class SessionManager:
         return mode
 
     @staticmethod
-    def _mode_value(raw: str) -> Optional[Mode]:
+    def _mode_value(raw: str) -> Mode | None:
         """A stored mode string → Mode, accepting the legacy "auto" for bypass."""
         value = str(raw or "").strip().lower()
         if value == "auto":
@@ -1187,7 +1187,7 @@ class SessionManager:
         record = self.session_store.load(session_id)
         return str(getattr(record, "mode", "") or "")
 
-    def lead_mode_for(self, session_id: str) -> Optional[str]:
+    def lead_mode_for(self, session_id: str) -> str | None:
         """The CURRENT mode of the lead of this worker's team, or None for non-workers."""
         found = self.teams.for_worker_session(session_id)
         if found is None:
@@ -1393,7 +1393,7 @@ class SessionManager:
             for c, enabled in defaults.items()
         ]
 
-    def persona_detail(self, persona_id: str) -> Optional[dict[str, Any]]:
+    def persona_detail(self, persona_id: str) -> dict[str, Any] | None:
         """Identity + capabilities + recommends(+connected) + default connections for one persona
         (UI-REFRESH §5). Returns None for an unknown id (the route maps that to an error).
         """
@@ -1490,7 +1490,7 @@ class SessionManager:
         return {"ok": True, "archived_sessions": archived}
 
     def _connection_detail(
-        self, session_id: str, connector: str, info: Optional[dict[str, Any]]
+        self, session_id: str, connector: str, info: dict[str, Any] | None
     ) -> str:
         """A short human description of WHY a connector is live for a session: the chat ids it's
         subscribed to on that platform, plus "DMs" if this is the designated DM session. Channel
@@ -1509,7 +1509,7 @@ class SessionManager:
         return (info or {}).get("title") or connector
 
     def session_connections_view(
-        self, session_id: str, persona_id: Optional[str] = None
+        self, session_id: str, persona_id: str | None = None
     ) -> dict[str, Any]:
         """The per-session connections drawer payload (UI-REFRESH §6): every account-connected
         connector with its effective on/off state (muted ones stay VISIBLE as off — a §4.2 toggle
@@ -1565,7 +1565,7 @@ class SessionManager:
         like the approver does."""
 
         async def ask(
-            args: dict[str, Any], tool_call_id: Optional[str] = None
+            args: dict[str, Any], tool_call_id: str | None = None
         ) -> dict[str, Any]:
             from coworker.tools.ask import answer_result, question_item_fields
 
@@ -1955,7 +1955,7 @@ class SessionManager:
 
     # -- MCP --------------------------------------------------------------------
     async def prepare_mcp_tools(
-        self, session_id: str, *, workspace: Optional[str] = None, agent: str = "code"
+        self, session_id: str, *, workspace: str | None = None, agent: str = "code"
     ) -> list[Any]:
         """Connect enabled MCP servers (global + workspace) and return their tool callables.
 
@@ -1975,7 +1975,7 @@ class SessionManager:
 
         ws = self.engine_workspace(session_id, workspace=workspace, agent=agent)
         loop = asyncio.get_running_loop()
-        effective: Optional[set[str]] = None  # computed lazily, once
+        effective: set[str] | None = None  # computed lazily, once
         out: list[Any] = []
         # Persona `mcp:` wiring (OPE-58 sibling stub): a persona that declares an `mcp:`
         # list SCOPES its sessions to those servers — the consent screen already presents
@@ -2109,7 +2109,7 @@ class SessionManager:
         if self._prefs.get("mcp_notified_errors", {}).pop(name, None) is not None:
             self._save_prefs()
 
-    def pop_mcp_failures(self, session_id: str) -> list[tuple[str, Optional[str]]]:
+    def pop_mcp_failures(self, session_id: str) -> list[tuple[str, str | None]]:
         """Drain (name, error) for servers that failed while preparing this session's
         tools — consumed once by the WS handler to append a transcript notice."""
         names = self._mcp_session_failures.pop(session_id, [])
@@ -2505,9 +2505,9 @@ class SessionManager:
         self,
         *,
         limit: int = 100,
-        session_id: Optional[str] = None,
-        connector: Optional[str] = None,
-        tool: Optional[str] = None,
+        session_id: str | None = None,
+        connector: str | None = None,
+        tool: str | None = None,
     ) -> list[dict[str, Any]]:
         return self.audit_store.list(
             limit=limit, session_id=session_id, connector=connector, tool=tool
@@ -2526,7 +2526,7 @@ class SessionManager:
 
     # ------------------------------------------------- project identity (pass 20)
 
-    def _memory_key_for(self, record, ws: Optional[str]) -> Optional[str]:
+    def _memory_key_for(self, record, ws: str | None) -> str | None:
         """Binding > git > path, with the one-time path→git re-key on the way."""
         binding = ((record.bindings if record else {}) or {}).get("memory")
         return resolve_memory_key(
@@ -2536,7 +2536,7 @@ class SessionManager:
             memory_store=self.memory_store,
         )
 
-    def _space_for(self, record, ws: Optional[str]) -> Optional[str]:
+    def _space_for(self, record, ws: str | None) -> str | None:
         """Board-space twin of _memory_key_for — same ladder, board collision rule."""
         binding = ((record.bindings if record else {}) or {}).get("board")
         return resolve_board_space(
@@ -2546,7 +2546,7 @@ class SessionManager:
             team_store=self.team_store,
         )
 
-    def _board_space(self, session_id: str) -> Optional[str]:
+    def _board_space(self, session_id: str) -> str | None:
         record = self.session_store.load(session_id)
         workspace = (record.workspace if record else None) or self.default_workspace
         return self._space_for(record, workspace) if workspace else None
@@ -2758,7 +2758,7 @@ class SessionManager:
     TEAM_WAKE_CAP_PER_HOUR = 60  # budget gate at the wake gate: silent server cap
 
     def _team_tools_for(
-        self, session_id: str, agent: Any, record: Any, ws: Optional[str]
+        self, session_id: str, agent: Any, record: Any, ws: str | None
     ) -> list[Any]:
         """Board/journal verbs, gated by the persona `team:` trait. Leads get the
         coordination set (+ steer); workers get the worker set bound to their roster
@@ -2827,7 +2827,7 @@ class SessionManager:
 
         manager = self
 
-        def post_chat(text: str, record_on_item: Optional[int] = None) -> dict:
+        def post_chat(text: str, record_on_item: int | None = None) -> dict:
             """Post to # team chat. Mention teammates with @name to reach them —
             only mentioned members are woken (the user always sees it). Chat is for
             questions and consensus; status lives on the board. If your message
@@ -3504,7 +3504,7 @@ class SessionManager:
         team,
         directs: list[dict],
         subs: list[dict],
-        chats: Optional[list[dict]] = None,
+        chats: list[dict] | None = None,
         *,
         is_lead: bool,
         reader: str = "",
@@ -3706,7 +3706,7 @@ class SessionManager:
 
     @staticmethod
     def _board_source(
-        team, message: str, *, rows: Optional[list[dict]] = None
+        team, message: str, *, rows: list[dict] | None = None
     ) -> dict[str, Any]:
         """Display-only MessageSource sidecar for board deliveries — the same
         mechanism connector messages use, so the GUI renders a structured card
@@ -3760,7 +3760,7 @@ class SessionManager:
             )
         return "\n".join(lines)
 
-    def _artifact_scan_root(self, session_id: str) -> Optional[Path]:
+    def _artifact_scan_root(self, session_id: str) -> Path | None:
         """The dir the Artifacts panel lists: the session's SCRATCH surface only
         (workspace-scratch-design.md §2.5). For orphan sessions that's the workspace
         itself; for folder-gated sessions it's the side scratch root — never the user's
@@ -3854,7 +3854,7 @@ class SessionManager:
 
     def _artifact_target(
         self, session_id: str, path: str, *, allow_dir: bool = False
-    ) -> tuple[Optional[Path], Optional[str]]:
+    ) -> tuple[Path | None, str | None]:
         """Resolve an artifact path under one of the session's roots — workspace first,
         then the scratch dir, then user-granted extra roots. Universal scratch means a
         gated session's artifacts live BESIDE its workspace, so single-root resolution
@@ -4017,7 +4017,7 @@ class SessionManager:
         }
 
     def set_web_search(
-        self, provider: str, api_key: Optional[str] = None
+        self, provider: str, api_key: str | None = None
     ) -> dict[str, Any]:
         from coworker.web import provider_names
 
@@ -4172,7 +4172,7 @@ class SessionManager:
         )
 
     def set_provider(
-        self, name: str, fields: Optional[dict[str, Any]]
+        self, name: str, fields: dict[str, Any] | None
     ) -> dict[str, Any]:
         """Store a provider's config in its `provider:<name>` SecretStore profile and rebuild
         its cached client. Merges provided fields into any existing profile."""
@@ -4204,7 +4204,7 @@ class SessionManager:
         self.adopt_provider_default(name)
         return {"ok": True, "provider": name, "recommended_model": d.recommended_model}
 
-    def adopt_provider_default(self, name: str) -> Optional[str]:
+    def adopt_provider_default(self, name: str) -> str | None:
         """After a provider's key arrived by ANY path (Settings, or a sealed
         deploy onto a machine): rebuild its client, surface its recommended
         model, and — first working provider wins — make that model the
@@ -4219,7 +4219,7 @@ class SessionManager:
         # Convenience: if the provider recommends a model and it's actually available, add it to
         # the curated list so it shows up in the composer right after configuring the provider.
         rec = d.recommended_model
-        added: Optional[str] = None
+        added: str | None = None
         suggested = self._suggested_models(name)
         if rec and rec in suggested:
             # OpenAI models stay bare (the router's default); others carry their prefix.
@@ -4319,7 +4319,7 @@ class SessionManager:
         return {"ok": True, "had_tokens": had_tokens}
 
     def verify_provider(
-        self, name: str, fields: Optional[dict[str, Any]]
+        self, name: str, fields: dict[str, Any] | None
     ) -> dict[str, Any]:
         """Test a provider's credentials with a live read-only call, WITHOUT persisting them, so
         onboarding can offer a "Test" button. Falls back to stored/env values when the form left
@@ -4389,12 +4389,12 @@ class SessionManager:
         )
 
     # -- direct-message routing -------------------------------------------------
-    def dm_session(self) -> Optional[str]:
+    def dm_session(self) -> str | None:
         """The session a DM to the bot is routed to (user-designated). None → DMs are parked."""
         sid = self._prefs.get("dm_session")
         return sid or None
 
-    def set_dm_session(self, session_id: Optional[str]) -> dict[str, Any]:
+    def set_dm_session(self, session_id: str | None) -> dict[str, Any]:
         """Designate (or clear, with a falsy id) the session that handles incoming DMs."""
         sid = (session_id or "").strip()
         if sid:
@@ -4518,7 +4518,7 @@ class SessionManager:
         """The entries of `models:` this machine can run, in list order."""
         return [m for m in self.persona_models(persona_id) if self.model_selectable(m)]
 
-    def resolve_persona_model(self, persona_id: str, requested: Optional[str] = None) -> str:
+    def resolve_persona_model(self, persona_id: str, requested: str | None = None) -> str:
         """The model a session of `persona_id` runs on (spec §4). No list: the requested
         model or the machine default, as before. A list: the requested model when it is
         on the list, else the first entry this machine can run, else the first entry
@@ -4796,7 +4796,7 @@ class SessionManager:
         }
 
     def set_surfaces(
-        self, chat: Optional[bool] = None, code: Optional[bool] = None
+        self, chat: bool | None = None, code: bool | None = None
     ) -> dict[str, Any]:
         """Toggle Chat/Code visibility (Cowork is always shown). Persisted in prefs."""
         if chat is not None:
@@ -5090,7 +5090,7 @@ class SessionManager:
         self,
         name: str,
         user_id: str,
-        team_id: Optional[str] = None,
+        team_id: str | None = None,
         *,
         display_name: str = "",
     ) -> dict[str, Any]:
@@ -5102,7 +5102,7 @@ class SessionManager:
         return out
 
     def disallow_user(
-        self, name: str, user_id: str, team_id: Optional[str] = None
+        self, name: str, user_id: str, team_id: str | None = None
     ) -> dict[str, Any]:
         # One list (UX-049): allowed people approve too, so only the PINNED
         # approver — the installer on a relay workspace, an explicit owner in
@@ -5114,7 +5114,7 @@ class SessionManager:
             }
         return self._set_allowed(name, user_id, team_id=team_id, add=False)
 
-    def _protected_slack_ids(self, team_id: Optional[str] = None) -> set[str]:
+    def _protected_slack_ids(self, team_id: str | None = None) -> set[str]:
         key = f"slack:team:{team_id}" if team_id else "slack:default"
         profile = self.secrets.get(key) or {}
         if team_id:
@@ -5124,7 +5124,7 @@ class SessionManager:
             return set()
         return {str(u).strip() for u in (profile.get("approval_owner_ids") or []) if str(u).strip()}
 
-    def slack_approval_owner_ids(self, team_id: Optional[str] = None) -> set[str]:
+    def slack_approval_owner_ids(self, team_id: str | None = None) -> set[str]:
         """Stable Slack user ids allowed to resolve consequential Inbox prompts.
 
         Managed relay installs are installer-owned. Manual Socket Mode has no
@@ -5287,7 +5287,7 @@ class SessionManager:
         *,
         actor_id: str,
         chat_id: str,
-        team_id: Optional[str],
+        team_id: str | None,
     ) -> bool:
         """Authorize a Slack resolution against both its owner and delivery binding."""
         event_team, event_channel = slack_split(chat_id)
@@ -5312,7 +5312,7 @@ class SessionManager:
         platform: str,
         actor_id: str,
         chat_id: str,
-        team_id: Optional[str],
+        team_id: str | None,
     ) -> bool:
         """Authorize a protected-item resolution over ANY transport.
 
@@ -5364,7 +5364,7 @@ class SessionManager:
             pass
 
     def set_inbox_binding(
-        self, name: str, *, channel: Optional[str], target: str
+        self, name: str, *, channel: str | None, target: str
     ) -> dict[str, Any]:
         """Persist an Inbox transport after validating its approval identity."""
         channel = str(channel or "").strip() or None
@@ -5396,7 +5396,7 @@ class SessionManager:
         return {"ok": True, "bindings": self.inbox_routing.bindings()}
 
     def _set_allowed(
-        self, name: str, user_id: str, *, team_id: Optional[str] = None, add: bool
+        self, name: str, user_id: str, *, team_id: str | None = None, add: bool
     ) -> dict[str, Any]:
         """Add/remove a sender on the allow-list. With `team_id` the edit targets that
         scope's profile — a workspace's `slack:team:<id>`, or a GitHub App
@@ -5702,7 +5702,7 @@ class SessionManager:
 
     # -- unauthorized inbound (parked, §19) --------------------------------------
     def _note_person(
-        self, platform: str, user_id: Optional[str], name: Optional[str]
+        self, platform: str, user_id: str | None, name: str | None
     ) -> None:
         """Remember a sender's display name (persisted) so ID-keyed surfaces — the allow-list
         chips above all — can show who a U07JK… actually is. Best-effort, newest name wins.
@@ -5898,7 +5898,7 @@ class SessionManager:
             except Exception:
                 self.unregister_session_client(session_id, cb)
 
-    def _drop_engine(self, session_id: str) -> Optional[TurnEngine]:
+    def _drop_engine(self, session_id: str) -> TurnEngine | None:
         """Forget a session's engine AND close its sandbox, so a rebuilt engine gets a fresh
         one and a deleted session leaves no container behind."""
         engine = self._engines.pop(session_id, None)
@@ -6709,7 +6709,7 @@ class SessionManager:
         await self.deliver_to_session(wake.session_id, message, wake=wake)
 
     async def deliver_to_session(
-        self, session_id: str, message: str, *, source: Optional[dict[str, Any]] = None, wake=None
+        self, session_id: str, message: str, *, source: dict[str, Any] | None = None, wake=None
     ) -> bool:
         """Deliver an out-of-band message to a (durable) session — the agent stays resumable
         forever, so this works with no live socket. Busy (mid tool-loop): steer it into the live
@@ -7044,7 +7044,7 @@ class SessionManager:
             return base
         return f"{base}\n\nFor this session: {extra}" if base else f"For this session: {extra}"
 
-    def _grant_thread(self, session_id: str, platform: str, chat_id: str, thread: Optional[str] = None) -> None:
+    def _grant_thread(self, session_id: str, platform: str, chat_id: str, thread: str | None = None) -> None:
         """Pre-approve the reply to one thread for a session (the mention grant, §25
         shape); persisted with the session's grants and re-applied on rebuild."""
         from coworker.connectors.base import format_target
@@ -8008,7 +8008,7 @@ class SessionManager:
             engine._append_notice("project_presence", notice)
         return {"ok": True, "roots": self.get_roots(session_id), "notice": notice}
 
-    def _project_notice(self, path: str) -> Optional[str]:
+    def _project_notice(self, path: str) -> str | None:
         """One-line presence pointer for a newly granted directory, or None."""
         try:
             key = project_key(path)
@@ -8102,8 +8102,8 @@ class SessionManager:
         self,
         session_id: str,
         *,
-        pinned: Optional[bool] = None,
-        archived: Optional[bool] = None,
+        pinned: bool | None = None,
+        archived: bool | None = None,
     ) -> dict[str, Any]:
         if session_id.startswith("__"):
             return {"ok": False, "error": "internal sessions cannot be modified here"}
@@ -8161,7 +8161,7 @@ class SessionManager:
     def provider_complete(self, model, messages, tools=None):
         return self.provider.complete(model=model, messages=messages, tools=tools)
 
-    def _refresh_provider(self, name: Optional[str] = None) -> None:
+    def _refresh_provider(self, name: str | None = None) -> None:
         """Drop the router's cached client(s) so the next turn rebuilds with fresh config.
         No-op for an injected non-router provider (tests)."""
         invalidate = getattr(self.provider, "invalidate", None)
@@ -8169,7 +8169,7 @@ class SessionManager:
             invalidate(name)
 
     # -- read models ------------------------------------------------------------
-    def list_sessions(self, workspace: Optional[str] = None) -> list[dict[str, Any]]:
+    def list_sessions(self, workspace: str | None = None) -> list[dict[str, Any]]:
         ws = self.resolve_workspace(workspace) if workspace else None
         return [
             {
@@ -8255,7 +8255,7 @@ class SessionManager:
             row["status"] = active["state"] if active else "idle"
         return row
 
-    def _sleeping_until(self, session_id: str) -> Optional[str]:
+    def _sleeping_until(self, session_id: str) -> str | None:
         fires = [
             w.fire_at
             for w in self.wakes.pending(session_id)
@@ -8274,13 +8274,13 @@ class SessionManager:
         return _list_agents()
 
     # -- skills (SKILLS-SPEC §4.4) ------------------------------------------------
-    def list_skills(self, workspace: Optional[str] = None) -> list[dict[str, Any]]:
+    def list_skills(self, workspace: str | None = None) -> list[dict[str, Any]]:
         """Enriched rows for the Settings screen (scope/source/enabled). Optional workspace
         adds that project's skills, with project copies shadowing same-named global ones."""
         return self.skill_store.rows(workspace or None)
 
     def reveal_skill(
-        self, name: str, workspace: Optional[str] = None
+        self, name: str, workspace: str | None = None
     ) -> dict[str, Any]:
         """Open the skill's folder in the OS file manager (§6 "Show folder" — the power-user
         window into folder-is-truth). Same local-machine rationale as reveal_artifact."""
@@ -8312,7 +8312,7 @@ class SessionManager:
             return {"ok": False, "error": str(exc)}
         return {"ok": True}
 
-    def persona_mcp_scope(self, persona_id: str) -> Optional[set[str]]:
+    def persona_mcp_scope(self, persona_id: str) -> set[str] | None:
         """The persona's declared MCP-server scope (OPE-58 sibling stub): the manifest's
         `mcp:` names, or None when it declares none (= no scoping). Only ever narrows —
         the user's enabled/configured/authed gates apply regardless."""
@@ -8322,7 +8322,7 @@ class SessionManager:
 
     def persona_skill_scope(
         self, persona_id: str
-    ) -> tuple[Optional[Path], Optional[set[str]]]:
+    ) -> tuple[Path | None, set[str] | None]:
         """The persona's own skill folder + optional allowlist (OPE-58).
 
         A manifest-backed persona carries skills as a `skills/` dir next to its manifest —
@@ -8342,8 +8342,8 @@ class SessionManager:
     def effective_skill_names(
         self,
         session_id: str,
-        workspace: Optional[str | Path] = None,
-        agent: Optional[str] = None,
+        workspace: str | Path | None = None,
+        agent: str | None = None,
     ) -> set[str]:
         """The session's skill menu (§3): merged scopes − Settings disables − session mutes.
         The single resolver behind the engine catalog, the rail list, and the composer popup.
@@ -8367,7 +8367,7 @@ class SessionManager:
         )
 
     def session_skills_view(
-        self, session_id: str, workspace: Optional[str] = None
+        self, session_id: str, workspace: str | None = None
     ) -> dict[str, Any]:
         """The rail payload: every in-scope, Settings-enabled skill with its mute state.
         Persona-carried skills (OPE-58) appear with scope "coworker" — mutable per session
@@ -8403,7 +8403,7 @@ class SessionManager:
                 )
         return {"skills": rows}
 
-    def _scratch_workspace_error(self, workspace: Any) -> Optional[dict[str, Any]]:
+    def _scratch_workspace_error(self, workspace: Any) -> dict[str, Any] | None:
         """Refuse skill WRITES into a per-conversation scratch dir — a skill saved there is
         stranded in a throwaway folder. Backend chokepoint: guards every entry path (UI,
         REST, future import), not just the flows the GUI happens to gate."""
@@ -8454,7 +8454,7 @@ class SessionManager:
             return {"ok": False, "error": str(exc)}
         return {"ok": True}
 
-    def delete_skill(self, name: str, workspace: Optional[str] = None) -> dict[str, Any]:
+    def delete_skill(self, name: str, workspace: str | None = None) -> dict[str, Any]:
         try:
             self.skill_store.delete(name, workspace or None)
         except ValueError as exc:
@@ -8557,7 +8557,7 @@ class SessionManager:
         }
 
     def set_binding(
-        self, session_id: str, kind: str, name: Optional[str]
+        self, session_id: str, kind: str, name: str | None
     ) -> dict[str, Any]:
         """Bind (or unbind, name=None) a named project for this session. Takes
         effect at the next engine build — the running engine keeps the knowledge
@@ -8611,7 +8611,7 @@ class SessionManager:
         ]
 
     def add_memory(
-        self, content: str, scope: str = "workspace", workspace: Optional[str] = None
+        self, content: str, scope: str = "workspace", workspace: str | None = None
     ) -> dict[str, Any]:
         content = (content or "").strip()
         if not content:
@@ -8645,7 +8645,7 @@ class SessionManager:
         return self.memory_settings.snapshot()
 
     def set_memory_settings(
-        self, enabled: Optional[bool] = None, user_rules: Optional[str] = None
+        self, enabled: bool | None = None, user_rules: str | None = None
     ) -> dict[str, Any]:
         return self.memory_settings.set(enabled=enabled, user_rules=user_rules)
 
@@ -8672,7 +8672,7 @@ def _epoch() -> float:
 _SLACK_TS_RE = re.compile(r"^\d+\.\d+$")
 
 
-def _inbound_epoch(message_id: Optional[str]) -> float:
+def _inbound_epoch(message_id: str | None) -> float:
     """Best-effort epoch-seconds for a MessageSource: a Slack-style ts, else wall-clock now."""
     if message_id and _SLACK_TS_RE.match(str(message_id)):
         try:
@@ -8682,7 +8682,7 @@ def _inbound_epoch(message_id: Optional[str]) -> float:
     return time.time()
 
 
-def _last_assistant_text(messages: list[dict[str, Any]]) -> Optional[str]:
+def _last_assistant_text(messages: list[dict[str, Any]]) -> str | None:
     for msg in reversed(messages or []):
         if msg.get("role") == "assistant" and msg.get("content"):
             return msg["content"]
@@ -8738,7 +8738,7 @@ def _redact(raw: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _git_branch(path: Path) -> Optional[str]:
+def _git_branch(path: Path) -> str | None:
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],

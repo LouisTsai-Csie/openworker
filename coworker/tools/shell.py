@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 import aisuite as ai
 
@@ -150,8 +149,8 @@ def shell_tools(executor: Executor) -> list:
 
     def run_shell(
         command: str,
-        description: Optional[str] = None,
-        timeout_seconds: Optional[int] = None,
+        description: str | None = None,
+        timeout_seconds: int | None = None,
         run_in_background: bool = False,
     ) -> dict:
         # `description` is not used here on purpose: it rides along in the call arguments

@@ -33,7 +33,7 @@ import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker import config as app_config
@@ -143,7 +143,7 @@ def is_wsl() -> bool:
         return False
 
 
-def admin_prefix() -> Optional[list[str]]:
+def admin_prefix() -> list[str] | None:
     """How this process can run a command as an administrator WITHOUT holding a password,
     or None. `sudo -n` when this user may use sudo without a password (a dev VM, a cloud
     box); else `pkexec` on a Linux desktop, where polkit shows the system's own password
@@ -159,7 +159,7 @@ def admin_prefix() -> Optional[list[str]]:
     return None
 
 
-def landlock_available() -> Optional[bool]:
+def landlock_available() -> bool | None:
     """Whether this kernel has Landlock: True/False on Linux, None elsewhere (a Mac's
     sandboxes run in Docker Desktop's own Linux VM, which cannot be asked from here).
     `landlock_create_ruleset(NULL, 0, LANDLOCK_CREATE_RULESET_VERSION)` returns the ABI
@@ -176,7 +176,7 @@ def landlock_available() -> Optional[bool]:
 _LANDLOCK_PROBE = "import ctypes; print(ctypes.CDLL(None, use_errno=True).syscall(444, None, 0, 1))"
 
 
-def docker_landlock() -> Optional[bool]:
+def docker_landlock() -> bool | None:
     """On a Mac: whether Docker Desktop's Linux VM has Landlock, asked from a throwaway
     container of the base image (no network), the same call as `landlock_available`.
     None when it cannot be asked: not a Mac, Docker not answering, or the base image not
@@ -199,7 +199,7 @@ def docker_landlock() -> Optional[bool]:
 _host_network_ok_at = 0.0
 
 
-def docker_host_network() -> Optional[bool]:
+def docker_host_network() -> bool | None:
     """On a Mac: whether a container on Docker's host network reaches the gateway on this
     Mac's loopback address, tried from a throwaway container of the base image. None when
     it cannot be told: not a Mac, Docker not answering, the base image not downloaded yet,
@@ -227,7 +227,7 @@ def docker_host_network() -> Optional[bool]:
     return done.returncode == 0
 
 
-def image_store_free_gb() -> Optional[float]:
+def image_store_free_gb() -> float | None:
     """Free space where the driver keeps images, in GB, or None when it cannot be told."""
     try:
         tool = openshell.image_tool()
@@ -324,7 +324,7 @@ def bind_mounts_change() -> str:
     )
 
 
-def apply_bind_mounts() -> Optional[str]:
+def apply_bind_mounts() -> str | None:
     """Write the gateway config, point the service at it, restart it. Returns an error
     text when the config already has a docker table (never edit that by hand-off)."""
     home = _openshell_home()
@@ -344,7 +344,7 @@ def apply_bind_mounts() -> Optional[str]:
     return restart_gateway()
 
 
-def restart_gateway() -> Optional[str]:
+def restart_gateway() -> str | None:
     """Restart the local gateway so it reads its config again: a Homebrew service on a Mac
     (the formula's start script reads `gateway.env`), a user systemd unit on Linux. Returns
     an error text, or None. Before 2026-09-28 the Mac was never restarted: the setting was
@@ -360,7 +360,7 @@ def restart_gateway() -> Optional[str]:
     return None
 
 
-def _allows_bind_mounts(config: Optional[Path]) -> bool:
+def _allows_bind_mounts(config: Path | None) -> bool:
     """Whether this gateway config lets a sandbox be given folders: the docker driver takes
     driver config and bind mounts, and resource admission is off for it."""
     try:
@@ -374,7 +374,7 @@ def _allows_bind_mounts(config: Optional[Path]) -> bool:
     return docker.get("allow_driver_config") is True and docker.get("enable_bind_mounts") is True and admission.get("enabled") is False
 
 
-def gateway_config_in_use() -> Optional[Path]:
+def gateway_config_in_use() -> Path | None:
     """The config file the RUNNING gateway was started with: its `--config` argument, else
     the one `gateway.env` names, else `gateway.toml` under the OpenShell config folder. A
     file written after the gateway started is not in use until it restarts, so the check
@@ -398,7 +398,7 @@ def gateway_config_in_use() -> Optional[Path]:
     return home / "gateway.toml"
 
 
-def enable_linger() -> Optional[str]:
+def enable_linger() -> str | None:
     """Try as the user, then as an administrator without a password (`admin_prefix`);
     return the command to run when both are refused."""
     user = getpass.getuser()
@@ -425,7 +425,7 @@ class PullProgress:
         return {"layers_total": self.layers_total, "layers_done": self.layers_done, "last_line": self.last_line}
 
 
-def pull_image(on_progress: Optional[Callable[[PullProgress], None]] = None, cancel: Optional[threading.Event] = None) -> Optional[str]:
+def pull_image(on_progress: Callable[[PullProgress], None] | None = None, cancel: threading.Event | None = None) -> str | None:
     """`docker pull` (or podman), streaming its per-layer lines into a PullProgress.
     No time limit: on a slow link this is the 20-minute step. Returns an error text on
     failure or cancellation, None when the image is there."""
@@ -534,7 +534,7 @@ def windows_remove_command(*, confirm: Callable[[str], bool], print_fn: Callable
     return 0 if ok else 1
 
 
-def remove(*, yes: bool = False, ask: Optional[Callable[[str], bool]] = None, print_fn: Callable[[str], None] = print) -> int:
+def remove(*, yes: bool = False, ask: Callable[[str], bool] | None = None, print_fn: Callable[[str], None] = print) -> int:
     confirm = ask or (lambda question: yes or input(f"{question} [y/N] ").strip().lower() in ("y", "yes"))
     if sys.platform == "win32":
         return windows_remove_command(confirm=confirm, print_fn=print_fn)
@@ -563,7 +563,7 @@ def status(print_fn: Callable[[str], None] = print) -> int:
     return 0 if all(ok for _, ok, _ in rows) else 1
 
 
-def _offer_image_download(rows: dict[str, bool], confirm: Callable[[str], bool], print_fn: Callable[[str], None]) -> Optional[int]:
+def _offer_image_download(rows: dict[str, bool], confirm: Callable[[str], bool], print_fn: Callable[[str], None]) -> int | None:
     """When the base image is missing: show the command, ask, and run the pull with Docker's
     own progress and no time limit. Returns an exit code to stop with, or None to go on."""
     if rows.get(IMAGE_ROW, True):
@@ -578,7 +578,7 @@ def _offer_image_download(rows: dict[str, bool], confirm: Callable[[str], bool],
     return None
 
 
-def setup(*, yes: bool = False, ask: Optional[Callable[[str], bool]] = None, print_fn: Callable[[str], None] = print) -> int:
+def setup(*, yes: bool = False, ask: Callable[[str], bool] | None = None, print_fn: Callable[[str], None] = print) -> int:
     confirm = ask or (lambda question: yes or input(f"{question} [y/N] ").strip().lower() in ("y", "yes"))
     if sys.platform == "win32":
         return windows_setup_command(confirm=confirm, print_fn=print_fn)

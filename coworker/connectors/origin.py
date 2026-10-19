@@ -11,7 +11,7 @@ no longer appears in model-facing text.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from coworker.connectors.base import SessionSource
 from coworker.connectors.slack_addr import split
@@ -29,7 +29,7 @@ def platform_label(platform: str) -> str:
     return PLATFORM_LABELS.get(platform, (platform or "chat").capitalize())
 
 
-def _q(value: Optional[str]) -> str:
+def _q(value: str | None) -> str:
     return '"' + str(value or "").replace('"', '\\"') + '"'
 
 
@@ -40,7 +40,7 @@ def _github_parts(chat_id: str) -> tuple[str, str, str]:
     return owner, repo, number
 
 
-def reply_call(src: SessionSource, thread: Optional[str] = None, frame: Optional[dict[str, Any]] = None) -> str:
+def reply_call(src: SessionSource, thread: str | None = None, frame: dict[str, Any] | None = None) -> str:
     """The tool call that answers this message, spelled out with its arguments."""
     p = src.platform
     if p == "slack":
@@ -63,7 +63,7 @@ def reply_call(src: SessionSource, thread: Optional[str] = None, frame: Optional
     return f"send_message(target={_q(target)}, text=…)"
 
 
-def also_call(src: SessionSource, frame: Optional[dict[str, Any]] = None) -> Optional[str]:
+def also_call(src: SessionSource, frame: dict[str, Any] | None = None) -> str | None:
     """A second tool the same grant covers: reviewing, on a GitHub pull request."""
     if src.platform != "github":
         return None
@@ -74,7 +74,7 @@ def also_call(src: SessionSource, frame: Optional[dict[str, Any]] = None) -> Opt
     return f"github_review(owner={_q(owner)}, repo={_q(repo)}, pull_number={number or '…'}, event=…, body=…)"
 
 
-def where_line(src: SessionSource, thread: Optional[str] = None, frame: Optional[dict[str, Any]] = None) -> str:
+def where_line(src: SessionSource, thread: str | None = None, frame: dict[str, Any] | None = None) -> str:
     """`From Slack · workspace T… · #team (C…) · thread 1788….` — one line, ids kept
     so the model can copy them into the reply call."""
     p = src.platform
@@ -111,8 +111,8 @@ def where_line(src: SessionSource, thread: Optional[str] = None, frame: Optional
 def origin_block(
     src: SessionSource,
     *,
-    thread: Optional[str] = None,
-    frame: Optional[dict[str, Any]] = None,
+    thread: str | None = None,
+    frame: dict[str, Any] | None = None,
     pre_approved: bool = True,
     judgement_only: bool = False,
 ) -> str:

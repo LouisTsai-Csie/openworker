@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 _SEP = "\x1f"
 
 
-def git_log(workspace: str, path: Optional[str] = None, max_count: int = 20) -> dict[str, Any]:
+def git_log(workspace: str, path: str | None = None, max_count: int = 20) -> dict[str, Any]:
     root = str(Path(workspace).resolve())
     n = max_count if isinstance(max_count, int) and max_count > 0 else 20
     n = min(n, 200)

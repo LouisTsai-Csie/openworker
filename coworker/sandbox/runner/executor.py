@@ -35,7 +35,7 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable, Sequence
 
 _IS_WINDOWS = sys.platform == "win32"
@@ -56,7 +56,7 @@ _NONINTERACTIVE_ENV = {
 
 class Executor(ABC):
     @abstractmethod
-    def run(self, command: str, timeout: Optional[float] = None) -> dict[str, Any]: ...
+    def run(self, command: str, timeout: float | None = None) -> dict[str, Any]: ...
 
     def run_background(self, command: str) -> dict[str, Any]:
         return {"error": "background execution is not supported by this executor"}
@@ -158,9 +158,9 @@ class LocalExecutor(Executor):
         self,
         *,
         cwd: str | Path,
-        env: Optional[dict[str, str]] = None,
-        base_env: Optional[dict[str, str]] = None,
-        shell_path: Optional[str] = None,
+        env: dict[str, str] | None = None,
+        base_env: dict[str, str] | None = None,
+        shell_path: str | None = None,
         default_timeout: float = _DEFAULT_TIMEOUT,
         # Memory safety net only (OPE-186): what the MODEL sees is bounded by the engine's
         # tool-result cap (head + marker + tail, full text in a spill file), which needs
@@ -236,7 +236,7 @@ class LocalExecutor(Executor):
             env=self._env,
             **spawn_kwargs,
         )
-        self._queue: queue.Queue[Optional[str]] = queue.Queue()
+        self._queue: queue.Queue[str | None] = queue.Queue()
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
 
@@ -256,8 +256,8 @@ class LocalExecutor(Executor):
     def run(
         self,
         command: str,
-        timeout: Optional[float] = None,
-        on_output: Optional[Callable[[str], None]] = None,
+        timeout: float | None = None,
+        on_output: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
         """`on_output`, when given, is called with each line as it arrives (the tool runner
         uses it for the live view). The returned result is the same either way."""
@@ -281,7 +281,7 @@ class LocalExecutor(Executor):
         interrupted = False
         timed_out = False
         aborted = False
-        exit_code: Optional[int] = None
+        exit_code: int | None = None
         lines: list[str] = []
 
         while True:
@@ -485,7 +485,7 @@ class LocalExecutor(Executor):
         return result
 
 
-def _parse_exit_code(line: str, marker: str) -> Optional[int]:
+def _parse_exit_code(line: str, marker: str) -> int | None:
     parts = line.strip().split()
     try:
         return int(parts[parts.index(marker) + 1])
@@ -493,7 +493,7 @@ def _parse_exit_code(line: str, marker: str) -> Optional[int]:
         return None
 
 
-def _parse_cwd(line: str, marker: str) -> Optional[str]:
+def _parse_cwd(line: str, marker: str) -> str | None:
     parts = line.strip().split()
     try:
         return " ".join(parts[parts.index(marker) + 2 :]) or None

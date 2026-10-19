@@ -14,7 +14,6 @@ import os
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from coworker.sandbox.workspace import DIRECT, OPENSHELL, PROVIDER_ENV, RUNNER_LOCAL, SEATBELT, WINDOWS
 
@@ -23,7 +22,7 @@ KNOWN = (DIRECT, SEATBELT, WINDOWS, OPENSHELL, RUNNER_LOCAL)
 _PROBE_SECONDS = 30.0
 
 _probe_lock = threading.Lock()
-_probe: tuple[float, Optional[str]] = (0.0, None)  # (when, why OpenShell is unusable | None)
+_probe: tuple[float, str | None] = (0.0, None)  # (when, why OpenShell is unusable | None)
 
 
 @dataclass(frozen=True)
@@ -37,7 +36,7 @@ def is_headless() -> bool:
     return os.environ.get(HEADLESS_ENV) == "1"
 
 
-def openshell_problem(*, fresh: bool = False) -> Optional[str]:
+def openshell_problem(*, fresh: bool = False) -> str | None:
     """None when OpenShell is usable on this machine, else why not. The answer is kept for a
     short while, because it is asked for every session and costs two CLI calls."""
     global _probe
@@ -56,7 +55,7 @@ def openshell_problem(*, fresh: bool = False) -> Optional[str]:
         return problem
 
 
-def select(configured: Optional[str] = None, *, headless: Optional[bool] = None) -> Selection:
+def select(configured: str | None = None, *, headless: bool | None = None) -> Selection:
     """Raises `OpenShellUnavailable` or `SeatbeltUnavailable` when that sandbox was chosen
     explicitly and is not usable: a silent fallback would hide the loss of protection."""
     chosen = (os.environ.get(PROVIDER_ENV) or configured or "").strip().lower()

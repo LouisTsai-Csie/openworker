@@ -20,7 +20,6 @@ import json
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Optional
 from collections.abc import Callable
 
 from coworker.risk import RiskClass
@@ -40,7 +39,7 @@ def _specificity(pattern: str) -> int:
 
 
 class RiskOverrideStore:
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else None
         # Rules refused at load with the reason why — surfaced to the user instead of
         # silently shaping permissions differently than their file says.
@@ -123,8 +122,8 @@ class RiskOverrideStore:
         self._rules.append(_Rule(pattern, risk))
         self.save()
 
-    def resolve(self, tool_name: str) -> Optional[RiskClass]:
-        best: Optional[RiskClass] = None
+    def resolve(self, tool_name: str) -> RiskClass | None:
+        best: RiskClass | None = None
         best_score = -1
         for r in self._rules:
             if fnmatchcase(tool_name, r.pattern):
@@ -133,7 +132,7 @@ class RiskOverrideStore:
                     best, best_score = r.risk, score
         return best
 
-    def resolver(self) -> Callable[[str], Optional[RiskClass]]:
+    def resolver(self) -> Callable[[str], RiskClass | None]:
         """A callable for ``PermissionEngine.risk_overrides`` / ``risk.classify``."""
         return self.resolve
 

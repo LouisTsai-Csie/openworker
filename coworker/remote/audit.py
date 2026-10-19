@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 _OCSF_VERSION = "1.1.0"
 _CLASS_ENTITY_MANAGEMENT = 3004
@@ -39,7 +39,7 @@ class AuditLog:
         entity_type: str,
         entity_name: str,
         entity_uid: str = "",
-        detail: Optional[dict[str, Any]] = None,
+        detail: dict[str, Any] | None = None,
         success: bool = True,
         actor: str = "",
         org_id: str = "",

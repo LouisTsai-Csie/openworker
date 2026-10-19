@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from coworker.secrets import state_dir, write_private_text
 
 
 class WorkspaceTrustStore:
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = (
             Path(path) if path is not None else state_dir() / "workspace_trust.json"
         )

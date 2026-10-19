@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
-from typing import Optional
 
 # User Rules is a bounded settings field, not a document store: big enough for any
 # real rule list, small enough that a paste-accident (or a hostile client) can't
@@ -49,7 +48,7 @@ class MemorySettingsStore:
         return rules if isinstance(rules, str) else ""
 
     def set(
-        self, *, enabled: Optional[bool] = None, user_rules: Optional[str] = None
+        self, *, enabled: bool | None = None, user_rules: str | None = None
     ) -> dict:
         with self._lock:
             data = self._load()

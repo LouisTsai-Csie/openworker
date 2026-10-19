@@ -18,7 +18,7 @@ sets are; UX-DECISIONS §21). Stripped-field counts go to the audit log.
 from __future__ import annotations
 
 import re
-from typing import Any, Optional
+from typing import Any
 
 from coworker.secrets import SecretStore
 
@@ -74,7 +74,7 @@ def default_portal(secrets: SecretStore) -> str:
 
 def resolve(
     secrets: SecretStore, portal: str = ""
-) -> tuple[str, str, Optional[dict[str, Any]]]:
+) -> tuple[str, str, dict[str, Any] | None]:
     """(hub_id, profile_key, profile) for the requested — or default — portal.
     `portal` may be a hub id or a portal name (account) — names are what agents
     see in results, so accept both."""

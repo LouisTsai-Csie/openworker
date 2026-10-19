@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 import aisuite as ai
@@ -54,7 +54,7 @@ def _slack_channel_name_like(chat_id: str) -> bool:
     return chat_id.startswith("#") or bool(_SLACK_NAME.match(chat_id))
 
 
-def _parse_or_coerce(target: str) -> tuple[str, str, Optional[str]]:
+def _parse_or_coerce(target: str) -> tuple[str, str, str | None]:
     """parse_target, but a BARE channel name ('all-openworker', '#general') coerces to
     Slack — models pass what the user said, and a lowercase/#-name is Slack-shaped (owner
     repro 2026-07-14: the model never invented the 'slack:' prefix on its own). Telegram
@@ -70,7 +70,7 @@ def _parse_or_coerce(target: str) -> tuple[str, str, Optional[str]]:
 
 def _resolve_slack_channel(
     secrets: SecretStore, name: str
-) -> tuple[Optional[str], Optional[str]]:
+) -> tuple[str | None, str | None]:
     """'#all-openworker' (a NAME the user said) → the team-qualified chat_id, via the
     same cached conversations.list roster the GUI's channel picker uses. (chat_id, error):
     exactly one match wins; none/many return an actionable error instead of a guess
@@ -113,7 +113,7 @@ def _resolve_slack_channel(
     return chat_id, None
 
 
-def _resolve_token(secrets: SecretStore, platform: str, chat_id: str) -> Optional[str]:
+def _resolve_token(secrets: SecretStore, platform: str, chat_id: str) -> str | None:
     """Pick the outbound token for a reply.
 
     Managed Slack relay is multi-workspace: a team-qualified chat_id ("T…/C…")
@@ -135,7 +135,7 @@ def _resolve_token(secrets: SecretStore, platform: str, chat_id: str) -> Optiona
 def make_send_message_tool(
     secrets: SecretStore,
     *,
-    senders: Optional[dict[str, Sender]] = None,
+    senders: dict[str, Sender] | None = None,
 ) -> Callable[..., Any]:
     """Build the `send_message` tool bound to a SecretStore (and optional sender registry)."""
     senders = senders if senders is not None else DEFAULT_SENDERS
@@ -232,7 +232,7 @@ _FILE_SCHEMA = {
 _MAX_FILE_BYTES = 50 * 1024 * 1024  # sanity cap well under Slack's limit
 
 
-def _resolve_within(path: str, bases: list[Path]) -> Optional[Path]:
+def _resolve_within(path: str, bases: list[Path]) -> Path | None:
     """Resolve `path` (relative → tried against each base) and require the result to live
     inside one of the allowed bases. None → outside every base or nonexistent."""
     candidates = []
@@ -274,10 +274,10 @@ def _render_html_png(path: Path) -> bytes:
 def make_send_file_tool(
     secrets: SecretStore,
     *,
-    workspace: Optional[Path] = None,
-    roots: Optional[list] = None,
-    file_senders: Optional[dict[str, FileSender]] = None,
-    render_html: Optional[Callable[[Path], bytes]] = None,
+    workspace: Path | None = None,
+    roots: list | None = None,
+    file_senders: dict[str, FileSender] | None = None,
+    render_html: Callable[[Path], bytes] | None = None,
 ) -> Callable[..., Any]:
     """Build the `send_file` tool. Same target grammar and token resolution as
     send_message, but a DIFFERENT tool name — standing send_message grants (e.g. a
@@ -291,8 +291,8 @@ def make_send_file_tool(
     def send_file(
         target: str,
         path: str,
-        title: Optional[str] = None,
-        comment: Optional[str] = None,
+        title: str | None = None,
+        comment: str | None = None,
         as_screenshot: bool = False,
     ) -> dict[str, Any]:
         try:

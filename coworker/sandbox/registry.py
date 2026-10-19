@@ -20,7 +20,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.secrets import state_dir
 
@@ -58,7 +58,7 @@ class SandboxLimitReached(RuntimeError):
     pass
 
 
-def registry_id(path: Optional[Path] = None) -> str:
+def registry_id(path: Path | None = None) -> str:
     """A short, stable id for a registry file: the same state folder always gives the same
     id, and another state folder a different one. It is a label value on each sandbox."""
     target = Path(path) if path is not None else state_dir() / "sandbox" / "registry.db"
@@ -81,7 +81,7 @@ def _alive(pid: int) -> bool:
 
 
 class SandboxRegistry:
-    def __init__(self, path: Optional[Path] = None) -> None:
+    def __init__(self, path: Path | None = None) -> None:
         self.path = Path(path) if path is not None else state_dir() / "sandbox" / "registry.db"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.id = registry_id(self.path)
@@ -110,7 +110,7 @@ class SandboxRegistry:
         provider: str,
         session_id: str = "",
         agent: str = "",
-        roots: Optional[list] = None,
+        roots: list | None = None,
         profile: str = "",
         enforcement: str = "",
         machine_id: str = LOCAL_MACHINE,
@@ -135,7 +135,7 @@ class SandboxRegistry:
             db.execute("DELETE FROM sandboxes WHERE name = ?", (name,))
 
     # -- reads ------------------------------------------------------------------------
-    def list(self, machine_id: Optional[str] = None) -> list[dict[str, Any]]:
+    def list(self, machine_id: str | None = None) -> list[dict[str, Any]]:
         query, args = "SELECT * FROM sandboxes", ()
         if machine_id is not None:
             query, args = query + " WHERE machine_id = ?", (machine_id,)
@@ -148,7 +148,7 @@ class SandboxRegistry:
     def count(self, machine_id: str = LOCAL_MACHINE) -> int:
         return len(self.list(machine_id))
 
-    def find(self, session_id: str, agent: str = "") -> Optional[dict[str, Any]]:
+    def find(self, session_id: str, agent: str = "") -> dict[str, Any] | None:
         for row in self.list():
             if row["session_id"] == session_id and (not agent or row["agent"] == agent):
                 return row

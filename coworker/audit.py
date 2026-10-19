@@ -6,7 +6,7 @@ import json
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.connectors import connector_for_tool
 
@@ -207,9 +207,9 @@ class AuditStore:
         self,
         *,
         limit: int = 100,
-        session_id: Optional[str] = None,
-        connector: Optional[str] = None,
-        tool: Optional[str] = None,
+        session_id: str | None = None,
+        connector: str | None = None,
+        tool: str | None = None,
     ) -> list[dict[str, Any]]:
         where = []
         params: list[Any] = []
@@ -257,7 +257,7 @@ def _sanitize_result(tool: str, result: Any) -> Any:
 
 def _redaction_marker(
     tool: str, lower_key: str, body_keys: tuple[str, ...]
-) -> Optional[str]:
+) -> str | None:
     """The marker this key's value must be replaced by, or None to keep the value."""
     if any(s in lower_key for s in _SECRET_KEYS):
         return "[redacted]"

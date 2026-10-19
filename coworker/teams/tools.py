@@ -11,7 +11,6 @@ session) and passes it at construction — the model never self-reports provenan
 
 from __future__ import annotations
 
-from typing import Optional
 from collections.abc import Callable
 
 import aisuite as ai
@@ -116,7 +115,7 @@ def board_tools(
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
+        parent: int | None = None,
         case: str = "",
     ) -> dict:
         """Create a work item (open, unassigned — work starts when it is
@@ -193,7 +192,7 @@ def board_tools(
                                                 "authority": "intent_not_access_grants"}
 
     def transition(
-        item: int, to: str, comment: str = "", refs: Optional[list] = None
+        item: int, to: str, comment: str = "", refs: list | None = None
     ) -> dict:
         """Move a work item to a new state. Workers move their own item to
         in_progress, blocked, or review (attach the blocker or a hand-off summary
@@ -210,7 +209,7 @@ def board_tools(
             taint=taint(),
         ))
 
-    def comment(item: int, body: str, refs: Optional[list] = None, needs_attention: bool = False) -> dict:
+    def comment(item: int, body: str, refs: list | None = None, needs_attention: bool = False) -> dict:
         """Add a comment to a work item. Comments are durable and attributed —
         answers that matter belong here, not in chat. `refs` attach artifact
         pointers (branch, PR, report, file:line) to the item. Routine notes do NOT
@@ -285,9 +284,9 @@ def journal_tools(
         case: str,
         body: str,
         kind: str = "note",
-        item: Optional[int] = None,
-        entities: Optional[list] = None,
-        refs: Optional[list] = None,
+        item: int | None = None,
+        entities: list | None = None,
+        refs: list | None = None,
     ) -> dict:
         """Append an entry to a journal case as you work: kind is finding,
         evidence, decision, note (any observation), or raw (a capture like a log
@@ -310,7 +309,7 @@ def journal_tools(
 
     def journal_read(
         case: str,
-        item: Optional[int] = None,
+        item: int | None = None,
         author: str = "",
         kind: str = "",
         entity: str = "",

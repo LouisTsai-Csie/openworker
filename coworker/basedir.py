@@ -16,14 +16,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 
 class OutsideBaseDir(ValueError):
     """A path outside OPENWORKER_BASE_DIR on a box that has one."""
 
 
-def base_dir() -> Optional[Path]:
+def base_dir() -> Path | None:
     raw = os.environ.get("OPENWORKER_BASE_DIR", "").strip()
     return Path(raw).expanduser() if raw else None
 

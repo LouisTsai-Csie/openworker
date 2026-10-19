@@ -32,7 +32,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Iterable
 
 # Allow `python scripts/eval_reviewer.py` as well as `-m scripts.eval_reviewer`.
@@ -57,7 +57,7 @@ class Row:
     why: str
     tags: list[str]
     holdout: bool
-    planted: Optional[dict[str, Any]] = None
+    planted: dict[str, Any] | None = None
     # Multi-turn context (spec §8.2): `history` is earlier user messages (chronological,
     # current request excluded); `reply` is an ask_user answer that lands in history tagged
     # is_reply — the very channel the reply-capture cases exercise. Both optional; a
@@ -368,7 +368,7 @@ async def _amain(args: argparse.Namespace) -> int:
     return 0 if all(r.gate_passed() for r in results) else 1
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Evaluate the Auto-Approve reviewer against the corpora.")
     p.add_argument("--model", required=True, help="e.g. anthropic:claude-opus-5")
     p.add_argument("--corpus", choices=CORPORA, help="just one corpus (default: all three)")

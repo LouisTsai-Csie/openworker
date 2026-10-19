@@ -17,7 +17,6 @@ import sys
 import threading
 import time
 from collections import deque
-from typing import Optional
 from collections.abc import Sequence
 
 from coworker.sandbox import network_profiles
@@ -103,7 +102,7 @@ class AllowListProxy:
             threading.Thread(target=self._serve, args=(client,), daemon=True).start()
 
     def _serve(self, client: socket.socket) -> None:
-        upstream: Optional[socket.socket] = None
+        upstream: socket.socket | None = None
         try:
             client.settimeout(_CONNECT_SECONDS)
             head = b""

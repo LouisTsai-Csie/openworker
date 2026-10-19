@@ -10,7 +10,7 @@ What the spike showed (ocw-context/docs/sandbox-spike-openshell.md):
 from __future__ import annotations
 
 import copy
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Sequence
 
 from coworker.sandbox import network_profiles
@@ -64,9 +64,9 @@ def render(
     roots: Sequence[dict[str, Any]],
     *,
     profile: str = DEFAULT_PROFILE,
-    uid: Optional[int] = None,
-    gid: Optional[int] = None,
-    home: Optional[str] = None,
+    uid: int | None = None,
+    gid: int | None = None,
+    home: str | None = None,
     extra_hosts: Sequence[str] = (),
 ) -> dict[str, Any]:
     """`roots`: [{"path": absolute path, "writable": bool}], primary first. `home`: the
@@ -97,7 +97,7 @@ def render(
     return policy
 
 
-def mounts(roots: Sequence[dict[str, Any]], runner_dir: str, home: Optional[str] = None) -> dict[str, Any]:
+def mounts(roots: Sequence[dict[str, Any]], runner_dir: str, home: str | None = None) -> dict[str, Any]:
     """Driver config for the Docker driver: every folder at the same absolute path it has on
     the machine, the runner's folder read-only, and the sandbox's private home read-write."""
     binds = [

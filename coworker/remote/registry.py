@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 MAX_NAME_CHARS = 60
 
@@ -161,21 +161,21 @@ class MachinesRegistry:
                 "provenance_ref": provenance_ref,
             }
 
-    def by_pubkey(self, pubkey: str) -> Optional[dict[str, Any]]:
+    def by_pubkey(self, pubkey: str) -> dict[str, Any] | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT * FROM machines WHERE pubkey = ?", (pubkey,)
             ).fetchone()
             return dict(row) if row else None
 
-    def by_id(self, machine_id: str) -> Optional[dict[str, Any]]:
+    def by_id(self, machine_id: str) -> dict[str, Any] | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT * FROM machines WHERE id = ?", (machine_id,)
             ).fetchone()
             return dict(row) if row else None
 
-    def list(self, org_id: Optional[str] = None) -> list[dict[str, Any]]:
+    def list(self, org_id: str | None = None) -> list[dict[str, Any]]:
         with self._lock:
             if org_id is None:
                 rows = self._conn.execute(
@@ -202,7 +202,7 @@ class MachinesRegistry:
                 )
             self._conn.commit()
 
-    def rename(self, machine_id: str, name: str) -> Optional[dict[str, Any]]:
+    def rename(self, machine_id: str, name: str) -> dict[str, Any] | None:
         cleaned = _clean_name(name)
         with self._lock:
             row = self.by_id(machine_id)
@@ -285,7 +285,7 @@ class MachinesRegistry:
             )
             self._conn.commit()
 
-    def sessions_snapshot(self, machine_id: str) -> Optional[str]:
+    def sessions_snapshot(self, machine_id: str) -> str | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT payload FROM machine_sessions WHERE machine_id = ?",
@@ -304,7 +304,7 @@ class MachinesRegistry:
             )
             self._conn.commit()
 
-    def transcript(self, machine_id: str, session_id: str) -> Optional[str]:
+    def transcript(self, machine_id: str, session_id: str) -> str | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT payload FROM machine_transcripts"

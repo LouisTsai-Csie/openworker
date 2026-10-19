@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Awaitable, Callable
 
 import httpx
@@ -30,7 +30,7 @@ from coworker.remote.identity import seal_b64
 # session could not be refreshed (Auth0 refresh tokens die from inactivity);
 # "ok" = a usable token was produced. The GUI hides the cloud section on
 # signed_out and shows a sign-in-again row on expired.
-TokenProvider = Callable[[], Awaitable[tuple[str, Optional[str]]]]
+TokenProvider = Callable[[], Awaitable[tuple[str, str | None]]]
 
 _ME_TTL_SECONDS = 900.0
 
@@ -43,7 +43,7 @@ def mount_cloud_proxy(
     wallet=None,
     ws_authenticated=None,
     origin_allowed=None,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> None:
     """`token_provider` returns (state, token) — state per the notes above,
     token only when state == "ok". `wallet` is the desktop SecretStore the
@@ -59,8 +59,8 @@ def mount_cloud_proxy(
         path: str,
         token: str,
         *,
-        body: Optional[bytes] = None,
-        content_type: Optional[str] = None,
+        body: bytes | None = None,
+        content_type: str | None = None,
         query: str = "",
     ) -> Response:
         headers = {"Authorization": f"Bearer {token}"}
@@ -91,7 +91,7 @@ def mount_cloud_proxy(
             query=request.url.query,
         )
 
-    async def _org(token: str) -> Optional[dict[str, str]]:
+    async def _org(token: str) -> dict[str, str] | None:
         if time.monotonic() - me_cache["at"] < _ME_TTL_SECONDS and me_cache["org"]:
             return me_cache["org"]
         try:

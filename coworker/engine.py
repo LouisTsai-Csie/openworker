@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import AsyncIterator, Awaitable, Callable
 
 from coworker import compaction as _compaction
@@ -106,12 +106,12 @@ class PermissionRequest:
     arguments: dict[str, Any]
     metadata: Any
     reason: str
-    tool_call_id: Optional[str] = None  # for durable resume (idempotent inbox item)
+    tool_call_id: str | None = None  # for durable resume (idempotent inbox item)
     # Where an MCP call actually goes ({transport, host}, from the server DEF at
     # registration) — carried on the request so a PARKED approval shows the same
     # destination evidence as the live card (§35 parity). None for non-MCP tools.
-    mcp_destination: Optional[dict] = None
-    escalation: Optional[dict] = None
+    mcp_destination: dict | None = None
+    escalation: dict | None = None
     provenance: str = ""
 
 
@@ -130,44 +130,30 @@ class TurnEngine:
         registry: ToolRegistry,
         permissions: PermissionEngine,
         model: str,
-        instructions: Optional[str] = None,
-        approver: Optional[Approver] = None,
+        instructions: str | None = None,
+        approver: Approver | None = None,
         max_iterations: int = 12,
-        model_settings: Optional[dict[str, Any]] = None,
-        messages: Optional[list[dict[str, Any]]] = None,
-        audit_sink: Optional[Callable[[dict[str, Any]], None]] = None,
-        context_provider: Optional[Callable[[], str]] = None,
-        directory_requester: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
-        plan_approver: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
-        question_asker: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
-        tool_requester: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
-        team_approver: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
-        items_approver: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
+        model_settings: dict[str, Any] | None = None,
+        messages: list[dict[str, Any]] | None = None,
+        audit_sink: Callable[[dict[str, Any]], None] | None = None,
+        context_provider: Callable[[], str] | None = None,
+        directory_requester: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        plan_approver: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        question_asker: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        tool_requester: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        team_approver: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        items_approver: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
         # Handles `request_connector` / `grant_connector` (spec §11.6): emits
         # CONNECTOR_REQUESTED, waits for the human, returns {approved, …}.
-        connector_requester: Optional[
-            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
-        ] = None,
+        connector_requester: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
         # Called (thread-safe, best-effort) when the user stops the turn — e.g. the
         # executor's kill for a running shell command.
-        interrupt_hooks: Optional[list[Callable[[], None]]] = None,
+        interrupt_hooks: list[Callable[[], None]] | None = None,
         # OPE-186 change 1: bound every tool result before it enters the conversation
         # (head + marker + tail; full text in a spill file). None = the module default
         # (10,000 bytes), 0 = off. See coworker/toolresult.py.
-        tool_result_max_bytes: Optional[int] = None,
-        tool_result_spill_dir: Optional[Path] = None,
+        tool_result_max_bytes: int | None = None,
+        tool_result_spill_dir: Path | None = None,
     ) -> None:
         self.provider = provider
         self.registry = registry
@@ -215,24 +201,24 @@ class TurnEngine:
         # constructor footprint stays put. `compaction_settings` is a live getter (Settings
         # changes apply without a rebuild); `is_attended` gates the failure prompt (None →
         # treat as unattended: never park a background run on internal bookkeeping).
-        self.compaction_state: Optional[_compaction.CompactionState] = None
-        self.compaction_settings: Optional[Callable[[], dict[str, Any]]] = None
-        self.is_attended: Optional[Callable[[], bool]] = None
+        self.compaction_state: _compaction.CompactionState | None = None
+        self.compaction_settings: Callable[[], dict[str, Any]] | None = None
+        self.is_attended: Callable[[], bool] | None = None
         # Attendance (coworker/unattended.py): who answers when the agent asks. A live
         # getter returning "attended" / "inbox" / "auto"; None reads as attended. In "auto"
         # the engine answers questions, folder requests and pinned installs itself by fixed
         # rule, and refuses any approval card only a person could clear — never a hang.
-        self.attendance: Optional[Callable[[], str]] = None
+        self.attendance: Callable[[], str] | None = None
         # Approvals are separate from questions. A surface that answers questions by rule
         # (attendance "auto") while a person still answers approval cards sets this: a
         # terminal run with --auto-answer. Unset, attendance "auto" covers both.
-        self.cards_reach_person: Optional[Callable[[], bool]] = None
+        self.cards_reach_person: Callable[[], bool] | None = None
         self._dangerous_warned = False
         # Session facts (spec Part 0 / §2.4) — the known world frozen at session start, plus
         # the per-turn ingestion record. Set post-construction by the surface, same as
         # compaction above, so the constructor footprint stays put. None ⇒ nothing recorded
         # and behaviour is byte-identical; NOTHING consumes it in v1 either way.
-        self.session_facts: Optional[session_facts.SessionFacts] = None
+        self.session_facts: session_facts.SessionFacts | None = None
         # Auto-Approve reviewer (spec Part 8). Set post-construction; None ⇒ Mode.AUTO_APPROVE
         # behaves exactly like INTERACTIVE. Consulted only on decisions the gate marked
         # needs_user, only in AUTO_APPROVE mode, only when the session is attended (an
@@ -241,7 +227,7 @@ class TurnEngine:
         # cumulative: an allow/unsure verdict or an ask_user answer resets the streak —
         # the owner-hit 2026-08-24 was a 2-denial cumulative trip silently downgrading a
         # long agentic turn to hand-approval for everything after one over-strict pair.
-        self.reviewer: Optional[Any] = None
+        self.reviewer: Any | None = None
         self.reviewer_enabled = True  # standalone injected reviewers; manager supplies live flag
         self.reviewer_settings_epoch = 0
         self.reviewer_settings_key = None
@@ -283,15 +269,13 @@ class TurnEngine:
         # can say where queries actually go (§1.9). Set post-construction by the surface
         # (the engine itself knows nothing about providers); None ⇒ no extras. Called at
         # card time, not session start, so a mid-session Settings change shows through.
-        self.approval_extras: Optional[
-            Callable[[str, dict[str, Any]], dict[str, Any]]
-        ] = None
+        self.approval_extras: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None
         # Harness-resolved original action for a lead's permission proxy. Never
         # derived from the lead's note or another agent's conversation.
-        self.delegated_approval: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None
-        self.reviewer_context: Optional[Callable[[], dict[str, Any]]] = None
-        self.reviewer_owner_history: Optional[Callable[[], tuple[str, list[dict[str, Any]]]]] = None
-        self.reviewer_denial_message: Optional[str] = None
+        self.delegated_approval: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+        self.reviewer_context: Callable[[], dict[str, Any]] | None = None
+        self.reviewer_owner_history: Callable[[], tuple[str, list[dict[str, Any]]]] | None = None
+        self.reviewer_denial_message: str | None = None
         self._authorized_delegates: dict[str, dict] = {}
         # What the agent itself created this session (OPE-114 §1). The reviewer never sees
         # file contents, so `python scripts/setup.py` is unjudgeable from its text — but the
@@ -309,7 +293,7 @@ class TurnEngine:
         )
         # Completed tool calls so far, so a fact can say how many steps back the write was.
         self._step = 0
-        self._last_context_tokens: Optional[int] = None
+        self._last_context_tokens: int | None = None
         self.audit_context: dict[str, Any] = {}
         if instructions and not (
             self.messages and self.messages[0].get("role") == "system"
@@ -323,7 +307,7 @@ class TurnEngine:
         self._continuations = 0
         self._warned_context_fallback = False
         # Each pending steering message: (text, optional MessageSource sidecar dict).
-        self._steering: list[tuple[str, Optional[dict[str, Any]], Optional[dict[str, Any]]]] = []
+        self._steering: list[tuple[str, dict[str, Any] | None, dict[str, Any] | None]] = []
         # tool_call.id → the standing rule that auto-allowed it ("tool → target"), so the
         # TOOL_FINISHED event can carry the note to the tool card (§25).
         self._standing_notes: dict[str, str] = {}
@@ -374,8 +358,8 @@ class TurnEngine:
         return message
 
     def queue_steering(
-        self, text: str, source: Optional[dict[str, Any]] = None,
-        activity: Optional[dict[str, Any]] = None,
+        self, text: str, source: dict[str, Any] | None = None,
+        activity: dict[str, Any] | None = None,
     ) -> None:
         self._steering.append((text, source, activity))
 
@@ -384,9 +368,9 @@ class TurnEngine:
         self,
         user_input: str | list,
         *,
-        source: Optional[dict[str, Any]] = None,
-        display: Optional[str] = None,
-        activity: Optional[dict[str, Any]] = None,
+        source: dict[str, Any] | None = None,
+        display: str | None = None,
+        activity: dict[str, Any] | None = None,
     ) -> AsyncIterator[Event]:
         # `user_input` is a string, or OpenAI content-parts (text + image_url) for attachments.
         # `source` (a MessageSource dict) is a display-only sidecar for connector messages: it
@@ -449,7 +433,7 @@ class TurnEngine:
             # generator teardown (disconnect) all land here.
             self.permissions.clear_run_allowances()
 
-    def switch_model(self, model: str) -> Optional[str]:
+    def switch_model(self, model: str) -> str | None:
         """Rebind the session's model mid-conversation (roadmap item 3). History is
         canonical OpenAI shape and every provider converts per call, so the switch is just
         the field write — plus a persisted notice marking WHERE it happened, with a
@@ -503,7 +487,7 @@ class TurnEngine:
             return message.get("kind") == "error"
         return False
 
-    def _append_notice(self, kind: str, text: Optional[str] = None, **fields: Any) -> None:
+    def _append_notice(self, kind: str, text: str | None = None, **fields: Any) -> None:
         """Persist a turn-ending marker (error/interrupted) as a display-only `notice`
         message: it survives reload like the transcript does, but `_outbound_messages`
         drops the role so no provider ever sees it. Extra `fields` (e.g. the failing
@@ -662,7 +646,7 @@ class TurnEngine:
                 self._append_notice("compacted", notice, compaction=record)
                 yield Event(EventType.COMPACTED, {"text": notice, "compaction": record})
 
-            turn: Optional[AssistantTurn] = None
+            turn: AssistantTurn | None = None
             streamed: list[str] = []
             streamed_reasoning: list[str] = []
 
@@ -933,7 +917,7 @@ class TurnEngine:
             cap_tokens=int(cfg["cap_tokens"]),
         )
 
-    def _compaction_record(self) -> Optional[dict[str, Any]]:
+    def _compaction_record(self) -> dict[str, Any] | None:
         """The compaction that just happened, as persisted on the `compacted` notice and
         carried on the COMPACTED event (OPE-170 problem 2): summary text, working state,
         the boundary into the canonical transcript, the summarizer model, and whether it
@@ -943,7 +927,7 @@ class TurnEngine:
         state = self.compaction_state
         return state.as_dict() if state is not None else None
 
-    async def _compact_now(self, *, force: bool = False) -> Optional[str]:
+    async def _compact_now(self, *, force: bool = False) -> str | None:
         """Run the compaction policy. Callers gate on `_compaction_due()` (or `force`,
         the overflow path). Returns the user-facing notice text when the outbound view
         changed, else None. Failure policy per spec: retry once (both modes); attended →
@@ -963,7 +947,7 @@ class TurnEngine:
         )
         model = str(cfg.get("model") or "") or self.model
 
-        def _build() -> Optional[_compaction.CompactionState]:
+        def _build() -> _compaction.CompactionState | None:
             return _compaction.build_state(
                 self.messages,
                 provider=self.provider,
@@ -974,7 +958,7 @@ class TurnEngine:
                 user_budget_tokens=user_budget,
             )
 
-        state: Optional[_compaction.CompactionState] = None
+        state: _compaction.CompactionState | None = None
         failed = False
         for _attempt in range(2):  # first try + the unconditional single retry
             try:
@@ -1336,7 +1320,7 @@ class TurnEngine:
         except Exception:
             return "", [], {"context_unavailable": True}
 
-    def _downloaded_target(self, tool_call: ToolCall) -> Optional[Any]:
+    def _downloaded_target(self, tool_call: ToolCall) -> Any | None:
         """A file this call would run that the agent DOWNLOADED this session, or None.
         Fetch-then-execute has no quiet legitimate form, so it reaches a person over both
         the reviewer and any command allowlist (OPE-114 §1)."""
@@ -2031,7 +2015,7 @@ class TurnEngine:
         # the model could probe around). Lift it onto the message as a sidecar
         # (like `source`), stripped from every provider feed in
         # `_outbound_messages` but persisted for the GUI's tool card.
-        display: Optional[dict[str, Any]] = None
+        display: dict[str, Any] | None = None
         if isinstance(result, dict) and "_display" in result:
             display = result.get("_display") or None
             result = {k: v for k, v in result.items() if k != "_display"}
@@ -2886,7 +2870,7 @@ class TurnEngine:
         return out
 
 
-def _effort_record(turn: AssistantTurn, setting: Optional[str]) -> Optional[dict[str, Any]]:
+def _effort_record(turn: AssistantTurn, setting: str | None) -> dict[str, Any] | None:
     """What the run record says about reasoning effort for this reply (OPE-176): the
     provider's own mapping when it reported one; otherwise, when a level was configured,
     an explicit "requested but not reported" so the setting is never silently lost."""
@@ -2902,7 +2886,7 @@ def _effort_record(turn: AssistantTurn, setting: Optional[str]) -> Optional[dict
 
 
 def _assistant_message(
-    turn: AssistantTurn, model: Optional[str] = None, effort_setting: Optional[str] = None
+    turn: AssistantTurn, model: str | None = None, effort_setting: str | None = None
 ) -> dict[str, Any]:
     message: dict[str, Any] = {
         "role": "assistant",

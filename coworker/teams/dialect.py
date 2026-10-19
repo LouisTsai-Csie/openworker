@@ -28,7 +28,7 @@ headless case where this process is the only writer.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 from coworker.teams.journal import JournalStore
 from coworker.teams.model import Actor, BoardError, Role
@@ -44,8 +44,8 @@ class BoardDialect(Protocol):
         self,
         space: str,
         *,
-        state: Optional[str] = None,
-        assignee: Optional[str] = None,
+        state: str | None = None,
+        assignee: str | None = None,
     ) -> list[dict[str, Any]]: ...
     def get_item(self, space: str, item_id: int) -> dict[str, Any]: ...
     def comment_page(self, space: str, item_id: int, *, after_seq: int = 0, limit: int = 20) -> dict: ...
@@ -57,8 +57,8 @@ class BoardDialect(Protocol):
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
-        case: Optional[str] = None,
+        parent: int | None = None,
+        case: str | None = None,
     ) -> dict[str, Any]: ...
     def transition(
         self,
@@ -67,7 +67,7 @@ class BoardDialect(Protocol):
         to: str,
         *,
         comment: str = "",
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
     ) -> dict[str, Any]: ...
     def comment(
         self,
@@ -75,7 +75,7 @@ class BoardDialect(Protocol):
         item_id: int,
         body: str,
         *,
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
         needs_attention: bool = False,
     ) -> dict[str, Any]: ...
     def assign(self, space: str, item_id: int, assignee: str) -> dict[str, Any]: ...
@@ -104,19 +104,19 @@ class BoardDialect(Protocol):
         body: str,
         *,
         kind: str = "note",
-        space: Optional[str] = None,
-        item: Optional[int] = None,
-        entities: Optional[list[str]] = None,
-        refs: Optional[list[str]] = None,
+        space: str | None = None,
+        item: int | None = None,
+        entities: list[str] | None = None,
+        refs: list[str] | None = None,
     ) -> dict[str, Any]: ...
     def journal_read(
         self,
         case: str,
         *,
-        item: Optional[int] = None,
-        author: Optional[str] = None,
-        kind: Optional[str] = None,
-        entity: Optional[str] = None,
+        item: int | None = None,
+        author: str | None = None,
+        kind: str | None = None,
+        entity: str | None = None,
         include_raw: bool = False,
         limit: int = 100,
     ) -> list[dict[str, Any]]: ...
@@ -129,7 +129,7 @@ class LocalDialect:
     def __init__(
         self,
         store: TeamStore,
-        journal: Optional[JournalStore],
+        journal: JournalStore | None,
         actor: Actor,
         *,
         attachments: Any = None,
@@ -149,8 +149,8 @@ class LocalDialect:
         self,
         space: str,
         *,
-        state: Optional[str] = None,
-        assignee: Optional[str] = None,
+        state: str | None = None,
+        assignee: str | None = None,
     ) -> list[dict[str, Any]]:
         return self.store.list_items(space, self.actor, state=state, assignee=assignee)
 
@@ -170,8 +170,8 @@ class LocalDialect:
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
-        case: Optional[str] = None,
+        parent: int | None = None,
+        case: str | None = None,
     ) -> dict[str, Any]:
         return self.store.create_item(
             space,
@@ -190,7 +190,7 @@ class LocalDialect:
         to: str,
         *,
         comment: str = "",
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
     ) -> dict[str, Any]:
         return self.store.transition(
             space, self.actor, item_id, to, comment=comment, refs=refs
@@ -202,7 +202,7 @@ class LocalDialect:
         item_id: int,
         body: str,
         *,
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
         needs_attention: bool = False,
     ) -> dict[str, Any]:
         return self.store.comment(space, self.actor, item_id, body, refs=refs, needs_attention=needs_attention)
@@ -267,10 +267,10 @@ class LocalDialect:
         body: str,
         *,
         kind: str = "note",
-        space: Optional[str] = None,
-        item: Optional[int] = None,
-        entities: Optional[list[str]] = None,
-        refs: Optional[list[str]] = None,
+        space: str | None = None,
+        item: int | None = None,
+        entities: list[str] | None = None,
+        refs: list[str] | None = None,
     ) -> dict[str, Any]:
         self._need_journal()
         return self.journal.append(
@@ -288,10 +288,10 @@ class LocalDialect:
         self,
         case: str,
         *,
-        item: Optional[int] = None,
-        author: Optional[str] = None,
-        kind: Optional[str] = None,
-        entity: Optional[str] = None,
+        item: int | None = None,
+        author: str | None = None,
+        kind: str | None = None,
+        entity: str | None = None,
         include_raw: bool = False,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
@@ -335,7 +335,7 @@ class RemoteDialect:
 
     # -- plumbing --------------------------------------------------------------
 
-    def _get(self, path: str, params: Optional[dict] = None) -> Any:
+    def _get(self, path: str, params: dict | None = None) -> Any:
         response = self._client.get(
             path, params={k: v for k, v in (params or {}).items() if v is not None}
         )
@@ -374,8 +374,8 @@ class RemoteDialect:
         self,
         space: str,
         *,
-        state: Optional[str] = None,
-        assignee: Optional[str] = None,
+        state: str | None = None,
+        assignee: str | None = None,
     ) -> list[dict[str, Any]]:
         return self._get(
             "/v1/board/items",
@@ -399,8 +399,8 @@ class RemoteDialect:
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
-        case: Optional[str] = None,
+        parent: int | None = None,
+        case: str | None = None,
     ) -> dict[str, Any]:
         return self._post(
             "/v1/board/items",
@@ -421,7 +421,7 @@ class RemoteDialect:
         to: str,
         *,
         comment: str = "",
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
     ) -> dict[str, Any]:
         return self._post(
             "/v1/board/items/transition",
@@ -440,7 +440,7 @@ class RemoteDialect:
         item_id: int,
         body: str,
         *,
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
         needs_attention: bool = False,
     ) -> dict[str, Any]:
         return self._post(
@@ -517,10 +517,10 @@ class RemoteDialect:
         body: str,
         *,
         kind: str = "note",
-        space: Optional[str] = None,
-        item: Optional[int] = None,
-        entities: Optional[list[str]] = None,
-        refs: Optional[list[str]] = None,
+        space: str | None = None,
+        item: int | None = None,
+        entities: list[str] | None = None,
+        refs: list[str] | None = None,
     ) -> dict[str, Any]:
         return self._post(
             "/v1/board/journal",
@@ -539,10 +539,10 @@ class RemoteDialect:
         self,
         case: str,
         *,
-        item: Optional[int] = None,
-        author: Optional[str] = None,
-        kind: Optional[str] = None,
-        entity: Optional[str] = None,
+        item: int | None = None,
+        author: str | None = None,
+        kind: str | None = None,
+        entity: str | None = None,
         include_raw: bool = False,
         limit: int = 100,
     ) -> list[dict[str, Any]]:

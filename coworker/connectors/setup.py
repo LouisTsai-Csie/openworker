@@ -7,7 +7,7 @@ public bot identity captured at connect time.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from coworker.secrets import SecretStore
 from coworker.connectors.catalog_copy import about_for, access_for
@@ -450,7 +450,7 @@ def store_managed_grant_bundle(
     secrets: SecretStore,
     connector: str,
     form: dict[str, Any],
-    grant: Optional[dict[str, Any]] = None,
+    grant: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Turn a broker OAuth callback (`form` = the callback's fields) into this
     connector's profile records in `secrets`, stamped with the delegation

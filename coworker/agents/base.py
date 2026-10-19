@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.tools.todo import TodoList
@@ -17,17 +17,17 @@ from coworker.tools.todo import TodoList
 
 @dataclass
 class AgentContext:
-    workspace: Optional[Path] = None
-    executor: Optional[Any] = None
-    todo: Optional[TodoList] = None
+    workspace: Path | None = None
+    executor: Any | None = None
+    todo: TodoList | None = None
     # Shared, mutable list of RootDir the session may touch (primary scratch + added folders).
     # When None, tools fall back to the single `workspace` root. Held by reference so runtime
     # add/remove of folders is seen by the file tools built from it.
-    roots: Optional[list] = None
+    roots: list | None = None
     # The session's sandbox workspace (coworker.sandbox.workspace). In `direct` mode, or when
     # None, the workspace tools run in this process as they always have; with a tool runner
     # behind it, their execution goes there.
-    sandbox: Optional[Any] = None
+    sandbox: Any | None = None
 
 
 @dataclass
@@ -35,7 +35,7 @@ class Agent:
     name: str
     title: str
     system_prompt: str
-    tool_factory: Optional[Callable[[AgentContext], list]] = None
+    tool_factory: Callable[[AgentContext], list] | None = None
     # Traits that replace the old per-agent-name branching in build_engine / manager.
     # requires_folder: the session cannot start without a user-picked primary folder
     # (composer + engine gate; everything else starts on a scratch dir). subagents:
@@ -54,7 +54,7 @@ class Agent:
     connectors: bool | tuple[str, ...] = False
     # Team identity: "lead" | "worker" | None (solo-only). Gates the board/journal
     # toolsets and staffing eligibility — solo personas are never team-staffable.
-    team: Optional[str] = None
+    team: str | None = None
     # Designer-authored context for Auto-approve, not an access grant.
     approval_guidance: str = ""
 

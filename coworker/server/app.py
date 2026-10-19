@@ -19,7 +19,7 @@ import uuid
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -1196,7 +1196,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     def board_journal_read(
         request: Request,
         case: str,
-        item: Optional[int] = None,
+        item: int | None = None,
         author: str = "",
         kind: str = "",
         entity: str = "",
@@ -1456,7 +1456,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         return connector_handoff_info(manager.secrets, name)
 
     @app.post("/v1/connectors/{name}/delegate")
-    async def connector_delegate(name: str, body: Optional[dict] = None) -> dict[str, Any]:
+    async def connector_delegate(name: str, body: dict | None = None) -> dict[str, Any]:
         """Handoff step for managed grants: mark each of this connector's
         managed connections machine-held at the broker, and stamp the
         broker's opaque user_id into the profile — it travels with the grant
@@ -1528,7 +1528,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     # -- broker views for the desktop GUI (UX-049 4c): the dashboard calls the
     # broker directly with the user's token; the desktop goes through here so
     # the token never leaves the sidecar. Explicit paths, no generic proxy.
-    async def _broker(method: str, path: str, body: Optional[dict] = None) -> Any:
+    async def _broker(method: str, path: str, body: dict | None = None) -> Any:
         from coworker import cloud
         from coworker.config import load_config
 
@@ -1914,7 +1914,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/{name}/connect-managed")
     async def connector_connect_managed(
-        name: str, body: Optional[dict] = None
+        name: str, body: dict | None = None
     ) -> dict[str, Any]:
         """One-click managed OAuth (requires cloud sign-in). Opens the provider
         consent page in the system browser; the broker's callback page will
@@ -1992,7 +1992,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 {"X-OpenWorker-Token": api_token} if api_token else {}
             ), machine_id
 
-    async def _find_machine(client, headers: dict, mid: str) -> Optional[dict]:
+    async def _find_machine(client, headers: dict, mid: str) -> dict | None:
         r = await client.get("/v1/machines", headers=headers)
         rows = r.json().get("machines", []) if r.status_code == 200 else []
         return next((m for m in rows if m.get("id") == mid), None)
@@ -2948,7 +2948,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         team_approver = manager.inbox_team_approver(session_id, agent, visibility=_visibility)
 
         items_approver = manager.inbox_items_approver(session_id, agent, visibility=_visibility)
-        async def _apply_model(model: Optional[str]) -> None:
+        async def _apply_model(model: str | None) -> None:
             # Mid-session rebind is allowed (roadmap item 3, supersedes the 2026-07-04
             # lock): history is canonical and providers convert per call. A real switch
             # appends a persisted notice; broadcast it so live views render the marker
@@ -3510,7 +3510,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     _machines_base = _load_cfg().cloud_machines_base
     if _machines_base:
 
-        async def _cloud_machines_token() -> tuple[str, Optional[str]]:
+        async def _cloud_machines_token() -> tuple[str, str | None]:
             from coworker import cloud as _cloud
 
             profile = manager.secrets.get(_cloud.CLOUD_AUTH_PROFILE) or {}

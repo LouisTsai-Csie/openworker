@@ -23,7 +23,7 @@ import json
 import os
 import re
 import time
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Iterator
 
 import httpx
@@ -43,7 +43,7 @@ _MODELFILE_NUM_CTX = re.compile(r"^\s*num_ctx\s+(\d+)\s*$", re.MULTILINE)
 _resolved: dict[str, int] = {}
 
 
-def num_ctx_cap() -> Optional[int]:
+def num_ctx_cap() -> int | None:
     """`OPENWORKER_OLLAMA_NUM_CTX` as an upper bound, or None when unset or invalid."""
     raw = os.environ.get(_NUM_CTX_ENV, "").strip()
     if not raw:
@@ -60,7 +60,7 @@ def apply_cap(value: int) -> int:
     return min(value, cap) if cap else value
 
 
-def pinned_num_ctx(show: dict[str, Any]) -> Optional[int]:
+def pinned_num_ctx(show: dict[str, Any]) -> int | None:
     """A `num_ctx` the Modelfile pins: the user chose it deliberately, so it wins."""
     params = show.get("parameters")
     if isinstance(params, str):
@@ -70,7 +70,7 @@ def pinned_num_ctx(show: dict[str, Any]) -> Optional[int]:
     return None
 
 
-def context_length_from_show(show: dict[str, Any]) -> Optional[int]:
+def context_length_from_show(show: dict[str, Any]) -> int | None:
     """The window a model can run at, from an `/api/show` response: a pinned `num_ctx`,
     else the trained length under `model_info["<architecture>.context_length"]`."""
     pinned = pinned_num_ctx(show)
@@ -90,7 +90,7 @@ def context_length_from_show(show: dict[str, Any]) -> Optional[int]:
 
 
 def resolve_num_ctx(
-    show: Optional[dict[str, Any]], memory_bytes: Optional[int] = None
+    show: dict[str, Any] | None, memory_bytes: int | None = None
 ) -> int:
     """The window to send: the Modelfile's pin if any, else the machine's recommended
     size held under the trained window (or the default when unknown). The env override
@@ -105,7 +105,7 @@ def resolve_num_ctx(
     return apply_cap(fitted or trained or DEFAULT_OLLAMA_NUM_CTX)
 
 
-def context_window_for(model: str) -> Optional[int]:
+def context_window_for(model: str) -> int | None:
     """Compaction window for an `ollama:` model. None for every other provider.
 
     Before the first chat call resolves the model's real window this is the default
@@ -142,9 +142,9 @@ class OllamaContextTransport(httpx.BaseTransport):
 
     def __init__(
         self,
-        num_ctx: Optional[int] = None,
-        inner: Optional[httpx.BaseTransport] = None,
-        memory_bytes: Optional[int] = None,
+        num_ctx: int | None = None,
+        inner: httpx.BaseTransport | None = None,
+        memory_bytes: int | None = None,
     ) -> None:
         self.num_ctx = num_ctx
         self.memory_bytes = memory_bytes  # tests: the machine's memory, stood in for
@@ -241,7 +241,7 @@ class OllamaContextTransport(httpx.BaseTransport):
             _resolved[model] = value
         return value
 
-    def _show(self, model: str, original: httpx.Request) -> Optional[dict[str, Any]]:
+    def _show(self, model: str, original: httpx.Request) -> dict[str, Any] | None:
         """`/api/show` for `model`, or None when the server cannot answer. A failed
         lookup is not cached: the chat call that follows will surface the real error."""
         request = httpx.Request(
@@ -485,7 +485,7 @@ def to_openai_stream_events(
 
 
 def _chunk(
-    native: dict[str, Any], delta: dict[str, Any], finish_reason: Optional[str] = None
+    native: dict[str, Any], delta: dict[str, Any], finish_reason: str | None = None
 ) -> dict[str, Any]:
     return {
         "id": "chatcmpl-ollama",

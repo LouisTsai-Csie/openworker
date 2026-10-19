@@ -26,7 +26,7 @@ import os
 import sys
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.engine import ApprovalOutcome, PermissionRequest
@@ -63,7 +63,7 @@ def _site(entry: str) -> str:
     return entry[: -len(":443")] if entry.endswith(":443") else entry
 
 
-def session_outcome(request: PermissionRequest) -> Optional[ApprovalOutcome]:
+def session_outcome(request: PermissionRequest) -> ApprovalOutcome | None:
     """The grant "[s] yes, for this session" stands for on this card: the narrowest one the
     app's card would offer (this command, this site, this tool). None when the card has no
     session choice, and then the prompt offers yes and no only."""
@@ -92,10 +92,10 @@ class Terminal:
 
     def __init__(
         self,
-        read_line: Callable[[], Optional[str]],
+        read_line: Callable[[], str | None],
         write: Callable[[str], None],
         *,
-        cwd: Optional[Path] = None,
+        cwd: Path | None = None,
     ) -> None:
         self._read_line = read_line
         self._write = write
@@ -106,11 +106,11 @@ class Terminal:
         self.card: dict[str, Any] = {}
         # Adds a folder to the running session and returns its resolved path; raises with
         # the reason when it cannot. Set by the run once the engine exists.
-        self.grant_folder: Optional[Callable[[Path, bool], Path]] = None
+        self.grant_folder: Callable[[Path, bool], Path] | None = None
         self._lock = asyncio.Lock()
 
     @classmethod
-    def attached(cls, cwd: Optional[Path] = None) -> Optional[Terminal]:
+    def attached(cls, cwd: Path | None = None) -> Terminal | None:
         """A terminal the person can be asked on, or None (a pipe, a CI job, a harness)."""
         try:
             if not (sys.stdin.isatty() and sys.stderr.isatty()):
@@ -118,7 +118,7 @@ class Terminal:
         except Exception:  # a closed stream is not a terminal
             return None
 
-        def read_line() -> Optional[str]:
+        def read_line() -> str | None:
             line = sys.stdin.readline()
             return line.rstrip("\r\n") if line else None
 
@@ -130,14 +130,14 @@ class Terminal:
 
     # -- plumbing -------------------------------------------------------------------------
 
-    async def _prompt(self) -> Optional[str]:
+    async def _prompt(self) -> str | None:
         """One typed line. Read on a daemon thread, not the loop's pool: a run that ends
         while the prompt waits (Ctrl-C, the time limit) must not wait for Enter to exit."""
         self._write("> ")
         loop = asyncio.get_running_loop()
-        typed: asyncio.Future[Optional[str]] = loop.create_future()
+        typed: asyncio.Future[str | None] = loop.create_future()
 
-        def deliver(line: Optional[str]) -> None:
+        def deliver(line: str | None) -> None:
             if not typed.done():
                 typed.set_result(line)
 
@@ -260,7 +260,7 @@ class Terminal:
                     continue
             return text
 
-    async def ask(self, args: dict[str, Any], _call_id: Optional[str] = None) -> dict[str, Any]:
+    async def ask(self, args: dict[str, Any], _call_id: str | None = None) -> dict[str, Any]:
         """The engine's question hook: `{"answer": …}` for one question, `{"answers": {…}}`
         for a group, keyed by header or question as the other surfaces key them."""
         async with self._lock:
@@ -279,7 +279,7 @@ class Terminal:
 
     # -- folders and tool installs --------------------------------------------------------
 
-    async def directory(self, args: dict[str, Any], _call_id: Optional[str] = None) -> dict[str, Any]:
+    async def directory(self, args: dict[str, Any], _call_id: str | None = None) -> dict[str, Any]:
         """The engine's folder-request hook: the coworker asks for another folder, to read
         or to read and write. The person says yes, yes but read only, no, or types a
         different folder. `grant_folder` (set by the run) adds it to the session."""
@@ -330,7 +330,7 @@ class Terminal:
                     continue
                 return {"granted": True, "path": str(granted), "writable": grant_writable}
 
-    async def tool(self, args: dict[str, Any], _call_id: Optional[str] = None) -> dict[str, Any]:
+    async def tool(self, args: dict[str, Any], _call_id: str | None = None) -> dict[str, Any]:
         """The engine's tool-install hook: only reached for a tool in the pinned catalog,
         so yes installs the verified build."""
         from coworker import toolchain

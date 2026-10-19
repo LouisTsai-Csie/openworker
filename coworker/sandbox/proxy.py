@@ -11,7 +11,7 @@ from __future__ import annotations
 import builtins
 import functools
 import inspect
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.sandbox.runner import protocol as P
@@ -31,7 +31,7 @@ def _reraise(exc: P.RunnerError) -> None:
     raise kind(message) from None
 
 
-def proxy_tool(tool: Callable[..., Any], workspace: Any, *, root: str, roots: Optional[list] = None) -> Callable[..., Any]:
+def proxy_tool(tool: Callable[..., Any], workspace: Any, *, root: str, roots: list | None = None) -> Callable[..., Any]:
     name = getattr(tool, "__name__", "")
     signature = inspect.signature(tool)
 
@@ -59,7 +59,7 @@ def proxy_tool(tool: Callable[..., Any], workspace: Any, *, root: str, roots: Op
     return call
 
 
-def proxy_tools(tools: list, workspace: Any, *, root: str, roots: Optional[list] = None) -> list:
+def proxy_tools(tools: list, workspace: Any, *, root: str, roots: list | None = None) -> list:
     """Proxies for the tools the runner can execute; any other tool is returned as it is."""
     return [
         proxy_tool(t, workspace, root=root, roots=roots) if getattr(t, "__name__", "") in TOOLS else t

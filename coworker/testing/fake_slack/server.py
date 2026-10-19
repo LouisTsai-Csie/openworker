@@ -23,7 +23,7 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 import uvicorn
 from starlette.applications import Starlette
@@ -77,8 +77,8 @@ class FakeSlack:
         self._ts_seq = 0
 
         self.app = self._build_app()
-        self._server: Optional[uvicorn.Server] = None
-        self._serve_task: Optional[asyncio.Task] = None
+        self._server: uvicorn.Server | None = None
+        self._serve_task: asyncio.Task | None = None
 
     # -- identity / urls -------------------------------------------------------
     @property
@@ -146,8 +146,8 @@ class FakeSlack:
         self,
         id: str,
         name: str,
-        real_name: Optional[str] = None,
-        display_name: Optional[str] = None,
+        real_name: str | None = None,
+        display_name: str | None = None,
     ) -> None:
         real = real_name or name
         self.users[id] = {
@@ -201,8 +201,8 @@ class FakeSlack:
         channel: str,
         user: str,
         text: str,
-        thread_ts: Optional[str] = None,
-        channel_type: Optional[str] = None,
+        thread_ts: str | None = None,
+        channel_type: str | None = None,
     ) -> str:
         """Push a user message over Socket Mode as an ``events_api`` envelope. Returns its ts."""
         if channel_type is None:

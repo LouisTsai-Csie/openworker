@@ -9,7 +9,7 @@ the vendors' pages before relying on them and update the dates in the file.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -31,8 +31,8 @@ def load_prices() -> dict[str, dict[str, float]]:
 
 
 def estimate_cost(
-    model: str, usage: dict[str, Any], prices: Optional[dict] = None
-) -> Optional[float]:
+    model: str, usage: dict[str, Any], prices: dict | None = None
+) -> float | None:
     """USD for one usage record {input, output, cache_read, cache_write} (token counts).
     Returns None when the model has no row."""
     prices = load_prices() if prices is None else prices

@@ -24,7 +24,6 @@ deferred to bound how much needs verifying at once.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from coworker.providers.base import ModelCapabilities
 
@@ -45,7 +44,7 @@ class ModelEntry:
     caps: ModelCapabilities = _AGENTIC
     # Max context length in tokens (prompt side), for the GUI's context-fill meter.
     # None = not verified against the vendor spec yet; the meter hides.
-    context_window: Optional[int] = None
+    context_window: int | None = None
 
 
 MATRIX: dict[str, ModelEntry] = {

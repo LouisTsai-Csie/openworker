@@ -21,7 +21,6 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
-from typing import Optional
 
 ATTENDED = "attended"
 INBOX = "inbox"
@@ -61,7 +60,7 @@ def normalize_attendance(value: object) -> str:
 
 
 class UnattendedRegistry:
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else None
         self._lock = threading.Lock()
         self._values: dict[str, str] = {}

@@ -13,7 +13,7 @@ import shlex
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
 
@@ -325,8 +325,8 @@ def standing_rule_candidate(
     tool_name: str,
     arguments: dict[str, Any],
     metadata: Any = None,
-    overrides: Optional[RiskOverrides] = None,
-) -> Optional[str]:
+    overrides: RiskOverrides | None = None,
+) -> str | None:
     """The target value iff this call is eligible for a task-scoped standing rule
     (UX-DECISIONS §25): external-risk only (never exec/write-local — shell asks forever),
     the tool must declare a target argument, and the call must actually name a target.
@@ -365,16 +365,16 @@ class PermissionEngine:
     # "*.example.com"), the same list its commands are held to. These tools run in the
     # OpenWorker process, outside the sandbox; before this the list did not apply to them
     # and Bypass reached any site (reported on 0.3.0, 2026-10-02).
-    sandbox_sites: Optional[list[str]] = None
+    sandbox_sites: list[str] | None = None
     # Where `web_search` goes: the configured provider's host (it has no url argument).
-    search_host: Optional[Callable[[], str]] = None
+    search_host: Callable[[], str] | None = None
     # Persists a site the user chose to always allow (adds it to the machine's list) and
     # returns that list, so this session's copy carries the same entries.
-    grant_site: Optional[Callable[[str], Optional[list[str]]]] = None
+    grant_site: Callable[[str], list[str] | None] | None = None
     # Opens a site on the session's running sandbox, so commands reach it too (OPE-219).
-    open_site: Optional[Callable[[str], None]] = None
+    open_site: Callable[[str], None] | None = None
     # Takes a site back from the session's running sandbox.
-    close_site: Optional[Callable[[str], None]] = None
+    close_site: Callable[[str], None] | None = None
     # "host:port" entries a person allowed for this session only (either card, or the
     # session's own list in the app). The machine's list is `sandbox_sites`.
     session_sites: list[str] = field(default_factory=list)
@@ -394,18 +394,18 @@ class PermissionEngine:
     # grant across restarts (mention-spawned sessions also re-derive from the thread map).
     thread_grants: set[str] = field(default_factory=set)
     # User-local risk override resolver (Phase 2). None → use the base classification.
-    risk_overrides: Optional[RiskOverrides] = None
+    risk_overrides: RiskOverrides | None = None
     # OPE-136 durable trust: tool name → has the user minted a standing "don't ask" rule?
     # (RiskOverrideStore.trusted). Waives only the card, only outside AUTO_APPROVE —
     # never the class, the mode gates, or the audit trail. None → no trust rules.
-    trust_overrides: Optional[Callable[[str], bool]] = None
+    trust_overrides: Callable[[str], bool] | None = None
     # The write half (RiskOverrideStore.set_trust) — how ApprovalOutcome.ALWAYS_TRUST
     # lands on disk. Kept as an injected callable so this module never imports the store.
-    grant_trust: Optional[Callable[[str], None]] = None
+    grant_trust: Callable[[str], None] | None = None
     # Shared, possibly-mutable list of roots (RootDir-like / dicts). When omitted, the single
     # `workspace_root` is the sole writable root (back-compat). Kept by reference and re-read on
     # every check, so runtime add/remove of folders takes effect without rebuilding the engine.
-    roots: Optional[list] = None
+    roots: list | None = None
 
     def __post_init__(self) -> None:
         self.workspace_root = Path(self.workspace_root).expanduser().resolve()
@@ -901,7 +901,7 @@ class PermissionEngine:
 
     def _touches_protected(
         self, tool_name: str, arguments: dict[str, Any], is_shell: bool
-    ) -> Optional[str]:
+    ) -> str | None:
         """The protected settings path this call would modify, or None.
 
         For writes we resolve the real target. For shell we can only inspect the command

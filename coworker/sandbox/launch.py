@@ -16,7 +16,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional
 from collections.abc import Sequence
 
 from coworker.sandbox.runner import winpipe
@@ -46,7 +45,7 @@ def read_paths() -> list[str]:
     return sorted(p for p in paths if p)
 
 
-def runner_dir(base: Optional[str] = None) -> tuple[str, str]:
+def runner_dir(base: str | None = None) -> tuple[str, str]:
     """A private folder for one runner and the address its daemon listens on: a socket
     file inside the folder, or on Windows a named pipe carrying the folder's name.
     A Unix socket path is limited to about 100 bytes and temp folders on macOS are long,
@@ -79,7 +78,7 @@ def spawn_kwargs() -> dict:
     return {"start_new_session": True}
 
 
-def wait_for_runner(address: str, daemon: subprocess.Popen, *, seconds: float = 15, said: Optional[str] = None) -> None:
+def wait_for_runner(address: str, daemon: subprocess.Popen, *, seconds: float = 15, said: str | None = None) -> None:
     """Block until the daemon listens at `address`; raise when it exits first or is late."""
     deadline = time.monotonic() + seconds
     while not _listening(address):

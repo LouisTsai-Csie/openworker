@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Sequence
 
 from coworker.sandbox import toolchains
@@ -87,7 +87,7 @@ def _literals(paths: Sequence[str]) -> str:
     return " ".join(f"(literal {_quote(p)})" for p in paths)
 
 
-def home_read_only(home: Optional[str] = None, tool_dirs: Optional[Sequence[str]] = None) -> list[str]:
+def home_read_only(home: str | None = None, tool_dirs: Sequence[str] | None = None) -> list[str]:
     """The toolchain folders (the machine's list, or the shipped one) and git settings that
     exist under this home folder."""
     base = Path(real(home or "~"))
@@ -100,10 +100,10 @@ def render(
     *,
     runtime_dir: str,
     read_only: Sequence[str] = (),
-    proxy_port: Optional[int] = None,
-    home: Optional[str] = None,
+    proxy_port: int | None = None,
+    home: str | None = None,
     open_network: bool = False,
-    tool_dirs: Optional[Sequence[str]] = None,
+    tool_dirs: Sequence[str] | None = None,
 ) -> str:
     """`roots`: [{"path": absolute path, "writable": bool}]. `runtime_dir`: this sandbox's
     own folder (socket and temporary files). `read_only`: more paths to read, e.g. the

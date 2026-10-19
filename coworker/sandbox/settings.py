@@ -6,7 +6,7 @@ machine-level and lives in the machine's config.toml, never in a repository's.
 from __future__ import annotations
 
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from coworker import config as app_config
 from coworker.sandbox import credentials, network_profiles, toolchains
@@ -58,7 +58,7 @@ def native_sandbox() -> str:
     return WINDOWS if sys.platform == "win32" else SEATBELT
 
 
-def snapshot(cfg: Optional[app_config.Config] = None) -> dict[str, Any]:
+def snapshot(cfg: app_config.Config | None = None) -> dict[str, Any]:
     cfg = cfg or app_config.load_config()
     from coworker.sandbox.selection import select
 
@@ -101,7 +101,7 @@ OPENSHELL_NEEDS_SITES = (
 )
 
 
-def _profile_for_display(configured: Optional[str]) -> str:
+def _profile_for_display(configured: str | None) -> str:
     """The machine's profile, or the default rule's when it has none."""
     try:
         return network_profiles.check((configured or "").strip().lower() or network_profiles.default_profile())
@@ -109,14 +109,14 @@ def _profile_for_display(configured: Optional[str]) -> str:
         return str(configured)
 
 
-def _presets(configured: Optional[list]) -> list[dict[str, Any]]:
+def _presets(configured: list | None) -> list[dict[str, Any]]:
     """The "A CLI's login" picker: the shipped entries not yet added, each saying whether
     its file or folder is on this machine (`kind` empty when it is not)."""
     added = {e["name"] for e in credentials.listed(configured)}
     return [row for row in _for_display([dict(e) for e in credentials.DEFAULT_ENTRIES]) if row["name"] not in added]
 
 
-def _windows_setup_info() -> Optional[dict[str, Any]]:
+def _windows_setup_info() -> dict[str, Any] | None:
     """The Windows setup's state for the page (UX-053): None off Windows."""
     if sys.platform != "win32":
         return None

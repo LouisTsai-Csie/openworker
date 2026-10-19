@@ -19,7 +19,7 @@ import shlex
 import stat
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 WRITTEN = "written"
 DOWNLOADED = "downloaded"
@@ -259,10 +259,10 @@ class SessionFiles:
 
     def match(
         self, tool_name: str, arguments: dict[str, Any], *, step: int
-    ) -> Optional[Match]:
+    ) -> Match | None:
         """The most recently created path this call names, or None. Newest wins: it is the
         one whose contents the agent most recently controlled."""
-        best: Optional[Match] = None
+        best: Match | None = None
         for path in referenced_paths(tool_name, arguments):
             key = resolve(path, self.root)
             if self._is_device(key):

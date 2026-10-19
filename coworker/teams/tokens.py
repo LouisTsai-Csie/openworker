@@ -19,7 +19,7 @@ import secrets
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.teams.model import Actor, Role
 
@@ -50,7 +50,7 @@ class BoardTokens:
             self._save(entries)
         return token
 
-    def resolve(self, token: str) -> Optional[Actor]:
+    def resolve(self, token: str) -> Actor | None:
         if not token:
             return None
         with self._lock:

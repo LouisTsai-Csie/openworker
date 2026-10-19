@@ -12,7 +12,7 @@ text-only path), else the parts list.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 MAX_ATTACHMENTS = 8
 MAX_IMAGE_CHARS = 12_000_000  # data-URL length cap (~8–9 MB decoded); keeps a turn sane
@@ -33,7 +33,7 @@ def _is_data_pdf(url: Any) -> bool:
 
 
 def build_user_content(
-    text: Optional[str], attachments: Optional[list[dict]] = None
+    text: str | None, attachments: list[dict] | None = None
 ) -> Any:
     """Return `str` (no attachments) or a list of OpenAI content-parts (with attachments).
 

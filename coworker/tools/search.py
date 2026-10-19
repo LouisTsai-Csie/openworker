@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import shutil  # noqa: F401  (tests patch search.shutil / search.subprocess)
 import subprocess  # noqa: F401
-from typing import Any, Optional
+from typing import Any
 
 import aisuite as ai
 
@@ -60,7 +60,7 @@ def search_tools(workspace: str) -> list:
     def grep(
         pattern: str,
         path: str = ".",
-        glob: Optional[str] = None,
+        glob: str | None = None,
         max_results: int = 100,
     ) -> dict[str, Any]:
         return _impl.grep(workspace, pattern, path, glob, max_results)

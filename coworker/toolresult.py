@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 DEFAULT_TOOL_RESULT_MAX_BYTES = 10_000
 # Bytes set aside for the marker line and JSON escaping when sizing head + tail.
@@ -49,7 +49,7 @@ def _nbytes(text: str) -> int:
     return len(text.encode("utf-8"))
 
 
-def head_tail(text: str, keep_bytes: int, *, spill_path: Optional[Path], total_bytes: int) -> str:
+def head_tail(text: str, keep_bytes: int, *, spill_path: Path | None, total_bytes: int) -> str:
     """First half of `keep_bytes`, a marker, last half. Cuts are byte-based and decoded
     with errors ignored so a multi-byte character split at the boundary is dropped, never
     corrupted."""
@@ -88,8 +88,8 @@ def _fit(cut, keep: int, overshoot) -> str:
 def bound_tool_result(
     result: Any,
     *,
-    max_bytes: Optional[int],
-    spill_dir: Optional[Path],
+    max_bytes: int | None,
+    spill_dir: Path | None,
     step: int,
     tool_name: str,
 ) -> Any:
@@ -105,7 +105,7 @@ def bound_tool_result(
 
     safe_tool = _SAFE_NAME.sub("_", tool_name or "tool")[:40] or "tool"
 
-    def spill(name: str, payload: str) -> Optional[Path]:
+    def spill(name: str, payload: str) -> Path | None:
         if spill_dir is None:
             return None
         try:

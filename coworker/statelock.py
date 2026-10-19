@@ -21,13 +21,12 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 LOCK_NAME = "engine.lock"
 
 
 class EngineBusy(RuntimeError):
-    def __init__(self, state: Path, holder_pid: Optional[int]) -> None:
+    def __init__(self, state: Path, holder_pid: int | None) -> None:
         self.state = Path(state)
         self.holder_pid = holder_pid
         who = f"pid {holder_pid}" if holder_pid else "another process"
@@ -80,7 +79,7 @@ def _try_lock(fh) -> bool:
         return False
 
 
-def holder_pid(state: Path) -> Optional[int]:
+def holder_pid(state: Path) -> int | None:
     """Pid recorded by the current holder, if any (informational only)."""
     try:
         text = (Path(state) / LOCK_NAME).read_text().strip()

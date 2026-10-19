@@ -10,7 +10,7 @@ empty (OPE-203). Both read-only, scoped to the session's folders.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Sequence
 
 _DEFAULT_MAX_LINES = 2000
@@ -25,7 +25,7 @@ _IGNORED_DIRS = (
 )
 
 
-def _home_for(target: Path, root: Path, extra_roots: Sequence[Path]) -> Optional[Path]:
+def _home_for(target: Path, root: Path, extra_roots: Sequence[Path]) -> Path | None:
     for r in (root, *extra_roots):
         try:
             target.relative_to(r)
@@ -41,7 +41,7 @@ def list_files(
     pattern: str = "*",
     recursive: bool = True,
     max_results: int = _DEFAULT_MAX_RESULTS,
-    roots: Optional[Sequence[str]] = None,
+    roots: Sequence[str] | None = None,
 ) -> Any:
     """Files and folders under `path`, folders marked with a trailing '/', sorted. Paths
     inside the workspace come back relative to it; paths inside another of the session's
@@ -87,7 +87,7 @@ def read_file(
     path: str,
     start_line: int = 1,
     max_lines: int = _DEFAULT_MAX_LINES,
-    roots: Optional[Sequence[str]] = None,
+    roots: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """`roots`: the absolute paths of the session's other folders; a path inside any of
     them resolves too."""

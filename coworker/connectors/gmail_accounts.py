@@ -17,7 +17,7 @@ audit row (rule + count, never content).
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from coworker.secrets import SecretStore
 
@@ -74,7 +74,7 @@ def default_account(secrets: SecretStore) -> str:
 
 def resolve(
     secrets: SecretStore, account: str = ""
-) -> tuple[str, str, Optional[dict[str, Any]]]:
+) -> tuple[str, str, dict[str, Any] | None]:
     """(email, profile_key, profile) for the requested — or default — mailbox.
     Profile is None when nothing matches (not connected / unknown account)."""
     email = _norm(account) or default_account(secrets)
@@ -150,8 +150,8 @@ def get_filters(secrets: SecretStore) -> dict[str, list[str]]:
 
 def set_filters(
     secrets: SecretStore,
-    senders: Optional[list[str]] = None,
-    labels: Optional[list[str]] = None,
+    senders: list[str] | None = None,
+    labels: list[str] | None = None,
 ) -> dict[str, Any]:
     """Replace either list (None = leave unchanged). Senders are `addr@x` or
     `@domain`; labels are Gmail label names (matched case-insensitively)."""

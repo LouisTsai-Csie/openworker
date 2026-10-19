@@ -31,7 +31,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable, Sequence
 
 import yaml
@@ -68,7 +68,7 @@ class OpenShellImageMissing(OpenShellUnavailable):
 IMAGE_MISSING_PREFIX = "The sandbox base image is not downloaded yet"
 
 
-def is_image_problem(problem: Optional[str]) -> bool:
+def is_image_problem(problem: str | None) -> bool:
     """Whether a preflight message is the missing-image one (the only problem that
     `setup` can fix by downloading, and that Settings shows as "needs download")."""
     return bool(problem) and str(problem).startswith(IMAGE_MISSING_PREFIX)
@@ -112,7 +112,7 @@ def preflight() -> dict[str, Any]:
     return {"version": version}
 
 
-def _host_network_problem() -> Optional[str]:
+def _host_network_problem() -> str | None:
     """On a Mac: what to do when Docker Desktop's host networking is off, else None.
     OpenShell 0.1 cannot start a sandbox without it, and says only "failed to connect"."""
     if sys.platform != "darwin":
@@ -144,7 +144,7 @@ def active_driver() -> str:
 _IMAGE_TOOLS = {"docker": "docker", "podman": "podman"}
 
 
-def image_tool() -> Optional[str]:
+def image_tool() -> str | None:
     """The `docker`/`podman` command to ask about (and pull) images, or None when the
     question cannot be answered here: the gateway is remote, its driver keeps images
     elsewhere (Kubernetes, the MicroVM driver on a Mac), or the command is not on PATH."""
@@ -164,7 +164,7 @@ def _gateway_is_remote() -> bool:
         return False
 
 
-def image_present(image: Optional[str] = None) -> Optional[bool]:
+def image_present(image: str | None = None) -> bool | None:
     """Whether the base image is on this machine: True or False when the gateway's driver
     keeps images here and can be asked (`docker`/`podman image inspect`), None when it
     cannot be told. The check is keyed on the driver, not the operating system: the same
@@ -240,7 +240,7 @@ class DenialLog:
     def __init__(self, sandbox_name: str) -> None:
         self.entries: deque[tuple[float, str]] = deque(maxlen=200)
         self._seen: set[tuple[float, str]] = set()
-        self._process: Optional[subprocess.Popen] = None
+        self._process: subprocess.Popen | None = None
         exe = shutil.which("openshell")
         if exe is None:
             return
@@ -294,13 +294,13 @@ class OpenShellProvider:
         self,
         *,
         roots: Sequence[dict[str, Any]],
-        cwd: Optional[str] = None,
+        cwd: str | None = None,
         profile: str = policy.DEFAULT_PROFILE,
-        image: Optional[str] = None,
+        image: str | None = None,
         label: str = "",
         credentials: Sequence[creds.Grant] = (),
         extra_hosts: Sequence[str] = (),
-        registry: Optional[str] = None,
+        registry: str | None = None,
     ) -> None:
         """`roots`: [{"path", "writable"}], primary first. `label`: who this sandbox is for
         (session and agent), stored on the sandbox so leftovers can be found. `extra_hosts`:
@@ -314,13 +314,13 @@ class OpenShellProvider:
         self.profile = policy.network_profiles.check(profile)
         self.extra_hosts = list(extra_hosts)
         self._identity: tuple = (None, None, None)  # uid, gid, home; set when the sandbox is made
-        self._denials: Optional[DenialLog] = None  # follows the sandbox's log once it is made
+        self._denials: DenialLog | None = None  # follows the sandbox's log once it is made
         self.image = image or sandbox_image()
         # A label value may hold letters, digits, '-', '_' and '.', and at most 63 characters.
         self.label = "".join(c if c.isalnum() or c in "-_." else "-" for c in label)[:63].strip("-_.")
         self.registry = registry or registry_id()
         self.sandbox_name = f"ow-{uuid.uuid4().hex[:12]}"
-        self.sandbox_id: Optional[str] = None
+        self.sandbox_id: str | None = None
         self._runner = build_runner_zipapp()
         # The session's private folder (copied credentials, the policy file). NOT under
         # /tmp: the gateway installed by NVIDIA's installer is a systemd service with
@@ -331,7 +331,7 @@ class OpenShellProvider:
         # pid is in the name so the registry's reap can remove folders of a dead server.
         self._tmp = tempfile.mkdtemp(prefix=f"ow-openshell-{os.getpid()}-", dir=runtime_dir())
         self.grants = list(credentials)
-        self.copied: Optional[creds.CopiedCredentials] = None
+        self.copied: creds.CopiedCredentials | None = None
 
     def describe(self) -> dict[str, Any]:
         return {
@@ -485,7 +485,7 @@ class OpenShellProvider:
         unless agent policy proposals are on, which we do not use)."""
         return self._denials.since(since) if self._denials is not None else []
 
-    def regrant(self, roots: Sequence[dict[str, Any]], *, before_create: Optional[Callable[[], None]] = None) -> None:
+    def regrant(self, roots: Sequence[dict[str, Any]], *, before_create: Callable[[], None] | None = None) -> None:
         """The session's folders changed. Mounts and the file policy are fixed when a sandbox
         is created, so this one is deleted and a new one is created with the new folders.
         `before_create` runs once the new name is chosen and before the sandbox exists: the
@@ -545,8 +545,8 @@ class GrpcExecTransport:
         host = endpoint.rsplit(":", 1)[0]
         options = [("grpc.ssl_target_name_override", "localhost")] if host in ("127.0.0.1", "::1") else []
         self._channel = grpc.secure_channel(endpoint, credentials, options=options)
-        self._outgoing: queue.Queue[Optional[bytes]] = queue.Queue()
-        self._incoming: queue.Queue[Optional[bytes]] = queue.Queue()
+        self._outgoing: queue.Queue[bytes | None] = queue.Queue()
+        self._incoming: queue.Queue[bytes | None] = queue.Queue()
         self._buffer = b""
         self._closed = False
         call = self._channel.stream_stream(wire.METHOD, request_serializer=lambda b: b, response_deserializer=lambda b: b)
@@ -584,7 +584,7 @@ class GrpcExecTransport:
             raise OSError("the stream is closed")
         self._outgoing.put(frame)
 
-    def recv_line(self) -> Optional[bytes]:
+    def recv_line(self) -> bytes | None:
         while b"\n" not in self._buffer:
             chunk = self._incoming.get()
             if chunk is None:

@@ -11,7 +11,7 @@ import asyncio
 import logging
 import os
 import re
-from typing import Any, Optional
+from typing import Any
 
 from coworker.connectors.base import (
     BasePlatformAdapter,
@@ -39,7 +39,7 @@ def _poll_cursor_path(connection_id: str):
     safe = "".join(ch for ch in connection_id if ch.isalnum() or ch in "-_")
     return state_dir() / "poll-cursors" / f"{safe}.cursor"
 
-def telegram_message_to_event(msg: Any) -> Optional[MessageEvent]:
+def telegram_message_to_event(msg: Any) -> MessageEvent | None:
     text = getattr(msg, "text", None)
     if not text:
         return None
@@ -65,8 +65,8 @@ def telegram_message_to_event(msg: Any) -> Optional[MessageEvent]:
 
 
 def slack_event_to_event(
-    event: dict, bot_user_id: Optional[str]
-) -> Optional[MessageEvent]:
+    event: dict, bot_user_id: str | None
+) -> MessageEvent | None:
     # Skip bot echoes / message edits / joins etc. (reply-loop guard).
     if event.get("bot_id") or event.get("subtype"):
         return None
@@ -138,7 +138,7 @@ class TelegramAdapter(BasePlatformAdapter):
             self._app = None
 
     async def send(
-        self, chat_id: str, text: str, *, thread_id: Optional[str] = None
+        self, chat_id: str, text: str, *, thread_id: str | None = None
     ) -> SendResult:
         return _send_telegram(self.token, chat_id, text, thread_id)
 
@@ -156,7 +156,7 @@ class SlackAdapter(BasePlatformAdapter):
         bot_token: str,
         app_token: str,
         *,
-        watchdog_interval: Optional[float] = None,
+        watchdog_interval: float | None = None,
         auto_reconnect: bool = True,
     ) -> None:
         super().__init__()
@@ -164,8 +164,8 @@ class SlackAdapter(BasePlatformAdapter):
         self.app_token = app_token
         self._app = None
         self._socket = None
-        self._task: Optional[asyncio.Task] = None
-        self._watchdog_task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
+        self._watchdog_task: asyncio.Task | None = None
         self._closing = False
         self._reconnects = (
             0  # observable: how many times the watchdog revived the connection
@@ -178,7 +178,7 @@ class SlackAdapter(BasePlatformAdapter):
         # slack_sdk's own reconnect stays on in production (seamless on Slack's graceful cycling);
         # tests turn it off so the watchdog is the sole, deterministic recovery path.
         self._auto_reconnect = auto_reconnect
-        self._bot_user_id: Optional[str] = None
+        self._bot_user_id: str | None = None
         self._name_cache: dict[str, str] = (
             {}
         )  # user_id → display name (resolved once via users.info)
@@ -301,7 +301,7 @@ class SlackAdapter(BasePlatformAdapter):
             except Exception:
                 logger.exception("slack watchdog reconnect failed — will retry")
 
-    async def _display_name(self, uid: Optional[str]) -> Optional[str]:
+    async def _display_name(self, uid: str | None) -> str | None:
         """Resolve a user id to a display name via users.info, cached. Best-effort: None on failure
         (the caller falls back to the id)."""
         if not uid:
@@ -335,7 +335,7 @@ class SlackAdapter(BasePlatformAdapter):
                 out = re.sub(rf"<@{re.escape(uid)}(?:\|[^>]*)?>", f"@{name}", out)
         return out
 
-    async def _channel_name(self, chat_id: Optional[str]) -> Optional[str]:
+    async def _channel_name(self, chat_id: str | None) -> str | None:
         """Resolve a channel/DM id to a display name via conversations.info, cached. Best-effort:
         None on failure (the caller falls back to the id). Mirrors `_display_name`."""
         if not chat_id:
@@ -352,11 +352,11 @@ class SlackAdapter(BasePlatformAdapter):
             self._channel_cache[chat_id] = name
         return name
 
-    async def resolve_user_name(self, user_id: Optional[str]) -> Optional[str]:
+    async def resolve_user_name(self, user_id: str | None) -> str | None:
         """Public §2.1 wrapper over the cached user-name resolution."""
         return await self._display_name(user_id)
 
-    async def resolve_channel_name(self, chat_id: Optional[str]) -> Optional[str]:
+    async def resolve_channel_name(self, chat_id: str | None) -> str | None:
         """Public §2.1 wrapper over the cached channel-name resolution."""
         return await self._channel_name(chat_id)
 
@@ -375,7 +375,7 @@ class SlackAdapter(BasePlatformAdapter):
             self._task = None
 
     async def send(
-        self, chat_id: str, text: str, *, thread_id: Optional[str] = None
+        self, chat_id: str, text: str, *, thread_id: str | None = None
     ) -> SendResult:
         # The stateless senders use blocking httpx; offload so an outbound from the event loop
         # (e.g. mirror_inbox_item / _on_interaction, which await this directly) never blocks the
@@ -385,7 +385,7 @@ class SlackAdapter(BasePlatformAdapter):
         )
 
     async def send_interactive(
-        self, chat_id: str, text: str, buttons, *, thread_id: Optional[str] = None
+        self, chat_id: str, text: str, buttons, *, thread_id: str | None = None
     ) -> SendResult:
         return await asyncio.to_thread(
             _send_slack_interactive, self.bot_token, chat_id, text, buttons, thread_id
@@ -430,12 +430,12 @@ def make_adapter(
     *,
     secrets=None,
     token_provider=None,
-    relay_url: Optional[str] = None,
+    relay_url: str | None = None,
     relay_hub=None,
     github_token_client=None,
     machine_unseal=None,
-    machine_poll_base: Optional[str] = None,
-) -> Optional[BasePlatformAdapter]:
+    machine_poll_base: str | None = None,
+) -> BasePlatformAdapter | None:
     """Build the adapter for a connected platform from its SecretStore profile.
 
     Slack supports two mutually-exclusive modes, the user's choice:

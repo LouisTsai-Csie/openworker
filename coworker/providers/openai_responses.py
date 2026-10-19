@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Optional
+from typing import Any
 
 from coworker.providers.base import (
     AssistantTurn,
@@ -127,7 +127,7 @@ def _synthesized_items(message: dict[str, Any]) -> list[dict[str, Any]]:
 
 def convert_messages(
     messages: list[dict[str, Any]],
-) -> tuple[Optional[str], list[dict[str, Any]]]:
+) -> tuple[str | None, list[dict[str, Any]]]:
     """Canonical OpenAI-chat history → (`instructions`, Responses `input` items).
 
     Leading system messages join into `instructions`; a stray mid-thread system message
@@ -173,7 +173,7 @@ def convert_messages(
     return ("\n\n".join(system_parts) or None), items
 
 
-def convert_tools(tools: Optional[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+def convert_tools(tools: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     """OpenAI chat function schemas → Responses FLAT tool entries (no nested `function`)."""
     converted: list[dict[str, Any]] = []
     for tool in tools or []:
@@ -235,7 +235,7 @@ def _sidecar_extras(items: list[dict[str, Any]]) -> dict[str, Any]:
     return {}
 
 
-def _usage_from(usage: Any) -> Optional[TokenUsage]:
+def _usage_from(usage: Any) -> TokenUsage | None:
     """Responses-API usage → normalized counts (OPE-101). `input_tokens` INCLUDES the
     cached share, so fresh input = input_tokens − cached_tokens (the same convention as
     the Chat Completions and Anthropic adapters); `output_tokens` already includes
@@ -308,9 +308,9 @@ class OpenAIResponsesProvider(ProviderClient):
         client: Any = None,
         *,
         default_model: str = "gpt-5.6-sol",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         secrets: Any = None,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         reasoning_summary: bool = True,
     ):
         # Same deferred-client contract as OpenAIProvider: built lazily so an engine can be
@@ -348,7 +348,7 @@ class OpenAIResponsesProvider(ProviderClient):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]],
+        tools: list[dict[str, Any]] | None,
         settings: dict[str, Any],
     ) -> dict[str, Any]:
         instructions, items = convert_messages(messages)
@@ -388,7 +388,7 @@ class OpenAIResponsesProvider(ProviderClient):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ) -> AssistantTurn:
         kwargs = self._request_kwargs(
@@ -405,7 +405,7 @@ class OpenAIResponsesProvider(ProviderClient):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ):
         kwargs = self._request_kwargs(
@@ -417,7 +417,7 @@ class OpenAIResponsesProvider(ProviderClient):
         text_parts: list[str] = []
         reasoning_parts: list[str] = []
         done_items: list[Any] = []
-        final: Optional[Any] = None
+        final: Any | None = None
         for event in events:
             kind = getattr(event, "type", None)
             if kind == "response.output_text.delta":

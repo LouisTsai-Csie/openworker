@@ -20,7 +20,7 @@ subscription is local-only, exactly as before.
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -34,7 +34,7 @@ MANAGED_INBOUND = ("slack", "github")
 _TIMEOUT = 15
 
 
-def _door(secrets: SecretStore, config: Config, connector: str) -> Optional[dict[str, Any]]:
+def _door(secrets: SecretStore, config: Config, connector: str) -> dict[str, Any] | None:
     """How to reach the broker for this connector, or None (local-only)."""
     if connector not in MANAGED_INBOUND:
         return None
@@ -160,7 +160,7 @@ def report_orphan(secrets: SecretStore, config: Config, *, source: str) -> None:
 # --- mirror refresh (spec §3.3 follow-up, UX-049 4b) ---------------------------
 
 
-def _get(door: dict[str, Any], path: str) -> Optional[dict[str, Any]]:
+def _get(door: dict[str, Any], path: str) -> dict[str, Any] | None:
     try:
         resp = httpx.get(door["url"] + path, params=door["ids"], headers=door["headers"], timeout=_TIMEOUT)
     except httpx.HTTPError as exc:

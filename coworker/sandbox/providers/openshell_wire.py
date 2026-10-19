@@ -18,7 +18,6 @@ the sandbox (it carried an internal id before) and must say which workspace it i
 
 from __future__ import annotations
 
-from typing import Optional
 from collections.abc import Iterator
 
 METHOD = "/openshell.v1.OpenShell/ExecSandboxInteractive"
@@ -93,7 +92,7 @@ def _read_varint(buf: bytes, pos: int) -> tuple[int, int]:
         shift += 7
 
 
-def decode_event(buf: bytes) -> tuple[str, Optional[bytes], Optional[int]]:
+def decode_event(buf: bytes) -> tuple[str, bytes | None, int | None]:
     """(kind, data, exit_code) with kind one of "stdout", "stderr", "exit", "other"."""
     for number, kind, value in _fields(buf):
         if kind != _LEN or not isinstance(value, bytes):

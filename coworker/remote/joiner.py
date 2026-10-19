@@ -17,7 +17,7 @@ import socket
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit
 
 from coworker.remote import channel as ch
@@ -52,7 +52,7 @@ def _config_path(state: Path) -> Path:
     return state / CONFIG_FILENAME
 
 
-def load_remote_config(state: Path) -> Optional[dict[str, Any]]:
+def load_remote_config(state: Path) -> dict[str, Any] | None:
     path = _config_path(state)
     if not path.exists():
         return None
@@ -91,7 +91,7 @@ def default_name() -> str:
 
 
 async def _handshake(
-    ws, identity: MachineIdentity, name: str, token: Optional[str]
+    ws, identity: MachineIdentity, name: str, token: str | None
 ) -> dict[str, Any]:
     hello: dict[str, Any] = {
         "type": "hello",
@@ -126,9 +126,9 @@ async def _serve_channel(
     ws,
     dispatcher: ch.AsgiDispatcher,
     app,
-    identity: Optional[MachineIdentity] = None,
+    identity: MachineIdentity | None = None,
     exporter=None,
-    state: Optional[Path] = None,
+    state: Path | None = None,
 ) -> None:
     """Steady state: dispatch each RPC concurrently so a slow request never
     blocks the next one; bridged WebSocket streams (live sessions) run as their
@@ -319,7 +319,7 @@ async def _serve_channel(
     tasks.add(check_task)
     check_task.add_done_callback(tasks.discard)
 
-    export_task: Optional[asyncio.Task] = None
+    export_task: asyncio.Task | None = None
     if exporter is not None:
         # The cloud sink for THIS connection's lifetime: audit frames ride the
         # same socket, acks come back through the loop below.
@@ -385,7 +385,7 @@ async def _serve_channel(
 POLICY_CHECK_SECONDS = 300.0  # the box asks for a newer document this often (spec: 5 min)
 
 
-def policy_version(doc: Optional[dict[str, Any]]) -> int:
+def policy_version(doc: dict[str, Any] | None) -> int:
     """The document's version; 0 when unversioned (desktop controllers, tests)."""
     try:
         return max(0, int((doc or {}).get("version") or 0))
@@ -399,7 +399,7 @@ def held_policy(app) -> dict[str, Any]:
 
 
 def apply_policy(
-    app, policy: dict[str, Any], *, state: Optional[Path] = None, exporter=None
+    app, policy: dict[str, Any], *, state: Path | None = None, exporter=None
 ) -> tuple[bool, int]:
     """Persist + apply an org policy DOCUMENT on this box (spec §Versioned org
     policy). Today one field acts: `audit_export` (remote/audit_export.py).
@@ -451,7 +451,7 @@ async def run_joined(
     state: Path,
     controller: str,
     name: str,
-    token: Optional[str] = None,
+    token: str | None = None,
     app=None,
     once: bool = False,
     on_welcome=None,
@@ -575,9 +575,9 @@ class _Only:
 
 
 def cli(
-    argv: Optional[list[str]] = None,
+    argv: list[str] | None = None,
     prog: str = "openworker",
-    only: Optional[tuple[str, ...]] = None,
+    only: tuple[str, ...] | None = None,
 ) -> int:
     """`only` limits the subcommands offered: TOP_COMMANDS for `openworker join|up`,
     MACHINE_COMMANDS for `openworker machine …`; None offers all of them."""
@@ -688,7 +688,7 @@ def _is_controller_address(url: str) -> bool:
     return bool(parts.netloc) and parts.path in ("", "/") and not parts.query
 
 
-def _cmd_join(state: Path, url: str, name: Optional[str]) -> int:
+def _cmd_join(state: Path, url: str, name: str | None) -> int:
     if _is_controller_address(url):
         return _cmd_auth_join(state, url, name)
     try:
@@ -712,7 +712,7 @@ def _cmd_join(state: Path, url: str, name: Optional[str]) -> int:
 
 
 def _cmd_auth_join(
-    state: Path, url: str, name: Optional[str], poll_interval: Optional[float] = None
+    state: Path, url: str, name: str | None, poll_interval: float | None = None
 ) -> int:
     """Device flow: print a code, wait for approval in the controller UI, then
     run the ordinary token join. `poll_interval` overrides the server's pacing
@@ -951,7 +951,7 @@ def _systemctl_user(*args: str) -> bool:
         return False
 
 
-def _cmd_service(state: Path, args, platform: Optional[str] = None, home: Optional[Path] = None) -> int:
+def _cmd_service(state: Path, args, platform: str | None = None, home: Path | None = None) -> int:
     platform = platform or sys.platform
     home = home or Path.home()
     if platform == "darwin":
@@ -1183,8 +1183,8 @@ def _cmd_service_macos(state: Path, args, home: Path) -> int:
 
 
 def logs_command(
-    state: Path, platform: str, unit: Optional[str], lines: int, follow: bool
-) -> Optional[list[str]]:
+    state: Path, platform: str, unit: str | None, lines: int, follow: bool
+) -> list[str] | None:
     """The command that prints this machine's service log, or None where there is none."""
     n = str(max(1, int(lines)))
     if platform == "linux":
@@ -1196,7 +1196,7 @@ def logs_command(
     return None
 
 
-def _cmd_logs(state: Path, args, platform: Optional[str] = None) -> int:
+def _cmd_logs(state: Path, args, platform: str | None = None) -> int:
     import subprocess
 
     platform = platform or sys.platform

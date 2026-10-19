@@ -13,7 +13,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # Per-OS application data directories. These are not build noise: on macOS 14+ merely
 # *descending* into ~/Library/Application Support (other apps' containers) trips the App
@@ -48,7 +48,7 @@ def grep(
     workspace: str,
     pattern: str,
     path: str = ".",
-    glob: Optional[str] = None,
+    glob: str | None = None,
     max_results: int = 100,
 ) -> dict[str, Any]:
     root = Path(workspace).resolve()
@@ -140,7 +140,7 @@ def _parse_rg(stdout: str, root: Path, n: int, base: Path | None = None) -> dict
 
 
 def _py_grep(
-    root: Path, base: Path, pattern: str, glob: Optional[str], n: int
+    root: Path, base: Path, pattern: str, glob: str | None, n: int
 ) -> dict[str, Any]:
     try:
         rx = re.compile(pattern)

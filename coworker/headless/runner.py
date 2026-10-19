@@ -46,7 +46,7 @@ import time
 import traceback
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # How tool calls are approved (--approval-mode). `ask` is the app's "Ask for approval";
 # the engine stores it as "interactive".
@@ -54,7 +54,7 @@ APPROVAL_MODES = ["ask", "auto-approve", "bypass-approvals", "dangerously-bypass
 RETRY_DELAYS_ENV = "OPENWORKER_RUN_RETRY_DELAYS"
 
 
-def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="openworker run",
         description="Run one task to the end, and record it.",
@@ -333,7 +333,7 @@ def provider_retry_delays() -> tuple[int, ...]:
 # -- offline provider (tests) -------------------------------------------------------------
 
 
-def _scripted_effort(settings: dict[str, Any]) -> Optional[dict[str, Any]]:
+def _scripted_effort(settings: dict[str, Any]) -> dict[str, Any] | None:
     """The fake model echoes the level as a real provider's record would."""
     level = settings.get("reasoning_effort")
     if not level:
@@ -498,7 +498,7 @@ def root_cause_text(exc: BaseException) -> str:
     """The exception at the bottom of a failed model call's chain, in a few words: what a
     person needs to see beside "Connection error." Empty when there is nothing underneath."""
     cause = exc.__cause__ or exc.__context__
-    last: Optional[BaseException] = None
+    last: BaseException | None = None
     depth = 0
     while cause is not None and depth < 8:
         last = cause
@@ -667,7 +667,7 @@ def _read_prompt(args: argparse.Namespace) -> str:
     return text
 
 
-def _agent_version(explicit: Optional[str]) -> str:
+def _agent_version(explicit: str | None) -> str:
     if explicit:
         return explicit
     from importlib.metadata import PackageNotFoundError, version
@@ -933,7 +933,7 @@ def _run(args: argparse.Namespace) -> int:
         engine.compaction_settings = lambda: dict(_forced)
     events: list[dict[str, Any]] = []
     outcome = "unknown"
-    error_text: Optional[str] = None
+    error_text: str | None = None
     raw_error = ""
     started = time.time()
 
@@ -1234,7 +1234,7 @@ def _final_answer(engine: Any) -> str:
     return ""
 
 
-def _merged_model_settings(args: argparse.Namespace, model: str) -> Optional[dict[str, Any]]:
+def _merged_model_settings(args: argparse.Namespace, model: str) -> dict[str, Any] | None:
     from coworker import model_config
 
     saved = {} if getattr(args, "isolated", False) else model_config.model_settings_for(model)
@@ -1242,7 +1242,7 @@ def _merged_model_settings(args: argparse.Namespace, model: str) -> Optional[dic
     return merged or None
 
 
-def _model_settings(args: argparse.Namespace) -> Optional[dict[str, Any]]:
+def _model_settings(args: argparse.Namespace) -> dict[str, Any] | None:
     """Explicit per-run settings that ride model_settings into every provider call:
     the output ceiling and the reasoning-effort level."""
     settings: dict[str, Any] = {}
@@ -1312,13 +1312,13 @@ def _write_records(
     events: list[dict[str, Any]],
     answers: Answers,
     outcome: str,
-    error_text: Optional[str],
+    error_text: str | None,
     wall: float,
     model: str,
     args: argparse.Namespace,
     run_id: str,
     isolation: dict[str, str],
-    trajectory_extra_path: Optional[str],
+    trajectory_extra_path: str | None,
 ) -> dict[str, Any]:
     """Compute the summary from the events so far and (re)write summary.json,
     messages.json, answers.json, and trajectory.json. Called after every iteration with a
@@ -1455,7 +1455,7 @@ def _write_records(
     return summary
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     try:
         code = run(args)

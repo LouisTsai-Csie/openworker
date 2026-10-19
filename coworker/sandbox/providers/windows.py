@@ -37,7 +37,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Sequence
 
 from coworker.sandbox import credentials as creds
@@ -85,8 +85,8 @@ class WindowsProvider:
         cwd: str | Path,
         profile: str = network_profiles.DEFAULT_PROFILE,
         network: bool = True,
-        runner_path: Optional[Path] = None,
-        relay_silence_seconds: Optional[float] = None,
+        runner_path: Path | None = None,
+        relay_silence_seconds: float | None = None,
         credentials: Sequence[creds.Grant] = (),
         tool_dirs: Sequence[str] = (),
         extra_hosts: Sequence[str] = (),
@@ -98,7 +98,7 @@ class WindowsProvider:
         self.roots = _clean_roots(roots)
         self.grants = list(credentials)
         self.tool_dirs = [os.path.realpath(p) for p in tool_dirs]
-        self.copied: Optional[creds.CopiedCredentials] = None
+        self.copied: creds.CopiedCredentials | None = None
         self.cwd = os.path.realpath(str(cwd))
         self.profile = network_profiles.check(profile)
         self.network = network
@@ -120,7 +120,7 @@ class WindowsProvider:
         self._dir = tempfile.mkdtemp(prefix="owr-", dir=str(windows_setup.SANDBOXES))
         self.socket_path = winpipe.pipe_name(os.path.basename(self._dir))
         self._daemon: Any = None
-        self._proxy: Optional[netproxy.AllowListProxy] = None
+        self._proxy: netproxy.AllowListProxy | None = None
         self._desktop: Any = None
         self._granted: list[tuple[str, str]] = []  # (folder, "write" | "read") entries that exist right now
         self._runner_inside: Path = self._runner  # where the sandbox sees the runner file
@@ -193,7 +193,7 @@ class WindowsProvider:
             env.update(netproxy.environment(self._proxy))
         return env
 
-    def _ssh_proxy_command(self) -> Optional[str]:
+    def _ssh_proxy_command(self) -> str | None:
         if self._proxy is None:
             return None
         return creds.windows_ssh_proxy_command(sys.executable, str(self._runner_inside), self._proxy.port)

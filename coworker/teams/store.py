@@ -29,7 +29,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.teams.attachments import stored_name, validate_stored_name
 from coworker.teams.model import (
@@ -196,10 +196,10 @@ class TeamStore:
         kind: str,
         actor: Actor,
         *,
-        item_id: Optional[int] = None,
-        case_id: Optional[str] = None,
-        recipient: Optional[str] = None,
-        payload: Optional[dict[str, Any]] = None,
+        item_id: int | None = None,
+        case_id: str | None = None,
+        recipient: str | None = None,
+        payload: dict[str, Any] | None = None,
         taint: bool = False,
     ) -> dict[str, Any]:
         """Append one record and fold it into the projections, atomically."""
@@ -227,9 +227,9 @@ class TeamStore:
         kind: str,
         actor: Actor,
         *,
-        item_id: Optional[int],
-        case_id: Optional[str],
-        recipient: Optional[str],
+        item_id: int | None,
+        case_id: str | None,
+        recipient: str | None,
         payload: dict[str, Any],
         taint: bool,
         commit: bool = True,
@@ -291,12 +291,12 @@ class TeamStore:
         self,
         space: str,
         *,
-        kinds: Optional[list[str]] = None,
-        item_id: Optional[int] = None,
-        case_id: Optional[str] = None,
+        kinds: list[str] | None = None,
+        item_id: int | None = None,
+        case_id: str | None = None,
         since_seq: int = 0,
         limit: int = 500,
-        exclude_kinds: Optional[list[str]] = None,
+        exclude_kinds: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         where = ["space = ?", "seq > ?"]
         params: list[Any] = [space, since_seq]
@@ -572,8 +572,8 @@ class TeamStore:
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
-        case: Optional[str] = None,
+        parent: int | None = None,
+        case: str | None = None,
     ) -> dict[str, Any]:
         """New item, `open` and unassigned. Acceptance criteria are load-bearing —
         required.
@@ -628,8 +628,8 @@ class TeamStore:
         space: str,
         actor: Actor,
         *,
-        state: Optional[str] = None,
-        assignee: Optional[str] = None,
+        state: str | None = None,
+        assignee: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return actor-visible items in a space.
 
@@ -678,7 +678,7 @@ class TeamStore:
         item_id: int,
         *,
         actor: Actor,
-        seq: Optional[int] = None,
+        seq: int | None = None,
         include_comments: bool = True,
     ) -> dict[str, Any]:
         """Return one actor-visible item.
@@ -829,7 +829,7 @@ class TeamStore:
         ref: str,
         *,
         taint: bool = False,
-        artifact: Optional[dict] = None,
+        artifact: dict | None = None,
     ) -> dict[str, Any]:
         """Attach one stored blob through an attributed comment event.
 
@@ -869,7 +869,7 @@ class TeamStore:
         to: str,
         *,
         comment: str = "",
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
         taint: bool = False,
     ) -> dict[str, Any]:
         target = ItemState(to)
@@ -908,7 +908,7 @@ class TeamStore:
         item_id: int,
         body: str,
         *,
-        refs: Optional[list[str]] = None,
+        refs: list[str] | None = None,
         taint: bool = False,
         needs_attention: bool = False,
     ) -> dict[str, Any]:
@@ -1112,7 +1112,7 @@ class TeamStore:
         ts: str,
         kind: str,
         actor_id: str,
-        item_id: Optional[int],
+        item_id: int | None,
         payload: dict[str, Any],
     ) -> None:
         """Fold one event into the projections. The ONLY writer of item, link,
@@ -1183,7 +1183,7 @@ class TeamStore:
         # markers also fold into their indexed projection.
 
     def _merge_refs(
-        self, space: str, item_id: Optional[int], refs: Optional[list]
+        self, space: str, item_id: int | None, refs: list | None
     ) -> None:
         if not refs or item_id is None:
             return
@@ -1203,8 +1203,8 @@ class TeamStore:
     def _merge_attachment_refs(
         self,
         space: str,
-        item_id: Optional[int],
-        attachments: Optional[list],
+        item_id: int | None,
+        attachments: list | None,
         seq: int,
     ) -> None:
         if not attachments or item_id is None:
@@ -1294,8 +1294,8 @@ class TeamStore:
         actor: Actor,
         item: dict[str, Any],
         *,
-        worker_slice: Optional[set[int]] = None,
-        claims_open: Optional[bool] = None,
+        worker_slice: set[int] | None = None,
+        claims_open: bool | None = None,
     ) -> bool:
         """Whether an actor may read one item through any board surface."""
         if actor.role != Role.WORKER:

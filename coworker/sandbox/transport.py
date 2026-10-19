@@ -9,13 +9,13 @@ technology and of which machine the runner is on.
 from __future__ import annotations
 
 import subprocess
-from typing import Optional, Protocol
+from typing import Protocol
 
 
 class Transport(Protocol):
     def send(self, frame: bytes) -> None: ...
 
-    def recv_line(self) -> Optional[bytes]:
+    def recv_line(self) -> bytes | None:
         """The next line, or None when the pipe is closed."""
 
     def close(self) -> None: ...
@@ -33,7 +33,7 @@ class PipeTransport:
         self.proc.stdin.write(frame)
         self.proc.stdin.flush()
 
-    def recv_line(self) -> Optional[bytes]:
+    def recv_line(self) -> bytes | None:
         if self.proc.stdout is None:
             return None
         line = self.proc.stdout.readline()

@@ -22,7 +22,7 @@ from email.header import decode_header
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 import aisuite as ai
@@ -55,7 +55,7 @@ _PRESETS: dict[str, EmailServers] = {
 }
 
 
-def resolve_servers(profile: dict[str, Any]) -> tuple[Optional[EmailServers], str]:
+def resolve_servers(profile: dict[str, Any]) -> tuple[EmailServers | None, str]:
     """Servers for a profile: explicit advanced fields win, then the domain preset."""
     address = str(profile.get("address") or "").strip()
     domain = address.rsplit("@", 1)[-1].lower() if "@" in address else ""
@@ -220,7 +220,7 @@ _DATE_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
 _MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
-def _imap_date(value: str) -> Optional[str]:
+def _imap_date(value: str) -> str | None:
     m = _DATE_RE.match(value.strip())
     if not m:
         return None
@@ -239,7 +239,7 @@ def build_search_criteria(
     since: str = "",
     before: str = "",
     unread_only: bool = False,
-) -> tuple[Optional[bytes], str]:
+) -> tuple[bytes | None, str]:
     """An IMAP SEARCH criteria string (as bytes, UTF-8) or an error message."""
     parts: list[str] = []
     for key, value in (
@@ -268,7 +268,7 @@ def build_search_criteria(
 _LIST_RE = re.compile(rb'\((?P<flags>[^)]*)\)\s+"(?P<delim>[^"]*)"\s+(?P<name>.+)$')
 
 
-def _parse_list_line(line: bytes) -> Optional[str]:
+def _parse_list_line(line: bytes) -> str | None:
     m = _LIST_RE.match(line)
     if not m:
         return None
@@ -283,7 +283,7 @@ def _parse_list_line(line: bytes) -> Optional[str]:
         return name.decode("latin-1")
 
 
-def _select_readonly(imap: imaplib.IMAP4, folder: str) -> Optional[str]:
+def _select_readonly(imap: imaplib.IMAP4, folder: str) -> str | None:
     status, _ = imap.select(_quote(folder), readonly=True)
     if status != "OK":
         return f"cannot open folder {folder!r}"
@@ -292,7 +292,7 @@ def _select_readonly(imap: imaplib.IMAP4, folder: str) -> Optional[str]:
 
 def _fetch_message(
     imap: imaplib.IMAP4, uid: str
-) -> Optional[email_lib.message.Message]:
+) -> email_lib.message.Message | None:
     status, data = imap.uid("FETCH", uid, "(BODY.PEEK[])")
     if status != "OK" or not data or not isinstance(data[0], tuple):
         return None
@@ -356,7 +356,7 @@ def _attach(
 def make_email_tools(
     secrets: SecretStore,
     *,
-    roots: Optional[list[RootDir]] = None,
+    roots: list[RootDir] | None = None,
     imap_factory: Callable[[str, int], imaplib.IMAP4] = _default_imap_factory,
     smtp_factory: Callable[[str, int], smtplib.SMTP] = _default_smtp_factory,
 ) -> list[Callable[..., Any]]:
@@ -578,7 +578,7 @@ def make_email_tools(
         bcc: str = "",
         reply_to_uid: str = "",
         reply_to_folder: str = "INBOX",
-        attachments: Optional[list[str]] = None,
+        attachments: list[str] | None = None,
     ) -> dict[str, Any]:
         profile = secrets.get("email:default") or {}
         if not profile.get("address") or not profile.get("app_password"):

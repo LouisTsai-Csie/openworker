@@ -31,7 +31,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.sandbox import netproxy
 
@@ -170,7 +170,7 @@ Write-Output "removed"
 '''
 
 
-def state() -> Optional[dict[str, Any]]:
+def state() -> dict[str, Any] | None:
     """What setup recorded, or None when setup has not run (or was removed)."""
     try:
         return json.loads(STATE_FILE.read_text(encoding="utf-8"))
@@ -184,7 +184,7 @@ def current() -> bool:
     return bool(recorded) and int(recorded.get("version") or 0) >= SETUP_VERSION
 
 
-def account(kind: str = CLOSED) -> Optional[tuple[str, str, str]]:
+def account(kind: str = CLOSED) -> tuple[str, str, str] | None:
     """(name, sid, password) of the `open` or `closed` account when the full mode can be
     used by THIS user: setup of this version has run and the credential file is readable.
     The password never leaves the process."""
@@ -203,7 +203,7 @@ def account(kind: str = CLOSED) -> Optional[tuple[str, str, str]]:
     return (name, sid, password) if password else None
 
 
-def problem() -> Optional[str]:
+def problem() -> str | None:
     """Why the Windows sandbox cannot be used by this user right now, or None."""
     recorded = state()
     if not recorded:

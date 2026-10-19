@@ -11,7 +11,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.sandbox.bundle import build_runner_zipapp
 from coworker.sandbox.launch import runner_command, runner_dir, serve_arguments, spawn_kwargs, wait_for_runner
@@ -22,12 +22,12 @@ from coworker.sandbox.transport import PipeTransport, Transport
 class RunnerLocalProvider:
     name = "runner-local"
 
-    def __init__(self, *, cwd: str | Path, runner_path: Optional[Path] = None, relay_silence_seconds: Optional[float] = None) -> None:
+    def __init__(self, *, cwd: str | Path, runner_path: Path | None = None, relay_silence_seconds: float | None = None) -> None:
         self.cwd = str(Path(cwd).expanduser().resolve())
         self._runner = Path(runner_path) if runner_path is not None else build_runner_zipapp()
         self._relay_silence = relay_silence_seconds
         self._dir, self.socket_path = runner_dir()
-        self._daemon: Optional[subprocess.Popen] = None
+        self._daemon: subprocess.Popen | None = None
 
     def describe(self) -> dict[str, Any]:
         return {"provider": self.name, "enforcement": "none", "reason": "a local process without any sandbox (developer mode)"}

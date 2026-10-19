@@ -24,7 +24,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 from coworker.teams.model import BoardError, space_for_workspace
 from coworker.teams.store import CLAIM_POLICIES
@@ -32,7 +31,7 @@ from coworker.teams.store import CLAIM_POLICIES
 _STATES = ("open", "in_progress", "blocked", "review", "done", "canceled")
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     if not getattr(args, "cmd", None):
@@ -206,7 +205,7 @@ def _dialect(args):
     return local_dialect(state_dir(), actor=args.local_actor, role=args.local_role)
 
 
-def _discover_server() -> Optional[str]:
+def _discover_server() -> str | None:
     """A running local server, found via its per-port sidecar token files."""
     import httpx
 

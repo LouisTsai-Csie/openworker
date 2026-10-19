@@ -23,7 +23,6 @@ import re
 import stat
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from coworker.teams.model import BoardError, BoardNotFoundError
 
@@ -140,7 +139,7 @@ def read_attachment_file(path: str | Path, *, roots=None) -> tuple[bytes, str]:
     return data, source.name
 
 
-def stored_name(ref: str) -> Optional[str]:
+def stored_name(ref: str) -> str | None:
     """`attachment://<hash>.<ext>#<name>` → `<hash>.<ext>`; None for other refs."""
     if not ref.startswith(ATTACHMENT_SCHEME):
         return None

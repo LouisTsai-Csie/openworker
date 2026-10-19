@@ -16,7 +16,7 @@ grant use, so a session started for a thread posts back to it without asking.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 import aisuite as ai
@@ -77,7 +77,7 @@ def slack_workspaces(secrets: SecretStore) -> list[str]:
     return out
 
 
-def _pick_workspace(secrets: SecretStore, workspace: str) -> tuple[Optional[str], Optional[str]]:
+def _pick_workspace(secrets: SecretStore, workspace: str) -> tuple[str | None, str | None]:
     """(workspace, error). Empty → the only connected workspace; several → refuse
     rather than guess (spec §11.8)."""
     known = slack_workspaces(secrets)
@@ -93,7 +93,7 @@ def _pick_workspace(secrets: SecretStore, workspace: str) -> tuple[Optional[str]
     return wanted, None
 
 
-def _resolve_channel_in(secrets: SecretStore, workspace: str, channel: str) -> tuple[Optional[str], Optional[str]]:
+def _resolve_channel_in(secrets: SecretStore, workspace: str, channel: str) -> tuple[str | None, str | None]:
     """A channel id passes through; a NAME resolves within the workspace via the same
     cached roster the GUI's channel picker uses. (channel_id, error)."""
     from coworker.connectors.slack_directory import list_channels
@@ -126,10 +126,10 @@ def _slack_chat_id(workspace: str, channel_id: str) -> str:
 def make_chat_tools(
     secrets: SecretStore,
     *,
-    roots: Optional[list] = None,
-    senders: Optional[dict[str, Sender]] = None,
-    file_senders: Optional[dict[str, FileSender]] = None,
-    render_html: Optional[Callable[[Path], bytes]] = None,
+    roots: list | None = None,
+    senders: dict[str, Sender] | None = None,
+    file_senders: dict[str, FileSender] | None = None,
+    render_html: Callable[[Path], bytes] | None = None,
 ) -> list[Callable[..., Any]]:
     """Every chat connector's tools; `make_integration_tools` filters them down to the
     session's enabled connectors like the rest of the catalog."""

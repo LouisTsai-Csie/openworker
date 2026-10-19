@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.sandbox.client import RunnerClient
@@ -30,9 +30,9 @@ class RunnerExecutor(Executor):
         cwd: str,
         shell: str = "main",
         default_timeout: float = _DEFAULT_TIMEOUT,
-        on_output: Optional[Callable[[str], None]] = None,
-        before_call: Optional[Callable[[], Optional[str]]] = None,
-        after_call: Optional[Callable[[float, dict[str, Any]], Optional[dict[str, Any]]]] = None,
+        on_output: Callable[[str], None] | None = None,
+        before_call: Callable[[], str | None] | None = None,
+        after_call: Callable[[float, dict[str, Any]], dict[str, Any] | None] | None = None,
     ) -> None:
         self._client = client
         # Called before every command. The workspace uses it to restart the sandbox when the
@@ -57,7 +57,7 @@ class RunnerExecutor(Executor):
             "error": message,
         }
 
-    def run(self, command: str, timeout: Optional[float] = None) -> dict[str, Any]:
+    def run(self, command: str, timeout: float | None = None) -> dict[str, Any]:
         timeout = timeout or self.default_timeout
         notice = self._before_call() if self._before_call is not None else None
         started = time.time()

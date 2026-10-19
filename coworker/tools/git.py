@@ -7,7 +7,7 @@ forbids those without explicit ask, and they'd go through run_shell anyway).
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import aisuite as ai
 
@@ -39,7 +39,7 @@ _SCHEMA = {
 
 
 def git_tools(workspace: str) -> list:
-    def git_log(path: Optional[str] = None, max_count: int = 20) -> dict[str, Any]:
+    def git_log(path: str | None = None, max_count: int = 20) -> dict[str, Any]:
         return _impl.git_log(workspace, path, max_count)
 
     git_log.__name__ = "git_log"

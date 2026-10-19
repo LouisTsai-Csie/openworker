@@ -12,11 +12,11 @@ Fly/operator implementations behind the same interface.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 
 class Provisioner(Protocol):
-    def mint_token(self, spec: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def mint_token(self, spec: dict[str, Any] | None = None) -> dict[str, Any]:
         """Mint one single-use join token → {"token", "expires_at"}. A spec
         with a "fingerprint" binds the token to that machine identity — the
         acceptor refuses any other pubkey presenting it. A spec with an
@@ -36,7 +36,7 @@ class LocalProvisioner:
     def __init__(self, acceptor) -> None:
         self._acceptor = acceptor
 
-    def mint_token(self, spec: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def mint_token(self, spec: dict[str, Any] | None = None) -> dict[str, Any]:
         spec = spec or {}
         token, expiry = self._acceptor.arm(
             bound_fingerprint=str(spec.get("fingerprint") or ""),

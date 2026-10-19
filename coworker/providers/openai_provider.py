@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Optional
+from typing import Any
 
 from coworker.providers.effort import NO_EFFORT, EffortPlan, openai_compat_effort
 from coworker.providers.base import (
@@ -26,7 +26,7 @@ from coworker.providers.base import (
 from coworker.providers.capabilities import capabilities_for
 
 
-def resolve_api_key(secrets: Any = None) -> Optional[str]:
+def resolve_api_key(secrets: Any = None) -> str | None:
     """Resolve the OpenAI API key: env `OPENAI_API_KEY` first, else the SecretStore
     `provider:openai` profile (`{api_key}`). Lets a Tauri-launched sidecar — which does NOT
     inherit the shell env — still find a key the user entered in Settings. The value never
@@ -59,7 +59,7 @@ def _pin_reasoning_effort(kwargs: dict[str, Any]) -> None:
         kwargs.setdefault("reasoning_effort", "none")
 
 
-def _reasoning_field(obj: Any) -> Optional[str]:
+def _reasoning_field(obj: Any) -> str | None:
     """Which field the thinking arrived in: `reasoning_content` (Together, Moonshot,
     DeepSeek, GLM) or `reasoning` (OpenRouter, xAI). The same name is used to send it
     back (OPE-178)."""
@@ -70,7 +70,7 @@ def _reasoning_field(obj: Any) -> Optional[str]:
     return None
 
 
-def _reasoning_extras(field: Optional[str], text: Optional[str]) -> dict[str, Any]:
+def _reasoning_extras(field: str | None, text: str | None) -> dict[str, Any]:
     """The `_openai_compat` sidecar persisted on the assistant message: the thinking text
     and the field it arrived in, replayed verbatim by `replay_reasoning`. Kimi K3 requires
     the complete assistant message — reasoning included — back on later turns; other
@@ -95,7 +95,7 @@ def replay_reasoning(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _delta_reasoning(obj: Any) -> Optional[str]:
+def _delta_reasoning(obj: Any) -> str | None:
     """Thinking text off a delta/message: `reasoning_content` (DeepSeek, GLM, Kimi, and
     most compat vendors) or `reasoning` (xAI, OpenRouter). Extra response fields survive
     the OpenAI SDK's models (extra="allow"), so plain getattr sees them."""
@@ -164,7 +164,7 @@ def _param_fix_retry(kwargs: dict[str, Any], exc: Exception) -> dict[str, Any]:
     raise exc
 
 
-def _effort_record(plan: Optional[EffortPlan], kwargs: dict[str, Any]) -> Optional[dict[str, Any]]:
+def _effort_record(plan: EffortPlan | None, kwargs: dict[str, Any]) -> dict[str, Any] | None:
     """The effort record for a reply, read from the kwargs that were finally sent (after
     the param-fix retries may have dropped or pinned the parameter)."""
     if plan is None:
@@ -181,21 +181,21 @@ def _effort_record(plan: Optional[EffortPlan], kwargs: dict[str, Any]) -> Option
     return plan.record()
 
 
-def _served_by(obj: Any) -> Optional[str]:
+def _served_by(obj: Any) -> str | None:
     """OpenRouter (and compatible routers) put the upstream host's name in a top-level
     `provider` field on responses and stream chunks; the OpenAI SDK keeps unknown fields."""
     value = getattr(obj, "provider", None)
     return str(value) if isinstance(value, str) and value else None
 
 
-def _output_limit(kwargs: dict[str, Any]) -> Optional[int]:
+def _output_limit(kwargs: dict[str, Any]) -> int | None:
     """The completion ceiling actually sent, after `_param_fix_retry` may have renamed
     `max_tokens` to `max_completion_tokens` or dropped it (server default -> None)."""
     value = kwargs.get("max_tokens", kwargs.get("max_completion_tokens"))
     return int(value) if value else None
 
 
-def _usage_from(usage: Any) -> Optional[TokenUsage]:
+def _usage_from(usage: Any) -> TokenUsage | None:
     """chat.completions usage → normalized counts. `prompt_tokens` INCLUDES cached
     tokens, so the cached share is subtracted into `cache_read`; no write-side split
     exists on this API shape."""
@@ -217,8 +217,8 @@ class OpenAIProvider(ProviderClient):
         client: Any = None,
         *,
         default_model: str = "gpt-5.6-sol",
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
         secrets: Any = None,
         http_client: Any = None,
     ):
@@ -265,7 +265,7 @@ class OpenAIProvider(ProviderClient):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ) -> AssistantTurn:
         plan = self._effort_plan(model, settings)
@@ -316,7 +316,7 @@ class OpenAIProvider(ProviderClient):
 
     # -- reasoning effort (OPE-176) ---------------------------------------------------
 
-    def _effort_plan(self, model: str, settings: dict[str, Any]) -> Optional[EffortPlan]:
+    def _effort_plan(self, model: str, settings: dict[str, Any]) -> EffortPlan | None:
         """Pop the engine-level `reasoning_effort` setting (it must never ride the wire
         unmapped) and translate it for this model; None when unset."""
         level = settings.pop("reasoning_effort", None)
@@ -330,8 +330,8 @@ class OpenAIProvider(ProviderClient):
         return openai_compat_effort(model, str(level))
 
     def _note_effort(
-        self, model: str, plan: Optional[EffortPlan], kwargs: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+        self, model: str, plan: EffortPlan | None, kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
         record = _effort_record(plan, kwargs)
         if (
             plan is not None
@@ -348,7 +348,7 @@ class OpenAIProvider(ProviderClient):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ):
         plan = self._effort_plan(model, settings)
@@ -371,11 +371,11 @@ class OpenAIProvider(ProviderClient):
 
         text_parts: list[str] = []
         reasoning_parts: list[str] = []
-        reasoning_field: Optional[str] = None
+        reasoning_field: str | None = None
         tool_accum: dict[int, dict[str, str]] = {}
         finish_reason = None
-        usage: Optional[TokenUsage] = None
-        served: Optional[str] = None
+        usage: TokenUsage | None = None
+        served: str | None = None
 
         # Up to three param-fix retries: effort, the max_tokens rename, and the
         # max_tokens over-limit drop can ALL need fixing on one call.
@@ -522,7 +522,7 @@ _FENCED = re.compile(r"```.*?```|~~~.*?~~~|`[^`\n]*`", re.DOTALL)
 _DANGLING_TOOL_TAG = re.compile(r"\s*</?tool_call>\s*$", re.IGNORECASE)
 
 
-def strip_dangling_tool_tag(text: Optional[str]) -> tuple[Optional[str], bool]:
+def strip_dangling_tool_tag(text: str | None) -> tuple[str | None, bool]:
     """(text without a trailing empty tool tag, whether one was removed). Only the tag
     at the end goes; a tag with anything after it is a call that did not parse."""
     if not text:
@@ -534,7 +534,7 @@ def strip_dangling_tool_tag(text: Optional[str]) -> tuple[Optional[str], bool]:
 
 
 def looks_like_unparsed_tool_call(
-    text: Optional[str], tools: Optional[list[dict[str, Any]]] = None
+    text: str | None, tools: list[dict[str, Any]] | None = None
 ) -> bool:
     """True when assistant text still carries tool-call markup that salvage couldn't turn into
     a call — i.e. the model tried to call a tool and the syntax was mangled or cut off.
@@ -561,11 +561,11 @@ def _coerce_param(raw: str) -> Any:
 
 
 def _maybe_salvage_tool_calls(
-    text: Optional[str],
+    text: str | None,
     tool_calls: list[ToolCall],
     *,
-    tools: Optional[list[dict[str, Any]]],
-) -> tuple[Optional[str], list[ToolCall]]:
+    tools: list[dict[str, Any]] | None,
+) -> tuple[str | None, list[ToolCall]]:
     """If the model returned tool calls as text, convert them. Returns (text, tool_calls):
     on success the salvaged calls replace `tool_calls` and `text` is cleared."""
     if tool_calls or not tools or not text:
@@ -577,15 +577,15 @@ def _maybe_salvage_tool_calls(
 
 
 def _tool_index(
-    tools: Optional[list[dict[str, Any]]],
-) -> tuple[Optional[set[str]], dict[str, Optional[str]]]:
+    tools: list[dict[str, Any]] | None,
+) -> tuple[set[str] | None, dict[str, str | None]]:
     """(known tool names, {name: sole-parameter-name}) from OpenAI tool schemas. The sole-param
     map lets us map a bare `toolname [args]` to `{param: args}` when a tool has one parameter.
     """
     if not tools:
         return None, {}
     names: set[str] = set()
-    single: dict[str, Optional[str]] = {}
+    single: dict[str, str | None] = {}
     for t in tools:
         fn = (t or {}).get("function") or {}
         name = fn.get("name")
@@ -609,7 +609,7 @@ def _loads(s: str) -> Any:
         return None
 
 
-def _extract_balanced(text: str, start: int) -> Optional[str]:
+def _extract_balanced(text: str, start: int) -> str | None:
     """Return the balanced `{…}`/`[…]` substring beginning at `text[start]` (string-aware), or
     None if it doesn't close — so nested braces/brackets are handled correctly."""
     open_ch = text[start]
@@ -651,7 +651,7 @@ def _iter_top_objects(text: str):
         i += 1
 
 
-def _call_from_dict(d: Any, names: Optional[set[str]]) -> Optional[ToolCall]:
+def _call_from_dict(d: Any, names: set[str] | None) -> ToolCall | None:
     """Build a ToolCall from a `{"name","arguments"}` dict, or None if it isn't one / the name
     isn't a known tool."""
     if not isinstance(d, dict):
@@ -681,7 +681,7 @@ def _renumber(calls: list[ToolCall]) -> list[ToolCall]:
 
 
 def _salvage_tool_calls_from_text(
-    content: str, tools: Optional[list[dict[str, Any]]] = None
+    content: str, tools: list[dict[str, Any]] | None = None
 ) -> list[ToolCall]:
     """Best-effort recovery of tool calls embedded in assistant text. Tries, in order:
     1. `<tool_call>…</tool_call>` blocks (anywhere, balanced); 2. embedded `{"name","arguments"}`

@@ -18,7 +18,7 @@ except ModuleNotFoundError:  # 3.10, the floor requires-python declares
     import tomli as tomllib  # type: ignore[no-redef]
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from coworker.secrets import state_dir
 
@@ -45,28 +45,28 @@ class Config:
     # provider's own default (32,000 for Anthropic and OpenAI-compatible endpoints;
     # Bedrock 4,096). Anthropic recommends ~64,000 at high effort. Environment override:
     # COWORKER_MAX_OUTPUT_TOKENS. Explicit `build_engine(model_settings=...)` wins.
-    max_output_tokens: Optional[int] = None
+    max_output_tokens: int | None = None
     # How hard the model should think per reply: one of EFFORT_LEVELS. Unset = send no
     # effort parameter at all (Anthropic's API default is high; Together's default for
     # Kimi K3 is max), so existing requests are unchanged. Held constant for a whole
     # session — changing it mid-conversation restarts the prompt cache. Environment
     # override: COWORKER_REASONING_EFFORT.
-    reasoning_effort: Optional[str] = None
+    reasoning_effort: str | None = None
     # OPE-186: bound every tool result before it enters the conversation. A result whose
     # serialised form exceeds this many bytes is stored as head + marker + tail, with the
     # full text in a spill file the model can read. Unset = 10,000;
     # 0 = off. Environment override: COWORKER_TOOL_RESULT_MAX_BYTES.
-    tool_result_max_bytes: Optional[int] = None
+    tool_result_max_bytes: int | None = None
     # OPE-186 change 3: cap on the auto-compaction trigger, in tokens. The engine compacts
     # at min(80% of the model's window, this cap); the built-in cap is 250,000, which on a
     # 1M-window model fired once in 445 long sessions. Lower it (e.g. 60000) to
     # summarise long sessions earlier. Environment override: COWORKER_COMPACTION_CAP_TOKENS.
-    compaction_cap_tokens: Optional[int] = None
+    compaction_cap_tokens: int | None = None
     # OPE-189: output ceiling for the summariser call, in tokens. Unset = 16,000. On a
     # reasoning model the budget is shared with the model's thinking, so a low value means
     # the summary itself never gets written. Environment override:
     # COWORKER_COMPACTION_SUMMARY_MAX_TOKENS.
-    compaction_summary_max_tokens: Optional[int] = None
+    compaction_summary_max_tokens: int | None = None
     allowed_commands: list[str] = field(
         default_factory=lambda: list(DEFAULT_ALLOWED_COMMANDS)
     )
@@ -118,7 +118,7 @@ class Config:
     # usable. Unset = the default rule in coworker/sandbox/selection.py. Machine-level
     # only: a repository's own config must never be able to switch the sandbox off.
     # Environment override: OPENWORKER_SANDBOX_PROVIDER.
-    sandbox_provider: Optional[str] = None
+    sandbox_provider: str | None = None
     # Credential files the user chose to share with sandboxes (design doc, section 11b):
     # `[[sandbox_credentials]]` tables with name, path, hosts, enabled. Machine-level only,
     # for the same reason as the provider. The shipped entries and their defaults are in
@@ -126,7 +126,7 @@ class Config:
     sandbox_credentials: list[dict[str, Any]] = field(default_factory=list)
     # Which hosts a sandbox may reach: a profile name from coworker/sandbox/network_profiles.py
     # ("allowlist" when unset, "open" on Windows). Machine-level, like the provider.
-    sandbox_network_profile: Optional[str] = None
+    sandbox_network_profile: str | None = None
     # The sites an `allowlist` sandbox may reach, "host:port" (a bare host means 443).
     # Empty until the user ticks some in Settings ▸ Sandbox.
     sandbox_network_hosts: list[str] = field(default_factory=list)
@@ -189,7 +189,7 @@ def global_config_path() -> Path:
     return state_dir() / "config.toml"
 
 
-def set_global_value(key: str, value: str, *, path: Optional[Path] = None) -> Path:
+def set_global_value(key: str, value: str, *, path: Path | None = None) -> Path:
     """Set one top-level string key in the machine's config.toml, keeping the rest of the
     file as it is. The line goes at the top, because a top-level key must come before any
     table header."""
@@ -204,7 +204,7 @@ def set_global_value(key: str, value: str, *, path: Optional[Path] = None) -> Pa
     return target
 
 
-def set_global_list(key: str, values: list[str], *, path: Optional[Path] = None) -> Path:
+def set_global_list(key: str, values: list[str], *, path: Path | None = None) -> Path:
     """Set one top-level list-of-strings key in the machine's config.toml, like
     set_global_value; an empty list removes the key. A hand-written array spread over
     several lines is removed whole."""
@@ -230,7 +230,7 @@ def set_global_list(key: str, values: list[str], *, path: Optional[Path] = None)
     return target
 
 
-def set_global_tables(key: str, rows: list[dict[str, Any]], *, path: Optional[Path] = None) -> Path:
+def set_global_tables(key: str, rows: list[dict[str, Any]], *, path: Path | None = None) -> Path:
     """Replace every `[[key]]` table in the machine's config.toml with `rows`, keeping the
     rest of the file. Values may be strings, booleans, integers and lists of strings."""
     if key not in _FIELDS:
@@ -291,7 +291,7 @@ COMPACTION_CAP_TOKENS_ENV = "COWORKER_COMPACTION_CAP_TOKENS"
 COMPACTION_SUMMARY_MAX_TOKENS_ENV = "COWORKER_COMPACTION_SUMMARY_MAX_TOKENS"
 
 
-def _nonnegative_int(value: Any, source: str) -> Optional[int]:
+def _nonnegative_int(value: Any, source: str) -> int | None:
     """`tool_result_max_bytes`: an integer >= 0 (0 turns bounding off); bools rejected."""
     if value is None:
         return None
@@ -302,7 +302,7 @@ def _nonnegative_int(value: Any, source: str) -> Optional[int]:
     return value
 
 
-def _effort_level(value: Any, source: str) -> Optional[str]:
+def _effort_level(value: Any, source: str) -> str | None:
     """`reasoning_effort` must be one of EFFORT_LEVELS (case-insensitive); empty = unset."""
     if value is None:
         return None
@@ -316,7 +316,7 @@ def _effort_level(value: Any, source: str) -> Optional[str]:
     return text
 
 
-def _positive_int(value: Any, source: str) -> Optional[int]:
+def _positive_int(value: Any, source: str) -> int | None:
     """`max_output_tokens` must be a positive integer (bools are ints in Python and
     TOML `true` would otherwise pass as 1)."""
     if value is None:
@@ -329,9 +329,9 @@ def _positive_int(value: Any, source: str) -> Optional[int]:
 
 
 def load_config(
-    workspace: Optional[str | Path] = None,
+    workspace: str | Path | None = None,
     *,
-    global_path: Optional[Path] = None,
+    global_path: Path | None = None,
     workspace_trusted: bool = False,
 ) -> Config:
     cfg = Config()
@@ -402,7 +402,7 @@ def load_config(
 
 def _positive_int_setting(
     value: Any, name: str, env_var: str
-) -> Optional[int]:
+) -> int | None:
     """A config.toml value overridden by `env_var`; both must be positive integers."""
     if value is not None and (
         isinstance(value, bool) or not isinstance(value, int) or value <= 0

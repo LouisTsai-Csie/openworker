@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.secrets import SecretStore
@@ -22,17 +22,17 @@ class ConnectorToolDef:
     # "this automation may call this tool against this exact target without asking". Only
     # single-argument targets are declarable in v1 (no wildcards, no composite targets), and
     # only write tools should declare one — reads never gate, so a rule would be meaningless.
-    target_arg: Optional[str] = None
+    target_arg: str | None = None
     # The composite alternative (spec §10.7 (b), 2026-09-05): a function that derives the
     # rule target from several arguments — a GitHub thread is `owner` + `repo` + a number,
     # and the target it yields is the same `github:owner/repo#N` handle the thread grant
     # pins for `send_message`, so one grant covers replying AND reviewing on that thread.
     # Returns None when the call does not fully name its target.
-    target_fn: Optional[Callable[[dict[str, Any]], Optional[str]]] = None
+    target_fn: Callable[[dict[str, Any]], str | None] | None = None
 
 
-def _github_thread(number_arg: str) -> Callable[[dict[str, Any]], Optional[str]]:
-    def target(arguments: dict[str, Any]) -> Optional[str]:
+def _github_thread(number_arg: str) -> Callable[[dict[str, Any]], str | None]:
+    def target(arguments: dict[str, Any]) -> str | None:
         owner = str(arguments.get("owner") or "").strip()
         repo = str(arguments.get("repo") or "").strip()
         number = str(arguments.get(number_arg) or "").strip()
@@ -43,7 +43,7 @@ def _github_thread(number_arg: str) -> Callable[[dict[str, Any]], Optional[str]]
     return target
 
 
-def _slack_thread(arguments: dict[str, Any]) -> Optional[str]:
+def _slack_thread(arguments: dict[str, Any]) -> str | None:
     """`slack:<workspace>/<channel>[:<thread_ts>]` — the SAME handle the inbound
     framing and the thread grant use (slack_addr: a bare channel for the manual
     single-workspace install, team-qualified for managed relays)."""
@@ -56,7 +56,7 @@ def _slack_thread(arguments: dict[str, Any]) -> Optional[str]:
     return f"slack:{chat}" + (f":{thread}" if thread else "")
 
 
-def _telegram_chat(arguments: dict[str, Any]) -> Optional[str]:
+def _telegram_chat(arguments: dict[str, Any]) -> str | None:
     chat_id = str(arguments.get("chat_id") or "").strip()
     thread = str(arguments.get("thread_id") or "").strip()
     if not chat_id:
@@ -1194,12 +1194,12 @@ TARGET_ARGS: dict[str, str] = {d.name: d.target_arg for d in TOOL_DEFS if d.targ
 TARGET_ARGS["send_message"] = "target"
 # Composite targets (several arguments → one handle); together with TARGET_ARGS this is
 # the whole set of rule-eligible tools.
-TARGET_FNS: dict[str, Callable[[dict[str, Any]], Optional[str]]] = {
+TARGET_FNS: dict[str, Callable[[dict[str, Any]], str | None]] = {
     d.name: d.target_fn for d in TOOL_DEFS if d.target_fn
 }
 
 
-def target_arg_for(tool_name: str) -> Optional[str]:
+def target_arg_for(tool_name: str) -> str | None:
     """The argument that names this tool's standing-rule target, or None if the tool
     isn't eligible for standing rules by a single argument."""
     return TARGET_ARGS.get(tool_name)
@@ -1210,7 +1210,7 @@ def rule_eligible(tool_name: str) -> bool:
     return tool_name in TARGET_ARGS or tool_name in TARGET_FNS
 
 
-def standing_target_for(tool_name: str, arguments: dict[str, Any]) -> Optional[str]:
+def standing_target_for(tool_name: str, arguments: dict[str, Any]) -> str | None:
     """The exact target this call names for a standing rule, or None when the tool is
     not rule-eligible or the call does not name one."""
     fn = TARGET_FNS.get(tool_name)

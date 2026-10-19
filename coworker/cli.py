@@ -13,7 +13,6 @@ import argparse
 import os
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from coworker.config import load_config
 from coworker.conversations import ConversationStore
@@ -61,7 +60,7 @@ def _moved(typed: str, now: str) -> None:
     raise SystemExit(2)
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     import sys
 
     from coworker.remote.joiner import MACHINE_COMMANDS, TOP_COMMANDS

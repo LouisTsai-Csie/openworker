@@ -25,7 +25,7 @@ import json
 import sys
 import uuid
 from ctypes import wintypes
-from typing import Any, Optional
+from typing import Any
 
 # -- our fixed keys ---------------------------------------------------------------------
 PROVIDER_KEY = uuid.UUID("3d0d3a3e-6c2b-5a3f-9f0a-1b6b7c1e8d21")
@@ -267,7 +267,7 @@ class Engine:
     def delete_provider(self) -> bool:
         return self._lib.FwpmProviderDeleteByKey0(self.handle, ctypes.byref(GUID.of(PROVIDER_KEY))) == ERROR_SUCCESS
 
-    def filter_exists(self, key: uuid.UUID) -> Optional[bool]:
+    def filter_exists(self, key: uuid.UUID) -> bool | None:
         """True or False, or None when this process may not ask (not an administrator)."""
         out = ctypes.POINTER(FWPM_FILTER0)()
         code = self._lib.FwpmFilterGetByKey0(self.handle, ctypes.byref(GUID.of(key)), ctypes.byref(out))
@@ -360,7 +360,7 @@ def remove() -> int:
         return remove_with(engine)
 
 
-def present() -> Optional[bool]:
+def present() -> bool | None:
     """All four filters exist; False when any is missing; None when this process may not
     look (the check then falls to the in-sandbox probe at session start)."""
     try:
@@ -373,7 +373,7 @@ def present() -> Optional[bool]:
     return all(seen)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(prog="windows_wfp")

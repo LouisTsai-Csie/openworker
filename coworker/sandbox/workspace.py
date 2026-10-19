@@ -17,7 +17,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable, Sequence
 
 from coworker.sandbox.runner.executor import Executor
@@ -81,7 +81,7 @@ class RunnerWorkspace(Workspace):
         registry: Any = None,
         session_id: str = "",
         agent: str = "",
-        live_roots: Optional[list] = None,
+        live_roots: list | None = None,
         start: bool = True,
     ) -> None:
         from coworker.sandbox.client import RunnerClient
@@ -89,7 +89,7 @@ class RunnerWorkspace(Workspace):
 
         self.provider = provider
         self.registry = registry
-        self._registered: Optional[str] = None
+        self._registered: str | None = None
         self._session_id, self._agent = session_id, agent
         # The session's own RootDir list. It changes while the session runs (a folder is
         # granted or taken away); a sandbox's walls are fixed when it starts.
@@ -169,7 +169,7 @@ class RunnerWorkspace(Workspace):
             state=state,
         )
 
-    def sync_roots(self) -> Optional[str]:
+    def sync_roots(self) -> str | None:
         """Restart the sandbox when the session's folders are no longer the ones it was
         started with (design ruling 15). Returns what to tell the agent, or None. Runs
         before every command, so it is also where a sandbox not yet started starts."""
@@ -259,7 +259,7 @@ class RunnerWorkspace(Workspace):
         ask = getattr(self.provider, "blocked_since", None)
         return list(ask(since)) if ask is not None else []
 
-    def network_note(self, started: float, result: Optional[dict[str, Any]] = None) -> Optional[dict[str, Any]]:
+    def network_note(self, started: float, result: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """What joins a command's result when the sandbox blocked something: the sites, and
         a note that says plainly what is and is not known. The attempts are tied to the time
         the command ran, not to the command.
@@ -357,21 +357,21 @@ def _same_roots(a: list, b: list) -> bool:
     return key(a) == key(b)
 
 
-def provider_name(explicit: Optional[str] = None) -> str:
+def provider_name(explicit: str | None = None) -> str:
     return (explicit or os.environ.get(PROVIDER_ENV) or DIRECT).strip().lower()
 
 
 def open_workspace(
     *,
     cwd: str | Path,
-    provider: Optional[str] = None,
-    roots: Optional[list] = None,
+    provider: str | None = None,
+    roots: list | None = None,
     session_id: str = "",
     agent: str = "",
-    credentials: Optional[list] = None,
-    network_profile: Optional[str] = None,
-    toolchains: Optional[list] = None,
-    extra_hosts: Optional[list] = None,
+    credentials: list | None = None,
+    network_profile: str | None = None,
+    toolchains: list | None = None,
+    extra_hosts: list | None = None,
     start: bool = True,
 ) -> Workspace:
     """The session's workspace for the configured provider. `credentials`: the machine's

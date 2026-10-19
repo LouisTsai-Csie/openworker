@@ -21,7 +21,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 _REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _IS_WINDOWS = sys.platform == "win32"
@@ -229,7 +229,7 @@ def _store_lock(path: Path) -> _StoreLock:
 class SecretStore:
     """File-backed secret store. Reads resolve `${VAR}` refs; status never leaks values."""
 
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path).expanduser() if path else state_dir() / "secrets.json"
         self._dotenv_path = self.path.parent / ".env"
         self._lock = _store_lock(self.path)
@@ -247,7 +247,7 @@ class SecretStore:
             self._lock.release()
 
     # -- reads ------------------------------------------------------------------
-    def get(self, profile: str) -> Optional[dict[str, Any]]:
+    def get(self, profile: str) -> dict[str, Any] | None:
         """Return a profile with `${VAR}` refs resolved, or None if absent."""
         data = self._read().get(profile)
         if data is None:

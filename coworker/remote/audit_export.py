@@ -27,7 +27,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Awaitable, Callable
 
 _OCSF_VERSION = "1.1.0"
@@ -55,7 +55,7 @@ class ExportPolicy:
     flush_seconds: float = 5.0
 
     @classmethod
-    def from_policy(cls, policy: Optional[dict[str, Any]]) -> ExportPolicy:
+    def from_policy(cls, policy: dict[str, Any] | None) -> ExportPolicy:
         """`policy` is the whole org policy record; this reads its `audit_export`
         field. Anything malformed reads as OFF — governance never turns on by
         accident."""
@@ -199,7 +199,7 @@ class AuditExporter:
         machine_id: str = "",
         machine_name: str = "",
         org_id: str = "",
-        policy: Optional[ExportPolicy] = None,
+        policy: ExportPolicy | None = None,
         backoff_start: float = 5.0,
         backoff_cap: float = 120.0,
     ) -> None:
@@ -337,7 +337,7 @@ class AuditExporter:
             self.last_error = ""
             total += len(rows)
 
-    async def run(self, send: Optional[SendBatch] = None) -> None:
+    async def run(self, send: SendBatch | None = None) -> None:
         """Serve until cancelled. `send` overrides the sink (tests, or the channel
         sender for one connection's lifetime). With the policy off this idles."""
         backoff = self._backoff_start

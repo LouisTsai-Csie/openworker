@@ -23,7 +23,7 @@ import threading
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 import aisuite as ai
@@ -84,7 +84,7 @@ def _write_skill_md(
 class SkillStore:
     """Folder-backed skill CRUD across the global + project scopes."""
 
-    def __init__(self, global_dir: Optional[str | Path] = None) -> None:
+    def __init__(self, global_dir: str | Path | None = None) -> None:
         self.global_dir = Path(global_dir) if global_dir else state_dir() / "skills"
         self._settings_path = state_dir() / "skills-settings.json"
         self._staging_dir = state_dir() / "skills-staged"
@@ -94,7 +94,7 @@ class SkillStore:
     def project_dir(self, workspace: str | Path) -> Path:
         return Path(workspace).expanduser().resolve() / ".coworker" / "skills"
 
-    def _base(self, scope: str, workspace: Optional[str | Path]) -> Path:
+    def _base(self, scope: str, workspace: str | Path | None) -> Path:
         if scope == GLOBAL_SCOPE:
             return self.global_dir
         if scope == PROJECT_SCOPE:
@@ -121,7 +121,7 @@ class SkillStore:
 
     # -- queries ------------------------------------------------------------------
     def find(
-        self, name: str, workspace: Optional[str | Path] = None
+        self, name: str, workspace: str | Path | None = None
     ) -> tuple[Path, str]:
         """Locate a skill by name, most-local first (project before global) — mirrors the
         loader's collision precedence so management operates on the copy the model sees."""
@@ -134,7 +134,7 @@ class SkillStore:
             return self._folder_of(self.global_dir, name), GLOBAL_SCOPE
         raise ValueError(f"Unknown skill: {name}")
 
-    def rows(self, workspace: Optional[str | Path] = None) -> list[dict[str, Any]]:
+    def rows(self, workspace: str | Path | None = None) -> list[dict[str, Any]]:
         """Enriched listing for the Settings screen: scope, source, enabled. Global first,
         then project (a project row with a colliding name is the effective copy)."""
         disabled = self.disabled_names()
@@ -182,7 +182,7 @@ class SkillStore:
         description: str,
         instructions: str,
         scope: str = GLOBAL_SCOPE,
-        workspace: Optional[str | Path] = None,
+        workspace: str | Path | None = None,
         source: str = "",
     ) -> dict[str, Any]:
         name = validate_name(name)
@@ -206,9 +206,9 @@ class SkillStore:
         self,
         name: str,
         *,
-        description: Optional[str] = None,
-        instructions: Optional[str] = None,
-        workspace: Optional[str | Path] = None,
+        description: str | None = None,
+        instructions: str | None = None,
+        workspace: str | Path | None = None,
     ) -> dict[str, Any]:
         """Rewrite SKILL.md fields in place; sibling resource files are untouched."""
         folder, scope = self.find(name, workspace)
@@ -228,7 +228,7 @@ class SkillStore:
         )
         return {"name": current.name, "scope": scope}
 
-    def delete(self, name: str, workspace: Optional[str | Path] = None) -> None:
+    def delete(self, name: str, workspace: str | Path | None = None) -> None:
         folder, _scope = self.find(name, workspace)
         if folder.is_symlink():  # never follow a link out of the scope dir
             folder.unlink()
@@ -240,7 +240,7 @@ class SkillStore:
         name: str,
         *,
         to_scope: str,
-        workspace: Optional[str | Path] = None,
+        workspace: str | Path | None = None,
     ) -> dict[str, Any]:
         folder, from_scope = self.find(name, workspace)
         if from_scope == to_scope:
@@ -375,7 +375,7 @@ class SkillStore:
         token: str,
         *,
         scope: str = GLOBAL_SCOPE,
-        workspace: Optional[str | Path] = None,
+        workspace: str | Path | None = None,
     ) -> dict[str, Any]:
         staged = self._staging_dir / str(token)
         if not (staged / "SKILL.md").is_file():
@@ -408,7 +408,7 @@ class SessionSkillStore:
     """``{session_id: {skill: bool}}`` — per-session mutes only; an absent entry means the
     session inherits (enabled unless disabled in Settings). Mirrors SessionConnectionStore."""
 
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else None
         self._lock = threading.Lock()
         self._rows: dict[str, dict[str, bool]] = {}
@@ -523,9 +523,9 @@ _SAVE_SKILL_SCHEMA = {
 
 
 def save_skill_tool(
-    store: Optional[SkillStore] = None,
+    store: SkillStore | None = None,
     *,
-    allowed_dirs: Optional[list[str | Path]] = None,
+    allowed_dirs: list[str | Path] | None = None,
 ) -> Callable:
     """Build the `save_skill` tool (SKILLS-SPEC §5.2). `requires_approval=True` routes every
     call through the standard approval card — the tool's ARGUMENTS are the review surface,
@@ -544,7 +544,7 @@ def save_skill_tool(
         name: str,
         description: str = "",
         instructions: str = "",
-        files: Optional[list[str]] = None,
+        files: list[str] | None = None,
     ) -> dict[str, Any]:
         try:
             name = validate_name(name)

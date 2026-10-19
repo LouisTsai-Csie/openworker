@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
 
 _TIMEOUT = 20.0
 
@@ -115,7 +114,7 @@ _PROVIDERS = {
 }
 
 
-def build_provider(name: str, api_key: Optional[str] = None) -> WebSearchProvider:
+def build_provider(name: str, api_key: str | None = None) -> WebSearchProvider:
     cls = _PROVIDERS.get(name, DuckDuckGoProvider)
     if cls.requires_key:
         if not api_key:

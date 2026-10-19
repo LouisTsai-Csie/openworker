@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from contextlib import AsyncExitStack
-from typing import Any, IO, Optional
+from typing import Any, IO
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -28,7 +28,7 @@ _STDERR_TAIL_LINES = 20
 _STDERR_TAIL_CHARS = 1500
 
 
-def _read_tail(errfile: Optional[IO[str]]) -> Optional[str]:
+def _read_tail(errfile: IO[str] | None) -> str | None:
     """Last few lines of a captured stderr file — the crash evidence, not the log."""
     if errfile is None:
         return None
@@ -108,12 +108,12 @@ class MCPManager:
                 self._conns.pop(server.name, None)  # _serve pops too; belt and braces
         return await self.ensure(server, interactive=interactive)
 
-    def last_stderr(self, name: str) -> Optional[str]:
+    def last_stderr(self, name: str) -> str | None:
         """Stderr tail from the most recent failed startup of `name`, if any."""
         return self._stderr_tails.get(name)
 
     async def call(
-        self, name: str, tool: str, arguments: Optional[dict[str, Any]]
+        self, name: str, tool: str, arguments: dict[str, Any] | None
     ) -> Any:
         conn = self._conns.get(name)
         if conn is None:

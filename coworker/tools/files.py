@@ -14,7 +14,7 @@ shape of the tree. Both tools are read-only and scoped to the session's roots.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import aisuite as ai
 
@@ -90,7 +90,7 @@ _LIST_SCHEMA = {
 }
 
 
-def file_tools(workspace: str, roots: Optional[list] = None) -> list:
+def file_tools(workspace: str, roots: list | None = None) -> list:
     """Windowed read_file and folder-aware list_files rooted at `workspace`. With `roots`
     (RootDir list), absolute paths inside ANY root also resolve — multi-root sessions
     (universal scratch) address their scratch/extra dirs by the absolute paths the roots

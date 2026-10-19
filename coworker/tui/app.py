@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from textual import work
 from textual.app import App, ComposeResult
@@ -84,13 +84,13 @@ class CoworkerApp(App):
         workspace: str | Path,
         model: str = "gpt-5.6-sol",
         mode: Mode = Mode.INTERACTIVE,
-        provider: Optional[ProviderClient] = None,
-        memory_store: Optional[MemoryStore] = None,
+        provider: ProviderClient | None = None,
+        memory_store: MemoryStore | None = None,
         memory_off: bool = False,
         user_rules: str = "",
-        session_store: Optional[ConversationStore] = None,
-        session_id: Optional[str] = None,
-        resume_messages: Optional[list[dict]] = None,
+        session_store: ConversationStore | None = None,
+        session_id: str | None = None,
+        resume_messages: list[dict] | None = None,
     ) -> None:
         super().__init__()
         self.workspace = Path(workspace).expanduser().resolve()

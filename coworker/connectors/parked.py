@@ -18,7 +18,6 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -27,11 +26,11 @@ class ParkedMessage:
     chat_id: str  # channel/DM id, e.g. "C0BD7KZ1AH5"
     user_id: str  # sender id, e.g. "U07JK68S4BH"
     text: str
-    chat_name: Optional[str] = None  # resolved display name (falls back to chat_id)
-    user_name: Optional[str] = None  # resolved display name (falls back to user_id)
+    chat_name: str | None = None  # resolved display name (falls back to chat_id)
+    user_name: str | None = None  # resolved display name (falls back to user_id)
     chat_type: str = "channel"  # "channel" | "group" | "dm"
-    thread_id: Optional[str] = None
-    team_id: Optional[str] = None  # workspace id (managed relay); None for socket mode
+    thread_id: str | None = None
+    team_id: str | None = None  # workspace id (managed relay); None for socket mode
     # A direct @-mention of the bot (drives the §31 mention router on re-delivery).
     mentions_me: bool = False
     ts: float = field(default_factory=time.time)
@@ -39,7 +38,7 @@ class ParkedMessage:
 
 
 class ParkedStore:
-    def __init__(self, path: Optional[str | Path] = None, *, cap: int = 100) -> None:
+    def __init__(self, path: str | Path | None = None, *, cap: int = 100) -> None:
         self.path = Path(path) if path else None
         self._cap = cap
         self._lock = threading.Lock()
@@ -75,7 +74,7 @@ class ParkedStore:
             self._save()
         return item
 
-    def list(self, platform: Optional[str] = None) -> list[dict]:
+    def list(self, platform: str | None = None) -> list[dict]:
         with self._lock:
             return [
                 asdict(i)
@@ -83,7 +82,7 @@ class ParkedStore:
                 if platform is None or i.platform == platform
             ]
 
-    def pop(self, item_id: str) -> Optional[ParkedMessage]:
+    def pop(self, item_id: str) -> ParkedMessage | None:
         with self._lock:
             for i, item in enumerate(self._items):
                 if item.id == item_id:

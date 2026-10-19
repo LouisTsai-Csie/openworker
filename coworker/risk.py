@@ -74,7 +74,7 @@ _STRICTNESS: dict[RiskClass, int] = {
 RiskOverrides = Callable[[str], Optional["RiskClass"]]
 
 
-def _catalog_floor(tool_name: str) -> Optional[RiskClass]:
+def _catalog_floor(tool_name: str) -> RiskClass | None:
     """The floor a connector-catalog tool must not be relaxed below. Catalog writes are
     EXTERNAL by construction (`approval_for_tool` → `requires_approval=True`), and letting
     an override drop one to READ would switch off approval, the Auto-Approve reviewer, and
@@ -88,7 +88,7 @@ def _catalog_floor(tool_name: str) -> Optional[RiskClass]:
     return RiskClass.EXTERNAL if kind is not None and kind != "read" else None
 
 
-def _mcp_floor(tool_name: str, metadata: Any) -> Optional[RiskClass]:
+def _mcp_floor(tool_name: str, metadata: Any) -> RiskClass | None:
     """The floor for third-party MCP tools (OPE-136): EXTERNAL, always.
 
     An MCP tool's effects are a stranger's claim — we cannot tell its reads from a write
@@ -116,7 +116,7 @@ def _mcp_floor(tool_name: str, metadata: Any) -> Optional[RiskClass]:
 
 
 def classify(
-    tool_name: str, metadata: Any = None, overrides: Optional[RiskOverrides] = None
+    tool_name: str, metadata: Any = None, overrides: RiskOverrides | None = None
 ) -> RiskClass:
     """Effective risk of a tool call. A user override may *relax* a metadata tool (the
     intended use — quieting an over-cautious plug-in), but may only ever **tighten** a

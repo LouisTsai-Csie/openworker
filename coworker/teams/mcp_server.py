@@ -12,7 +12,7 @@ Tool results are JSON — raw data for the agent, not prose.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from coworker.teams.model import BoardError
 
@@ -107,7 +107,7 @@ def build(dialect, *, space: str):
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
+        parent: int | None = None,
         case: str = "",
     ) -> Any:
         """File a new work item (open, unassigned — work starts when it is
@@ -214,7 +214,7 @@ def build(dialect, *, space: str):
         case: str,
         body: str,
         kind: str = "note",
-        item: Optional[int] = None,
+        item: int | None = None,
         entities: list[str] = [],
         refs: list[str] = [],
     ) -> Any:
@@ -235,7 +235,7 @@ def build(dialect, *, space: str):
     @mcp.tool()
     def journal_read(
         case: str,
-        item: Optional[int] = None,
+        item: int | None = None,
         author: str = "",
         kind: str = "",
         entity: str = "",

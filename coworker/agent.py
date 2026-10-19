@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Callable
 
 from coworker.agents import Agent, AgentContext, code_agent
@@ -140,7 +140,7 @@ CHAT_PLATFORMS: frozenset[str] = frozenset({"slack", "telegram"})
 
 
 def _chat_platforms(
-    agent: Agent, secrets: SecretStore, connector_filter: Optional[set[str]] = None
+    agent: Agent, secrets: SecretStore, connector_filter: set[str] | None = None
 ) -> set[str]:
     """The chat platforms this session may post to: gateway-enabled (token or relay
     present) ∩ the persona's `connectors:` allowlist ∩ the session's effective set."""
@@ -203,7 +203,7 @@ def _loaded_skill_names(messages: list[dict[str, Any]]) -> set[str]:
     return loaded
 
 
-def _skill_dirs(workspace: Optional[Path]) -> list[Path]:
+def _skill_dirs(workspace: Path | None) -> list[Path]:
     dirs = [state_dir() / "skills"]
     if workspace is not None:
         dirs.append(workspace / ".coworker" / "skills")
@@ -225,75 +225,75 @@ def _is_within(path: Path, root: Path) -> bool:
 def build_engine(
     *,
     agent: Agent,
-    workspace: Optional[str | Path] = None,
+    workspace: str | Path | None = None,
     model: str = "gpt-5.6-sol",
     mode: Mode = Mode.INTERACTIVE,
-    approver: Optional[Approver] = None,
-    provider: Optional[ProviderClient] = None,
-    allowed_commands: Optional[list[str]] = None,
-    max_iterations: Optional[int] = None,
-    model_settings: Optional[dict[str, Any]] = None,
+    approver: Approver | None = None,
+    provider: ProviderClient | None = None,
+    allowed_commands: list[str] | None = None,
+    max_iterations: int | None = None,
+    model_settings: dict[str, Any] | None = None,
     # OPE-186: explicit tool-result byte cap (None = config, then the 10,000 default;
     # 0 = off) and where bounded results' full text is spilled (None = the session's
     # scratch root if there is one, else a per-process temp directory).
-    tool_result_max_bytes: Optional[int] = None,
-    tool_result_spill_dir: Optional[str | Path] = None,
-    memory_store: Optional[MemoryStore] = None,
+    tool_result_max_bytes: int | None = None,
+    tool_result_spill_dir: str | Path | None = None,
+    memory_store: MemoryStore | None = None,
     # Twentieth pass: the project key memory loads/saves under. Defaults to the
     # workspace path; the manager passes the resolved key (binding > git > path)
     # so all worktrees of a repo share one memory and named bindings work.
-    memory_workspace: Optional[str] = None,
+    memory_workspace: str | None = None,
     # MEMORY-SPEC §5.1: called with the MemoryItem right after `remember` persists it —
     # the manager uses this to push the memory_saved event that powers the save toast.
-    on_memory_saved: Optional[Any] = None,
+    on_memory_saved: Any | None = None,
     # MEMORY-SPEC §6: the user's standing rules (Settings textarea). Injected verbatim
     # above auto memories; independent of the memory on/off switch. No tool writes it.
     # A CALLABLE is read per turn (the server passes one so a Settings edit reaches
     # conversations already open); a plain string is a fixed value for CLI/tests.
-    user_rules: Optional[Any] = None,
+    user_rules: Any | None = None,
     # True when the user turned memory OFF in Settings (vs. memory simply not wired):
     # injects the honesty notice so the model says so instead of faking a save.
     memory_off: bool = False,
     # LIVE saving switch, consulted per write so turning memory off applies to
     # conversations already running (the registry is fixed at build, so the tool stays
     # and refuses). Same pattern as the skills menu's live filter.
-    memory_saving_enabled: Optional[Any] = None,
-    messages: Optional[list[dict[str, Any]]] = None,
-    extra_tools: Optional[list[Any]] = None,
-    secrets: Optional[SecretStore] = None,
-    task_store: Optional[Any] = None,
-    wake_store: Optional[Any] = None,
-    session_id: Optional[str] = None,
-    audit_sink: Optional[Any] = None,
-    roots: Optional[list] = None,
-    directory_requester: Optional[Any] = None,
-    plan_approver: Optional[Any] = None,
-    question_asker: Optional[Any] = None,
-    tool_requester: Optional[Any] = None,
-    connector_requester: Optional[Any] = None,
-    team_approver: Optional[Any] = None,
-    items_approver: Optional[Any] = None,
-    subscription_store: Optional[Any] = None,
-    channel_buffer: Optional[Any] = None,
-    routing_targets: Optional[list[str]] = None,
+    memory_saving_enabled: Any | None = None,
+    messages: list[dict[str, Any]] | None = None,
+    extra_tools: list[Any] | None = None,
+    secrets: SecretStore | None = None,
+    task_store: Any | None = None,
+    wake_store: Any | None = None,
+    session_id: str | None = None,
+    audit_sink: Any | None = None,
+    roots: list | None = None,
+    directory_requester: Any | None = None,
+    plan_approver: Any | None = None,
+    question_asker: Any | None = None,
+    tool_requester: Any | None = None,
+    connector_requester: Any | None = None,
+    team_approver: Any | None = None,
+    items_approver: Any | None = None,
+    subscription_store: Any | None = None,
+    channel_buffer: Any | None = None,
+    routing_targets: list[str] | None = None,
     # Cloud-first subscribe / release hooks (connectors-across-machines spec §3.3):
     # the manager's, so an agent's subscribe obeys the same one-responder rule as the UI.
-    subscription_register: Optional[Callable[[str, str], dict]] = None,
-    subscription_release: Optional[Callable[[str, str], None]] = None,
+    subscription_register: Callable[[str, str], dict] | None = None,
+    subscription_release: Callable[[str, str], None] | None = None,
     # §11.6: a lead's `decide_worker_call` resolves a worker's parked prompt through the
     # manager (team membership + the durable wait queue live there).
-    worker_decider: Optional[Callable[[str, str, str, str], dict]] = None,
-    connector_filter: Optional[set[str]] = None,
+    worker_decider: Callable[[str, str, str, str], dict] | None = None,
+    connector_filter: set[str] | None = None,
     # A set (static snapshot) or a zero-arg callable (live, re-evaluated per load_skill).
-    skill_filter: Optional[set[str] | Callable[[], set[str]]] = None,
+    skill_filter: set[str] | Callable[[], set[str]] | None = None,
     # Auto-Approve flags (spec Part 8 / §1.5). None ⇒ read the config.toml value; the server
     # passes its prefs-backed booleans so the GUI Settings toggle takes effect. Both stores
     # are user-global, preserving the "a repo can't enable this" invariant.
-    auto_approve: Optional[bool] = None,
-    auto_approve_shadow: Optional[bool] = None,
+    auto_approve: bool | None = None,
+    auto_approve_shadow: bool | None = None,
     # Persona-carried skill folders (OPE-58): the bundle's skills/ dir joins the loader so
     # its skills are readable by load_skill, not just listed by the filter.
-    extra_skill_dirs: Optional[list[str | Path]] = None,
+    extra_skill_dirs: list[str | Path] | None = None,
 ) -> TurnEngine:
     ws = Path(workspace).expanduser().resolve() if workspace else None
     if agent.requires_folder and ws is None:
@@ -324,7 +324,7 @@ def build_engine(
         root_list.append(RootDir(path=_openshell.SKILLS_DIR, writable=False, label="openshell-skills"))
 
     if tool_result_spill_dir is not None:
-        spill_dir: Optional[Path] = Path(tool_result_spill_dir).expanduser().resolve()
+        spill_dir: Path | None = Path(tool_result_spill_dir).expanduser().resolve()
     else:
         scratch = next((r.path for r in root_list if r.label == "scratch"), None)
         if scratch is not None:
