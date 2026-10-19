@@ -48,7 +48,8 @@ def test_is_consequential():
 
 def test_overrides_relax_metadata_but_never_downgrade_a_builtin():
     # A user-local override may relax a metadata/MCP tool (the intended use)...
-    relax = lambda n: RiskClass.READ if n in {"write_file", "mcp_tool"} else None
+    def relax(n):
+        return RiskClass.READ if n in {"write_file", "mcp_tool"} else None
     assert classify("mcp_tool", EXTERNAL_META, relax) == RiskClass.READ  # relax MCP
     # ...but must NEVER loosen a built-in write/exec/egress tool: downgrading write_file to
     # read would switch off path scoping AND the read-only gate, so the override is ignored.
@@ -59,7 +60,8 @@ def test_overrides_relax_metadata_but_never_downgrade_a_builtin():
 
 def test_overrides_may_tighten_a_builtin():
     # Tightening is fine — only loosening a built-in is refused.
-    tighten = lambda n: RiskClass.EXEC if n == "write_file" else None
+    def tighten(n):
+        return RiskClass.EXEC if n == "write_file" else None
     assert classify("write_file", None, tighten) == RiskClass.EXEC
 
 

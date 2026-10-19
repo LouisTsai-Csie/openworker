@@ -3516,9 +3516,10 @@ class SessionManager:
         by code — the model does judgment, not arithmetic. Returns (model text,
         structured rows) — the rows ride the display sidecar so the GUI renders a
         collapsed BoardWakeCard instead of re-parsing prose."""
-        clamp = lambda text: self._clamp(  # two-site local shorthand
-            text, self.DIGEST_CLAMP_MODEL, suffix=" … (full text on the board)"
-        )
+        def clamp(text):
+            return self._clamp(  # two-site local shorthand
+                    text, self.DIGEST_CLAMP_MODEL, suffix=" … (full text on the board)"
+                )
         lines: list[str] = []
         rows: list[dict] = []
         ordered = sorted(directs + subs, key=lambda e: e["seq"])
