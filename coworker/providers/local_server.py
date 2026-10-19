@@ -53,7 +53,7 @@ def _headers(api_key: Optional[str]) -> dict[str, str]:
 def alive(name: str, base_url: Optional[str], api_key: Optional[str] = None) -> bool:
     try:
         return httpx.get(v1_base(name, base_url) + "/models", headers=_headers(api_key), timeout=0.8).status_code == 200
-    except Exception:  # noqa: BLE001 - a probe never raises
+    except Exception:  # a probe never raises
         return False
 
 

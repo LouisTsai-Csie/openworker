@@ -1,7 +1,6 @@
 """Regressions found by the real lead + two-worker Team View run."""
 
 import asyncio
-from types import SimpleNamespace
 
 import pytest
 from coworker.engine import ApprovalOutcome, PermissionRequest

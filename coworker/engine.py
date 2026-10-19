@@ -21,7 +21,8 @@ import time
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Optional
+from typing import Any, Optional
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 from . import compaction as _compaction
 from . import provenance
@@ -137,27 +138,27 @@ class TurnEngine:
         audit_sink: Optional[Callable[[dict[str, Any]], None]] = None,
         context_provider: Optional[Callable[[], str]] = None,
         directory_requester: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         plan_approver: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         question_asker: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         tool_requester: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         team_approver: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         items_approver: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         # Handles `request_connector` / `grant_connector` (spec §11.6): emits
         # CONNECTOR_REQUESTED, waits for the human, returns {approved, …}.
         connector_requester: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+            Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = None,
         # Called (thread-safe, best-effort) when the user stops the turn — e.g. the
         # executor's kill for a running shell command.
@@ -381,7 +382,7 @@ class TurnEngine:
     # -- main loop --------------------------------------------------------------
     async def run(
         self,
-        user_input: "str | list",
+        user_input: str | list,
         *,
         source: Optional[dict[str, Any]] = None,
         display: Optional[str] = None,
@@ -1178,7 +1179,7 @@ class TurnEngine:
             outcomes = await asyncio.gather(
                 *[asyncio.to_thread(self._execute_sync, tc) for tc in concurrent]
             )
-            for tool_call, (result, status) in zip(concurrent, outcomes):
+            for tool_call, (result, status) in zip(concurrent, outcomes, strict=True):
                 yield self._record_result(tool_call, result, status)
 
         for tool_call in serial:
@@ -1249,7 +1250,7 @@ class TurnEngine:
         """Attendance is "auto": nobody will answer, so the engine answers by fixed rule."""
         try:
             return self.attendance is not None and self.attendance() == _attendance.AUTO
-        except Exception:  # noqa: BLE001 - a broken getter must read as attended
+        except Exception:  # a broken getter must read as attended
             return False
 
     def _nobody_answers_cards(self) -> bool:
@@ -1259,7 +1260,7 @@ class TurnEngine:
             try:
                 if self.cards_reach_person():
                     return False
-            except Exception:  # noqa: BLE001 - a broken getter must not open a card nobody sees
+            except Exception:  # a broken getter must not open a card nobody sees
                 pass
         return self._auto_answering()
 
@@ -1401,7 +1402,7 @@ class TurnEngine:
                 for tc in pending
             ]
         )
-        for tc, verdict in zip(pending, verdicts):
+        for tc, verdict in zip(pending, verdicts, strict=True):
             if (self.reviewer is not consulted_reviewer
                     or self.reviewer_settings_epoch != settings_epoch
                     or not self._reviewer_active()
@@ -1548,7 +1549,7 @@ class TurnEngine:
         if self._shadow_tasks:
             await asyncio.gather(*list(self._shadow_tasks), return_exceptions=True)
 
-    async def _authorize(self, tool_call: ToolCall) -> "AsyncIterator[Event | bool]":
+    async def _authorize(self, tool_call: ToolCall) -> AsyncIterator[Event | bool]:
         """Permission flow for one call (TOOL_PROPOSED is emitted by the caller). Yields
         its events, then True/False (allowed) last. Denied/unknown calls get their
         tool-error message appended here."""
@@ -2428,7 +2429,7 @@ class TurnEngine:
                     "version": info.get("version", ""),
                     "note": "installed by the unattended-auto rule (pinned, checksum-verified)",
                 }
-            except Exception as exc:  # noqa: BLE001 - the agent must hear why
+            except Exception as exc:  # the agent must hear why
                 result = {
                     "installed": False,
                     "error": f"install failed: {exc}",
@@ -2521,7 +2522,7 @@ class TurnEngine:
         try:
             for when, entry in (workspace.blocked_since(0.0) if evidence else []):
                 last[entry] = max(when, last.get(entry, 0.0))
-        except Exception:  # noqa: BLE001 - evidence is a help, never a reason to fail the card
+        except Exception:  # evidence is a help, never a reason to fail the card
             last, evidence = {}, False
         now = time.time()
         return {

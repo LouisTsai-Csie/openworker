@@ -9,7 +9,6 @@ from __future__ import annotations
 import subprocess
 from types import SimpleNamespace
 
-import pytest
 
 from coworker.tools.files import file_tools
 from coworker.tools.git import git_tools

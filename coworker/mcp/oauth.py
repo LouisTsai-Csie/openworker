@@ -236,7 +236,7 @@ async def _wait_for_callback() -> tuple[str, Optional[str]]:
         raise RuntimeError(
             "sign-in timed out — the browser window was not completed in "
             f"{FLOW_TIMEOUT_SECONDS // 60} minutes"
-        )
+        ) from None
     finally:
         _pending = None
         _expected_state = None  # don't let this flow's state gate the next one

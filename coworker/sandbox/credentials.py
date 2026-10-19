@@ -22,7 +22,8 @@ import stat
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 CREDENTIAL = "credential"
 CONFIGURATION = "configuration"
@@ -294,7 +295,7 @@ def copy_in(
     """
     home = os.path.realpath(home or os.path.expanduser("~"))
     sandbox_home = os.path.join(os.path.realpath(runtime_dir), "home")
-    if sandbox_home == home or sandbox_home.startswith(home + os.sep) and os.path.realpath(runtime_dir) == home:
+    if sandbox_home == home or (sandbox_home.startswith(home + os.sep) and os.path.realpath(runtime_dir) == home):
         raise ValueError("the sandbox's runtime folder cannot be the home folder itself")
     seen = sandbox_home if inside_home is None else inside_home
     on_windows = (sys.platform == "win32") if windows is None else windows

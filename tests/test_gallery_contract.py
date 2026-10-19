@@ -24,7 +24,6 @@ from coworker.sessions import SessionRecord
 from proposal_fixtures import work_proposal, team_proposal
 
 CONTRACT = Path(__file__).resolve().parents[1] / "surfaces/gui/src/gallery/states.contract.json"
-OPUS, SONNET = "anthropic:claude-opus-4-8", "anthropic:claude-sonnet-4-8"
 
 
 @pytest.fixture(scope="module")
@@ -104,7 +103,7 @@ async def test_staffing_card_payload_matches_the_gallery(manager, contract):
     problems = _compare("team gate", data, canonical, states)
     # Same check one level down: the roster rows.
     gallery_members = [m for s in states for m in s.get("members", [])]
-    canonical_member = {k: v for k, v in canonical["members"][0].items()}
+    canonical_member = dict(canonical["members"][0].items())
     for member in data["members"]:
         problems += _compare("team member", member, {k: canonical_member[k] for k in ("persona", "name", "resolved_model")}, gallery_members)
     # The inline event carries the same fields minus the gate marker.

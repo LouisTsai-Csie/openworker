@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from .manifest import PersonaManifest
 

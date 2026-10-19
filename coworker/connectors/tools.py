@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 import aisuite as ai
 

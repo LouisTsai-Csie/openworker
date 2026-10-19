@@ -1,7 +1,6 @@
 """Scoped board reads, honest approval attribution and interrupted-prompt recovery."""
 
 import asyncio
-import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 

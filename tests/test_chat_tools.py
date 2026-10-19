@@ -4,7 +4,6 @@ that names the reply call, and the thread grant that pre-approves it. No network
 
 from __future__ import annotations
 
-import pytest
 
 from coworker.connectors.base import SendResult, SessionSource
 from coworker.connectors.chat_tools import make_chat_tools, slack_workspaces

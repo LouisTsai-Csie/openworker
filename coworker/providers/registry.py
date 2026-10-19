@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from .anthropic_provider import AnthropicProvider
 from .base import ProviderClient

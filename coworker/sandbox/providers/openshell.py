@@ -31,7 +31,8 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Callable, Sequence
 
 import yaml
 
@@ -544,8 +545,8 @@ class GrpcExecTransport:
         host = endpoint.rsplit(":", 1)[0]
         options = [("grpc.ssl_target_name_override", "localhost")] if host in ("127.0.0.1", "::1") else []
         self._channel = grpc.secure_channel(endpoint, credentials, options=options)
-        self._outgoing: "queue.Queue[Optional[bytes]]" = queue.Queue()
-        self._incoming: "queue.Queue[Optional[bytes]]" = queue.Queue()
+        self._outgoing: queue.Queue[Optional[bytes]] = queue.Queue()
+        self._incoming: queue.Queue[Optional[bytes]] = queue.Queue()
         self._buffer = b""
         self._closed = False
         call = self._channel.stream_stream(wire.METHOD, request_serializer=lambda b: b, response_deserializer=lambda b: b)

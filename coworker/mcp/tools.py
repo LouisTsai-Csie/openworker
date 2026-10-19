@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import Any, Awaitable, Callable
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 import aisuite as ai
 

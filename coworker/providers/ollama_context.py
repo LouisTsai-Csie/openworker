@@ -23,7 +23,8 @@ import json
 import os
 import re
 import time
-from typing import Any, Iterator, Optional
+from typing import Any, Optional
+from collections.abc import Iterator
 
 import httpx
 

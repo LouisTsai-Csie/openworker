@@ -8,7 +8,6 @@ modification, not reading.
 """
 from __future__ import annotations
 
-from pathlib import Path
 
 import pytest
 
@@ -79,7 +78,7 @@ def test_find_with_a_global_option_inside_the_root_still_runs(session):
     # The scoping must not undo the convenience: the prefixed form over an in-scope path
     # keeps auto-running, exactly like the unprefixed one.
     assert runs(session, "find -L . -name '*.py'")
-    assert runs(session, "find -D search src"), command
+    assert runs(session, "find -D search src")
 
 
 def test_openworkers_own_secrets_are_no_longer_readable(session):

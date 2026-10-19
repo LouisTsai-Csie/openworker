@@ -10,7 +10,8 @@ empty (OPE-203). Both read-only, scoped to the session's folders.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 _DEFAULT_MAX_LINES = 2000
 _MAX_LINE_CHARS = 500
@@ -119,7 +120,7 @@ def read_file(
     selected: list[str] = []
     total = 0
     try:
-        with open(target, "r", encoding="utf-8", errors="replace") as fh:
+        with open(target, encoding="utf-8", errors="replace") as fh:
             for i, line in enumerate(fh, 1):
                 total = i
                 if i < start or len(selected) >= n:

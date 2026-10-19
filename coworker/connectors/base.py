@@ -11,7 +11,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Awaitable, Callable
 
 
 class MessageType(str, Enum):

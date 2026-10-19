@@ -11,7 +11,8 @@ from __future__ import annotations
 import builtins
 import functools
 import inspect
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from .runner import protocol as P
 from .runner.toolcalls import TOOLS

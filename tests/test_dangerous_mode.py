@@ -67,7 +67,7 @@ def _text(text="done"):
 def test_mode_exists_with_a_label_and_sits_in_the_bypass_family():
     assert Mode("dangerously-bypass-approvals") is DANGEROUS
     assert MODE_LABELS["dangerously-bypass-approvals"] == "Dangerously bypass approvals"
-    assert BYPASS_MODES == {Mode.BYPASS_APPROVALS, DANGEROUS}
+    assert BYPASS_MODES == {Mode.BYPASS_APPROVALS, DANGEROUS}  # noqa: SIM300 - actual == expected; SIM300 reads the ALL-CAPS name as the constant
     # The legacy spelling still means the SAFE bypass, never the dangerous one.
     assert Mode("auto") is Mode.BYPASS_APPROVALS
 

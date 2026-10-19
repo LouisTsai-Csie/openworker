@@ -142,7 +142,7 @@ class CompactionState:
         }
 
     @classmethod
-    def from_dict(cls, raw: Any) -> Optional["CompactionState"]:
+    def from_dict(cls, raw: Any) -> Optional[CompactionState]:
         if not isinstance(raw, dict) or "boundary_index" not in raw:
             return None
         return cls(

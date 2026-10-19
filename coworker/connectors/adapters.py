@@ -507,7 +507,7 @@ def make_adapter(
         from .relay_client import RelayHub
 
         installs = (
-            {iid: prof for iid, prof in list_installs(secrets)} if secrets else {}
+            dict(list_installs(secrets)) if secrets else {}
         )
         # Machine-held GitHub (machines spec §Managed events, increment 2):
         # events drain the sealed queue by machine credential; tokens mint on

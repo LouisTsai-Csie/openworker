@@ -22,7 +22,8 @@ from email.header import decode_header
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 import aisuite as ai
 
@@ -216,7 +217,7 @@ def _quote(value: str) -> str:
 
 
 _DATE_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
-_MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
 def _imap_date(value: str) -> Optional[str]:

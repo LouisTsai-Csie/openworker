@@ -21,9 +21,10 @@ import json
 import re
 import threading
 from collections import deque
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
+from collections.abc import Callable
 
 
 @dataclass

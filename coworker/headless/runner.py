@@ -438,7 +438,7 @@ def describe_reasoning_effort(model: str) -> dict[str, Any]:
                 # to effort "high".
                 detail["effort"] = "high (API default; no output_config sent)"
                 label = "high (Anthropic adaptive thinking, effort not set = API default high)"
-        except Exception:  # noqa: BLE001 - never fail a run over a metadata lookup
+        except Exception:  # never fail a run over a metadata lookup
             label = "extended thinking on (OpenWorker default; details unavailable)"
         return {"label": label, "detail": detail}
     if provider == "openai":
@@ -530,7 +530,7 @@ def recording_provider(inner, log_path: Path):
         def _record(self, exc: BaseException, method: str) -> None:
             try:
                 self.last_cause = redact(root_cause_text(exc))
-            except Exception:  # noqa: BLE001
+            except Exception:
                 self.last_cause = ""
             try:
                 lines = [f"=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} {method} ==="]
@@ -546,7 +546,7 @@ def recording_provider(inner, log_path: Path):
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 with log_path.open("a", encoding="utf-8") as fh:
                     fh.write(redact("\n".join(lines)) + "\n")
-            except Exception:  # noqa: BLE001 - diagnostics must never mask the real error
+            except Exception:  # diagnostics must never mask the real error
                 pass
 
         def _note_turn(self, turn, method: str) -> None:
@@ -567,7 +567,7 @@ def recording_provider(inner, log_path: Path):
                 calls_path = log_path.with_name("model_calls.jsonl")
                 with calls_path.open("a", encoding="utf-8") as fh:
                     fh.write(json.dumps(rec) + "\n")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
         def complete(self, *, model, messages, tools=None, **settings):
@@ -677,7 +677,7 @@ def _agent_version(explicit: Optional[str]) -> str:
             return f"openworker {version(dist)}"
         except PackageNotFoundError:
             continue
-        except Exception:  # noqa: BLE001
+        except Exception:
             break
     return "openworker unknown"
 
@@ -960,7 +960,7 @@ def _run(args: argparse.Namespace) -> int:
                 isolation=isolation,
                 trajectory_extra_path=None,  # final copy to --trajectory-atif happens at the end
             )
-        except Exception:  # noqa: BLE001 - a provisional write must never break the run
+        except Exception:  # a provisional write must never break the run
             pass
 
     import signal
@@ -970,7 +970,7 @@ def _run(args: argparse.Namespace) -> int:
     # part a run waiting out a provider error ignored the signal until a hard kill.
     stop: dict[str, Any] = {"asked": False, "loop": None, "event": None}
 
-    def _on_term(signum, frame):  # noqa: ARG001
+    def _on_term(signum, frame):
         stop["asked"] = True
         try:
             engine.request_interrupt()
@@ -1108,15 +1108,15 @@ def _run(args: argparse.Namespace) -> int:
         outcome = "timeout"
         try:
             engine.request_interrupt()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     except KeyboardInterrupt:  # Ctrl-C: stop, and still leave the record
         outcome = "interrupted"
         try:
             engine.request_interrupt()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
-    except Exception as exc:  # noqa: BLE001 - recorded, then reported by exit code
+    except Exception as exc:  # recorded, then reported by exit code
         outcome = "crash"
         error_text = "".join(traceback.format_exception(exc))
     finally:
@@ -1124,19 +1124,19 @@ def _run(args: argparse.Namespace) -> int:
         if executor is not None:
             try:
                 executor.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         # The run's sandbox ends with the run.
         sandbox = getattr(engine, "sandbox_workspace", None)
         if sandbox is not None:
             try:
                 sandbox.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
     wall = time.time() - started
     try:
         events_fh.close()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     if stop["asked"] and outcome in ("unknown", "timeout"):
@@ -1301,7 +1301,7 @@ def _context_record(engine: Any) -> dict[str, Any]:
                 cap_tokens=int(cfg["cap_tokens"]),
             ),
         }
-    except Exception:  # noqa: BLE001 - a record field must never break the run
+    except Exception:  # a record field must never break the run
         return {"window": None, "window_source": "unknown", "compaction_trigger_tokens": None}
 
 
@@ -1459,7 +1459,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     args = parse_args(argv)
     try:
         code = run(args)
-    except Exception:  # noqa: BLE001 - last resort: say what happened, exit non-zero
+    except Exception:  # last resort: say what happened, exit non-zero
         traceback.print_exc()
         code = 1
     sys.exit(code)

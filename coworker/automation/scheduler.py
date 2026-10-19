@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Awaitable, Callable, Optional
+from typing import Optional
+from collections.abc import Awaitable, Callable
 
 from .models import ScheduledTask, TaskRun
 from .store import TaskStore

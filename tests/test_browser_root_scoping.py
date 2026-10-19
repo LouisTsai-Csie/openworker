@@ -7,7 +7,6 @@ card. The checks live inside the tools; these pin them.
 """
 from __future__ import annotations
 
-from pathlib import Path
 
 import pytest
 

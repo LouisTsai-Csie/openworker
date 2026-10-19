@@ -105,7 +105,7 @@ class Schedule:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Schedule":
+    def from_dict(cls, d: dict) -> Schedule:
         return cls(
             kind=d.get("kind", "cron"),
             cron=d.get("cron"),
@@ -152,7 +152,7 @@ class ScheduledTask:
         return d
 
     @classmethod
-    def from_dict(cls, d: dict) -> "ScheduledTask":
+    def from_dict(cls, d: dict) -> ScheduledTask:
         d = dict(d)
         d["schedule"] = Schedule.from_dict(d.get("schedule") or {})
         return cls(**d)
@@ -238,5 +238,5 @@ class TaskRun:
         return self.__dict__.copy()
 
     @classmethod
-    def from_dict(cls, d: dict) -> "TaskRun":
+    def from_dict(cls, d: dict) -> TaskRun:
         return cls(**d)

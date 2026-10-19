@@ -4,7 +4,6 @@ plain error; an unconfined box behaves exactly as before."""
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest

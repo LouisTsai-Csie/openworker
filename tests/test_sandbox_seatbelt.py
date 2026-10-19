@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from coworker.agents.base import AgentContext  # noqa: E402  (before catalog: import order)
-from coworker import catalog  # noqa: E402, I001
+from coworker.agents.base import AgentContext
+from coworker import catalog
 from coworker.roots import RootDir
 from coworker.sandbox import netproxy, network_profiles
 from coworker.sandbox.providers import seatbelt, seatbelt_profile
@@ -90,7 +90,7 @@ def _ask(proxy: netproxy.AllowListProxy, request: bytes) -> bytes:
         while True:
             try:
                 data = s.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 break
             if not data:
                 break

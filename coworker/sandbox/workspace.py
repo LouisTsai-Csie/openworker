@@ -17,7 +17,8 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Callable, Sequence
 
 from .runner.executor import Executor
 
@@ -226,7 +227,7 @@ class RunnerWorkspace(Workspace):
     def _asking(self) -> bool:
         try:
             return bool(self.can_ask_network())
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False
 
     def _network_context(self) -> str:

@@ -18,7 +18,8 @@ the sandbox (it carried an internal id before) and must say which workspace it i
 
 from __future__ import annotations
 
-from typing import Iterator, Optional
+from typing import Optional
+from collections.abc import Iterator
 
 METHOD = "/openshell.v1.OpenShell/ExecSandboxInteractive"
 _LEN, _VARINT = 2, 0

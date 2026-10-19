@@ -72,7 +72,7 @@ def usage_totals(messages: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
         if not isinstance(u, dict):
             continue
         key = str(u.get("model") or "unknown")
-        row = out.setdefault(key, {f: 0 for f in USAGE_FIELDS} | {"turns": 0})
+        row = out.setdefault(key, dict.fromkeys(USAGE_FIELDS, 0) | {"turns": 0})
         for f in USAGE_FIELDS:
             try:
                 row[f] += max(int(u.get(f) or 0), 0)

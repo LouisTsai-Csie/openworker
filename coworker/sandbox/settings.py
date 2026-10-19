@@ -205,7 +205,7 @@ def _throwaway_check() -> tuple[bool, str]:
         )
         ws.close()
         return True, "your profile is not readable from inside; no local port but the proxy's is reachable"
-    except Exception as exc:  # noqa: BLE001 - the message is the outcome
+    except Exception as exc:  # the message is the outcome
         return False, str(exc)
     finally:
         shutil.rmtree(folder, ignore_errors=True)
@@ -376,7 +376,7 @@ def session_sandbox(engine: Any) -> dict[str, Any]:
         }
     try:
         configured = provider_name(app_config.load_config().sandbox_provider)
-    except Exception:  # noqa: BLE001 - a broken config must not break the header
+    except Exception:  # a broken config must not break the header
         configured = DIRECT
     if configured != DIRECT:
         return {"state": "not_sandboxed", "provider": configured}

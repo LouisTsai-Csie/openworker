@@ -14,8 +14,8 @@ catalog (see ``PERMISSIONS-AND-INBOX.md``).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable
+from dataclasses import dataclass
+from collections.abc import Callable
 
 import aisuite as ai
 

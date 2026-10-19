@@ -20,7 +20,8 @@ default max).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 from ..config import EFFORT_LEVELS
 
@@ -51,7 +52,7 @@ class EffortPlan:
             out["note"] = self.note
         return out
 
-    def without_param(self, note: str) -> "EffortPlan":
+    def without_param(self, note: str) -> EffortPlan:
         """The plan after the endpoint rejected the parameter and it was dropped."""
         return EffortPlan(self.requested, None, {}, note)
 

@@ -154,7 +154,7 @@ def _py_grep(
                 continue
             fp = Path(dirpath) / fn
             try:
-                with open(fp, "r", encoding="utf-8", errors="ignore") as fh:
+                with open(fp, encoding="utf-8", errors="ignore") as fh:
                     for i, line in enumerate(fh, 1):
                         if rx.search(line):
                             matches.append(

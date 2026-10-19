@@ -163,13 +163,11 @@ from ..attachments import (
     MAX_TEXT_CHARS,
     build_user_content,
 )
-from ..engine import ApprovalOutcome
-from ..events import EventType
-from ..connectors import connector_list
-from ..inbox import VIS_INBOX, VIS_INLINE, args_preview
-from ..permissions import Mode
-from ..providers import AssistantTurn
-from .. import toolchain
+from coworker.engine import ApprovalOutcome
+from coworker.inbox import VIS_INBOX, VIS_INLINE, args_preview
+from coworker.permissions import Mode
+from coworker.providers import AssistantTurn
+from coworker import toolchain
 
 
 def _session_sandbox(engine: Any) -> dict[str, Any]:
@@ -179,7 +177,7 @@ def _session_sandbox(engine: Any) -> dict[str, Any]:
         from ..sandbox.settings import session_sandbox
 
         return session_sandbox(engine)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {"state": "off"}
 from ..teams.model import AuthorityError as TeamsAuthorityError
 from ..teams.model import BoardError as TeamsBoardError
@@ -2831,7 +2829,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 }
             try:
                 path = await asyncio.to_thread(toolchain.install, name)
-            except Exception as exc:  # noqa: BLE001 - surfaced to the agent verbatim
+            except Exception as exc:  # surfaced to the agent verbatim
                 return {"installed": False, "error": str(exc)}
             return {"installed": True, "path": path, "version": info["version"]}
 
@@ -3063,14 +3061,14 @@ def create_app(manager: SessionManager) -> FastAPI:
                     # OPE-218: the header chip says which walls this session runs behind.
                     "sandbox": _session_sandbox(engine),
                     "workspace": (
-                        str(getattr(engine, "executor").cwd)
+                        str(engine.executor.cwd)
                         if getattr(engine, "executor", None)
                         else None
                     ),
                     # UX-029: the GUI never shows a temporary folder's raw path — this flag
                     # is how it knows to say "Temporary folder" (and offer Save as project).
                     "temp_workspace": manager.is_temp_workspace(
-                        str(getattr(engine, "executor").cwd)
+                        str(engine.executor.cwd)
                         if getattr(engine, "executor", None)
                         else None
                     ),

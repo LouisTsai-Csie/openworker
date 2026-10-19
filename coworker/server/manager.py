@@ -149,9 +149,8 @@ def _grant_offered(outcome, request) -> bool:
     - ALWAYS_COMMAND only means anything for the shell tool.
     - ALWAYS_DOMAIN only means anything for a tool carrying a url.
     """
-    from ..engine import ApprovalOutcome
-    from ..permissions import NETWORK_ACCESS_TOOL
-    from ..risk import RiskClass, classify
+    from coworker.permissions import NETWORK_ACCESS_TOOL
+    from coworker.risk import RiskClass, classify
 
     name = getattr(request, "tool_name", "")
     metadata = getattr(request, "metadata", None)
@@ -1076,7 +1075,7 @@ class SessionManager:
             # Spec §11.6: workers start with NO connectors — only a per-session override
             # (the staffing card, or a later grant_connector) turns one on. The
             # persona's declaration stays the ceiling below.
-            persona_defaults = {c: False for c in connected}
+            persona_defaults = dict.fromkeys(connected, False)
         effective = set(
             effective_connections(
                 connected=connected,
@@ -1281,7 +1280,7 @@ class SessionManager:
             fut = asyncio.run_coroutine_threadsafe(self.resolve_inbox(call_id, resolution, by=by), self._loop)
             try:
                 ok = fut.result(timeout=30)
-            except Exception:  # noqa: BLE001 — the resume is best-effort; the resolution itself is durable
+            except Exception:  # the resume is best-effort; the resolution itself is durable
                 ok = self.inbox.get(call_id) is not None and self.inbox.get(call_id).state == "resolved"
         else:
             ok = self.inbox.resolve(call_id, resolution, by=by)
@@ -1291,7 +1290,7 @@ class SessionManager:
                     {"session_id": member.session_id, "tool": "decide_worker_call", "stage": "decided",
                      "status": resolution, "reason": note[:500], "actor": by, "call_id": call_id}
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         return {"ok": bool(ok), "worker": member.actor, "call_id": call_id, "decision": resolution}
 
@@ -1353,7 +1352,7 @@ class SessionManager:
             # A session is not a task identity. Never pick the first candidate.
             if len(candidates) == 1:
                 item_id = candidates[0]["id"]
-        except Exception:  # noqa: BLE001
+        except Exception:
             item_id = None
         try:
             self.team_store.append_event(
@@ -1363,7 +1362,7 @@ class SessionManager:
                 item_id=item_id,
                 payload={"tool": tool_name, "session_id": session_id, "prompt_id": prompt_id, "preview": preview[:300]},
             )
-        except Exception:  # noqa: BLE001 — a notice must never break the approval
+        except Exception:  # a notice must never break the approval
             logger.exception("worker_waiting event for %s failed", session_id)
         self.kick_team_tick()
 
@@ -3514,7 +3513,7 @@ class SessionManager:
         by code — the model does judgment, not arithmetic. Returns (model text,
         structured rows) — the rows ride the display sidecar so the GUI renders a
         collapsed BoardWakeCard instead of re-parsing prose."""
-        clamp = lambda text: self._clamp(  # noqa: E731 — two-site local shorthand
+        clamp = lambda text: self._clamp(  # two-site local shorthand
             text, self.DIGEST_CLAMP_MODEL, suffix=" … (full text on the board)"
         )
         lines: list[str] = []
@@ -5598,7 +5597,7 @@ class SessionManager:
         counts = {"added": 0, "removed": 0, "orphans": 0, "people": 0}
         try:
             pulled = await asyncio.to_thread(subscription_sync.pull, self.secrets, load_config())
-        except Exception:  # noqa: BLE001
+        except Exception:
             return counts
         mine = {(r["session_id"], r["source"]) for r in pulled["subscriptions"] if r.get("session_id") and r.get("source")}
         for session_id, source in mine:
@@ -5637,7 +5636,7 @@ class SessionManager:
             # A joined box mirrors the cloud before it listens (never blocks it).
             try:
                 await self.refresh_subscription_mirrors()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.info("subscription mirror refresh skipped")
         settings = load_settings(self.secrets)
         self.gateway = Gateway(
@@ -5887,7 +5886,7 @@ class SessionManager:
 
             try:
                 message = {**message, "data": {**data, "sandbox": session_sandbox(engine)}}
-            except Exception:  # noqa: BLE001 - the chip must not break a tool result
+            except Exception:  # the chip must not break a tool result
                 pass
         if message.get("type") == "permission_required" and data.get("name") == "decide_worker_call":
             worker_call = self.worker_call_for(data.get("arguments") or {}, lead_session=session_id)
@@ -6180,7 +6179,6 @@ class SessionManager:
         any-argument shell grant. Same philosophy as mint_task_rule: validate here, don't
         trust the card.
         """
-        from ..engine import ApprovalOutcome
 
         if resolution == "superseded":
             original = self._owned_worker_prompt(
@@ -6407,8 +6405,7 @@ class SessionManager:
             pass
 
     def _scheduled_approver(self, task, session_id: str):
-        from ..engine import ApprovalOutcome
-        from ..permissions import WRITE_TOOLS
+        from coworker.permissions import WRITE_TOOLS
 
         name_allowed = task.name_allowed_tools()
 
@@ -7879,7 +7876,7 @@ class SessionManager:
             return {"state": "off"}
         try:
             return session_sandbox(engine)
-        except Exception:  # noqa: BLE001 - a list must not break the pane
+        except Exception:  # a list must not break the pane
             return {"state": "off"}
 
     def _session_site_engine(self, session_id: str, host: str):
@@ -7924,7 +7921,7 @@ class SessionManager:
             return {"ok": False, "error": error}
         try:
             removed = engine.permissions.remove_session_site(entry)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {"ok": False, "error": f"The sandbox could not drop {entry}: {exc}", "sandbox": self.session_sites(session_id)}
         if not removed:
             return {"ok": False, "error": f"{entry} is not a site allowed for this session. Sites from Settings are changed in Settings > Sandbox.", "sandbox": self.session_sites(session_id)}
@@ -7935,7 +7932,7 @@ class SessionManager:
         try:
             # Allowing a site widens what the session reaches ("raised"); taking it back narrows it.
             self.audit_autonomy_change(session_id, "session_site", *(("", entry) if what == "allowed" else (entry, "")))
-        except Exception:  # noqa: BLE001 - the audit line must not fail the change
+        except Exception:  # the audit line must not fail the change
             pass
 
     def add_root(

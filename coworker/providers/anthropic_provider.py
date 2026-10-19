@@ -736,7 +736,7 @@ class AnthropicProvider(ProviderClient):
                             cache_diagnostics = (
                                 diag if isinstance(diag, dict) else diag.model_dump()
                             )
-                        except Exception:  # noqa: BLE001
+                        except Exception:
                             cache_diagnostics = {"raw": str(diag)}
             elif kind == "content_block_start":
                 block = getattr(event, "content_block", None)

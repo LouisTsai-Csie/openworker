@@ -8,15 +8,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
-from .agents import Agent, AgentContext, code_agent
-from .automation import scheduling_tools
-from .clock import clock_tools
-from .selfwake import selfwake_tools
-from .subscriptions import subscription_tools
-from .config import load_config
-from .connectors import (
+from coworker.agents import Agent, AgentContext, code_agent
+from coworker.automation import scheduling_tools
+from coworker.clock import clock_tools
+from coworker.selfwake import selfwake_tools
+from coworker.subscriptions import subscription_tools
+from coworker.config import load_config
+from coworker.connectors import (
     connector_list,
     load_settings,
     make_integration_tools,
@@ -769,7 +770,7 @@ def build_engine(
 
             try:
                 sandbox_workspace.add_hosts([clean_host(host)])
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logging.getLogger(__name__).warning("could not open %s on the session's sandbox: %s", host, exc)
                 raise
 

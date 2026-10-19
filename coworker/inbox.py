@@ -484,7 +484,7 @@ class InboxStore:
         inline (one place to answer from now on) plus a recap of what was answered while away.
         Single source of truth: every item already has one authoritative resolution."""
         pending = self.pending(session_id)
-        recap = [i for i in self.list(session_id=session_id, state=STATE_RESOLVED)]
+        recap = list(self.list(session_id=session_id, state=STATE_RESOLVED))
         return {
             "pending": [asdict(i) for i in pending],
             "recap": [asdict(i) for i in recap],
@@ -498,7 +498,7 @@ def inbox_approver(store: InboxStore, session_id: str, *, inbox: str = "default"
     """
     from .engine import ApprovalOutcome, PermissionRequest
 
-    async def approve(request: "PermissionRequest") -> "ApprovalOutcome":
+    async def approve(request: PermissionRequest) -> ApprovalOutcome:
         item = store.add_approval(
             session_id,
             title=f"Run `{request.tool_name}`?",

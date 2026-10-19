@@ -11,7 +11,8 @@ from __future__ import annotations
 import logging
 from asyncio import to_thread
 from collections import OrderedDict
-from typing import Callable, Optional
+from typing import Optional
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from ..secrets import SecretStore
@@ -62,7 +63,7 @@ class Gateway:
         self._on_unauthorized = on_unauthorized
         self._adapters: dict[str, BasePlatformAdapter] = {}
         # In-memory recent senders for chat-ID auto-capture (identity only, never persisted).
-        self._recent: "OrderedDict[tuple[str, str, str], dict]" = OrderedDict()
+        self._recent: OrderedDict[tuple[str, str, str], dict] = OrderedDict()
 
     def set_handler(self, handler: MessageHandler) -> None:
         self._handler = handler

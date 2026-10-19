@@ -26,7 +26,8 @@ import os
 import sys
 import threading
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from ..engine import ApprovalOutcome, PermissionRequest
 from ..permissions import NETWORK_ACCESS_TOOL
@@ -42,7 +43,7 @@ def _short(text: str, limit: int = _VALUE_LIMIT) -> str:
 def _home_relative(path: str) -> str:
     try:
         home = str(Path.home())
-    except Exception:  # noqa: BLE001
+    except Exception:
         return path
     return "~" + path[len(home):] if path == home or path.startswith(home + os.sep) else path
 
@@ -109,12 +110,12 @@ class Terminal:
         self._lock = asyncio.Lock()
 
     @classmethod
-    def attached(cls, cwd: Optional[Path] = None) -> Optional["Terminal"]:
+    def attached(cls, cwd: Optional[Path] = None) -> Optional[Terminal]:
         """A terminal the person can be asked on, or None (a pipe, a CI job, a harness)."""
         try:
             if not (sys.stdin.isatty() and sys.stderr.isatty()):
                 return None
-        except Exception:  # noqa: BLE001 - a closed stream is not a terminal
+        except Exception:  # a closed stream is not a terminal
             return None
 
         def read_line() -> Optional[str]:
@@ -143,7 +144,7 @@ class Terminal:
         def read() -> None:
             try:
                 line = self._read_line()
-            except Exception:  # noqa: BLE001 - a broken terminal reads as end of input
+            except Exception:  # a broken terminal reads as end of input
                 line = None
             try:
                 loop.call_soon_threadsafe(deliver, line)
@@ -324,7 +325,7 @@ class Terminal:
                     return {"granted": False, "error": "directory requests aren't available here"}
                 try:
                     granted = self.grant_folder(folder, grant_writable)
-                except Exception as exc:  # noqa: BLE001 - say why, and let the person choose again
+                except Exception as exc:  # say why, and let the person choose again
                     self._say(f"  That folder cannot be given: {exc}. Type another, or n for no.")
                     continue
                 return {"granted": True, "path": str(granted), "writable": grant_writable}
@@ -354,7 +355,7 @@ class Terminal:
                 self._say("  Type y or n.")
             try:
                 path = await asyncio.to_thread(toolchain.install, name)
-            except Exception as exc:  # noqa: BLE001 - the coworker must hear why
+            except Exception as exc:  # the coworker must hear why
                 self._say(f"  The install failed: {exc}")
                 return {"installed": False, "error": f"install failed: {exc}"}
             return {"installed": True, "path": path, "version": info.get("version", "")}

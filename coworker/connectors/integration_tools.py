@@ -13,7 +13,8 @@ import json
 import re
 from email.message import EmailMessage
 from html.parser import HTMLParser
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 from urllib.parse import quote
 
 import aisuite as ai

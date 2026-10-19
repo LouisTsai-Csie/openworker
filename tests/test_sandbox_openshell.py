@@ -471,7 +471,7 @@ def test_a_sandbox_left_behind_by_a_dead_server_is_removed(folder):
 
     orphan = OpenShellProvider(roots=[{"path": str(folder), "writable": True}], label="orphan")
     orphan.create()  # created, never recorded by a living server
-    names = lambda: {str(s.get("name")) for s in list_our_sandboxes(SandboxRegistry().id)}  # noqa: E731
+    names = lambda: {str(s.get("name")) for s in list_our_sandboxes(SandboxRegistry().id)}
     assert orphan.sandbox_name in names()
     removed = SandboxRegistry().reap()
     assert orphan.sandbox_name in removed and orphan.sandbox_name not in names()

@@ -153,7 +153,7 @@ def _warn_if_state_shared() -> None:
     except EngineBusy as exc:
         if strict:
             print(f"error: {exc}", file=sys.stderr)
-            raise SystemExit(3)
+            raise SystemExit(3) from None
         print(f"warning: {exc}", file=sys.stderr)
 
 

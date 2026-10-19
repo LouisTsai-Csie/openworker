@@ -13,7 +13,8 @@ import shlex
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
 
 # Constructs whose *contents* we cannot evaluate, so a command carrying one is never
@@ -212,9 +213,9 @@ def write_paths(tool_name: str, arguments: dict[str, Any]) -> tuple[list[str], b
     # its path, so it cannot be auto-scoped.
     return ([], False)
 
-from .risk import (  # re-exported for back-compat (manager.py imports WRITE_TOOLS)
-    SHELL_TOOL,
-    WRITE_TOOLS,
+from coworker.risk import (  # re-exported for back-compat (manager.py imports WRITE_TOOLS)
+    SHELL_TOOL,  # noqa: F401  — re-export, no local use
+    WRITE_TOOLS,  # noqa: F401  — re-export, imported by server/manager.py
     RiskClass,
     RiskOverrides,
     classify,
@@ -274,7 +275,7 @@ class Mode(str, Enum):
     CUSTOM = "custom"  # interactive + auto-allow the config's `auto_allow` tools
 
     @classmethod
-    def _missing_(cls, value: object) -> "Mode | None":
+    def _missing_(cls, value: object) -> Mode | None:
         # Legacy spelling from configs, saved sessions, and older UIs.
         if value == "auto":
             return cls.BYPASS_APPROVALS
@@ -293,7 +294,7 @@ BYPASS_MODES = frozenset({Mode.BYPASS_APPROVALS, Mode.DANGEROUSLY_BYPASS_APPROVA
 CLEARED_BY_MODE = "cleared by mode"
 
 
-def _cleared(floor: str) -> "Decision":
+def _cleared(floor: str) -> Decision:
     return Decision(True, f"{CLEARED_BY_MODE}: {floor}")
 
 
@@ -420,7 +421,7 @@ class PermissionEngine:
             elif isinstance(r, (str, Path)):
                 p, w = r, True
             else:  # duck-typed RootDir-like
-                p, w = getattr(r, "path"), bool(getattr(r, "writable", False))
+                p, w = r.path, bool(getattr(r, "writable", False))
             out.append((Path(p).expanduser().resolve(), w))
         return out
 
@@ -778,7 +779,7 @@ class PermissionEngine:
         try:
             self.open_site(host_or_entry)
             self.site_open_errors.pop(host_or_entry, None)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.site_open_errors[host_or_entry] = str(exc) or type(exc).__name__
 
     def _entry_allowed(self, entry: str) -> bool:
@@ -841,7 +842,7 @@ class PermissionEngine:
         if self.search_host is not None:
             try:
                 return _host_of(self.search_host() or "")
-            except Exception:  # noqa: BLE001 - an unknown provider reads as "not allowed"
+            except Exception:  # an unknown provider reads as "not allowed"
                 return ""
         return ""
 

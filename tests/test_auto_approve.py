@@ -8,7 +8,6 @@ falls through to the human, not to execution.
 from __future__ import annotations
 
 import asyncio
-import json
 from dataclasses import dataclass, replace
 
 import pytest

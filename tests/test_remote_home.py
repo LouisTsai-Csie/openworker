@@ -24,6 +24,8 @@ from coworker.remote.joiner import (
     parse_join_url,
     run_joined,
 )
+from typing import Any
+
 from coworker.remote.registry import MachinesRegistry
 from coworker.server.app import create_app
 from coworker.server.manager import SessionManager

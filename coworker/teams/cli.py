@@ -24,7 +24,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from .model import BoardError, space_for_workspace
 from .store import CLAIM_POLICIES

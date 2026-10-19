@@ -32,7 +32,8 @@ import tempfile
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
+from collections.abc import Iterable
 from urllib.parse import urlparse
 
 from .secrets import state_dir
@@ -264,7 +265,7 @@ def install(name: str, *, timeout: int = 120) -> str:
     if target.is_file() and os.access(target, os.X_OK):
         return str(target)
 
-    with urllib.request.urlopen(dl.url, timeout=timeout) as resp:  # noqa: S310 - pinned URL
+    with urllib.request.urlopen(dl.url, timeout=timeout) as resp:  # pinned URL
         blob = resp.read()
     _verify(blob, dl.sha256)
 

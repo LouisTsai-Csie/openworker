@@ -37,7 +37,8 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 from .. import credentials as creds
 from .. import netproxy, network_profiles

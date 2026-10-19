@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import ctypes
 import sys
-from typing import Any, Iterator, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Iterator, Sequence
 
 PIPE_PREFIX = "\\\\.\\pipe\\"
 _BUFSIZE = 65536

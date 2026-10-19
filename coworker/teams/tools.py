@@ -11,7 +11,8 @@ session) and passes it at construction — the model never self-reports provenan
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Optional
+from collections.abc import Callable
 
 import aisuite as ai
 
@@ -274,7 +275,7 @@ def board_tools(
 
 
 def journal_tools(
-    journal: "JournalStore",
+    journal: JournalStore,
     *,
     actor: Actor,
     space: str = "",

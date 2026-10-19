@@ -17,13 +17,13 @@ import pytest
 
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the tool runner needs Unix sockets")
 
-from coworker.agents.base import AgentContext  # noqa: E402  (before catalog: import order)
-from coworker import catalog  # noqa: E402, I001
-from coworker.roots import RootDir  # noqa: E402
-from coworker.sandbox.bundle import build_runner_zipapp  # noqa: E402
-from coworker.sandbox.providers.runner_local import RunnerLocalProvider  # noqa: E402
-from coworker.sandbox.workspace import RunnerWorkspace  # noqa: E402
-from coworker.tools import ToolRegistry  # noqa: E402
+from coworker.agents.base import AgentContext
+from coworker import catalog
+from coworker.roots import RootDir
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.providers.runner_local import RunnerLocalProvider
+from coworker.sandbox.workspace import RunnerWorkspace
+from coworker.tools import ToolRegistry
 
 CAPABILITIES = ["code_files", "git", "search"]
 

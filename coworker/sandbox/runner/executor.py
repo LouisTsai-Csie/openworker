@@ -35,7 +35,8 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Callable, Sequence
 
 _IS_WINDOWS = sys.platform == "win32"
 
@@ -235,7 +236,7 @@ class LocalExecutor(Executor):
             env=self._env,
             **spawn_kwargs,
         )
-        self._queue: "queue.Queue[Optional[str]]" = queue.Queue()
+        self._queue: queue.Queue[Optional[str]] = queue.Queue()
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
 

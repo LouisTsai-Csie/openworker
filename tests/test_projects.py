@@ -14,10 +14,9 @@ from coworker.projects import (
     project_key,
     project_label,
     project_presence,
-    resolve_board_space,
     resolve_memory_key,
 )
-from coworker.teams.store import GENESIS, TeamStore
+from coworker.teams.store import TeamStore
 from coworker.teams.model import Actor, Role
 
 
@@ -93,7 +92,6 @@ class TestProjectNames:
         assert names.resolve("memory", "ops") == "/k2"
 
     def test_mru_order_and_limit(self, names):
-        import time
         for i, n in enumerate(["a", "b", "c"]):
             names.name_current("memory", n, f"/k{i}")
         names._conn.execute(

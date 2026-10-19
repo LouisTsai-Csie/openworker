@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 # name, title, path under the home folder (forward slashes on every platform)
 _MAC: list[tuple[str, str, str]] = [

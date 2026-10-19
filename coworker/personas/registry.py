@@ -17,7 +17,8 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
+from collections.abc import Callable
 
 from ..agents.base import Agent
 from ..agents.code import CODE_CAPABILITIES, code_agent

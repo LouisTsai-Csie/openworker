@@ -12,11 +12,11 @@ from .manifest import PersonaManifest, ManifestError, parse_manifest, load_manif
 from .registry import PersonaRegistry, PersonaState, DEFAULT_PERSONA_ID
 
 __all__ = [
-    "PersonaManifest",
+    "DEFAULT_PERSONA_ID",
     "ManifestError",
-    "parse_manifest",
-    "load_manifest_file",
+    "PersonaManifest",
     "PersonaRegistry",
     "PersonaState",
-    "DEFAULT_PERSONA_ID",
+    "load_manifest_file",
+    "parse_manifest",
 ]

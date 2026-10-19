@@ -23,7 +23,8 @@ import threading
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 import aisuite as ai
 
@@ -112,8 +113,8 @@ class SkillStore:
         try:
             resolved = folder.resolve()
             base_resolved = base.resolve()
-        except OSError:
-            raise ValueError(f"Unreadable skill folder: {name}")
+        except OSError as exc:
+            raise ValueError(f"Unreadable skill folder: {name}") from exc
         if base_resolved not in resolved.parents and resolved != base_resolved / name:
             raise ValueError(f"Skill folder escapes its scope: {name}")
         return folder
@@ -345,7 +346,7 @@ class SkillStore:
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
-            raise ValueError("Not a valid skill file — upload a .zip or a SKILL.md.")
+            raise ValueError("Not a valid skill file — upload a .zip or a SKILL.md.") from None
         token = uuid.uuid4().hex
         staged = self._staging_dir / token
         staged.mkdir(parents=True, exist_ok=True)

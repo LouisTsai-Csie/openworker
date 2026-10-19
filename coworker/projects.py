@@ -156,7 +156,7 @@ def resolve_memory_key(
     workspace: Optional[str],
     *,
     binding: Optional[str] = None,
-    names: Optional["ProjectNames"] = None,
+    names: Optional[ProjectNames] = None,
     memory_store: Any = None,
 ) -> Optional[str]:
     """The identity ladder for memory: explicit binding > git > path. Applies the
@@ -185,7 +185,7 @@ def resolve_board_space(
     workspace: Optional[str],
     *,
     binding: Optional[str] = None,
-    names: Optional["ProjectNames"] = None,
+    names: Optional[ProjectNames] = None,
     team_store: Any = None,
 ) -> Optional[str]:
     """The identity ladder for the board space — same ladder, board collision

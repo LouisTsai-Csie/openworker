@@ -65,7 +65,7 @@ class GUID(ctypes.Structure):
     _fields_ = [("Data1", U32), ("Data2", U16), ("Data3", U16), ("Data4", ctypes.c_ubyte * 8)]
 
     @classmethod
-    def of(cls, value: uuid.UUID) -> "GUID":
+    def of(cls, value: uuid.UUID) -> GUID:
         g = cls()
         g.Data1, g.Data2, g.Data3 = value.time_low, value.time_mid, value.time_hi_version
         g.Data4[:] = value.bytes[8:]
@@ -201,7 +201,7 @@ class Engine:
             self._lib.FwpmEngineClose0(self.handle)
             self.handle = wintypes.HANDLE()
 
-    def __enter__(self) -> "Engine":
+    def __enter__(self) -> Engine:
         return self
 
     def __exit__(self, *exc: Any) -> None:

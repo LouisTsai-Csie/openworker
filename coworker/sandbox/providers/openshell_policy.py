@@ -10,7 +10,8 @@ What the spike showed (ocw-context/docs/sandbox-spike-openshell.md):
 from __future__ import annotations
 
 import copy
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Sequence
 
 from .. import network_profiles
 

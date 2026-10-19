@@ -401,7 +401,7 @@ def test_token_client_caches_and_force_remints(tmp_path, monkeypatch):
     assert t3 == "ghs_second" and len(calls) == 2
 
     # NEVER at rest: nothing github-token-shaped in the secret store.
-    blob = json.dumps([m for m in secrets.status()])
+    blob = json.dumps(list(secrets.status()))
     assert "ghs_" not in blob
 
 

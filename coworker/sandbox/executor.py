@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from .client import RunnerClient
 from .runner import protocol as P
@@ -82,7 +83,7 @@ class RunnerExecutor(Executor):
         if self._after_call is not None:
             try:
                 answer.update(self._after_call(started, answer) or {})
-            except Exception:  # noqa: BLE001 - a note must never cost the command's result
+            except Exception:  # a note must never cost the command's result
                 pass
         return answer
 

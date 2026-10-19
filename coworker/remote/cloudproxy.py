@@ -17,7 +17,8 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Awaitable, Callable
 
 import httpx
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect

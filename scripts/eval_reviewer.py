@@ -32,12 +32,13 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
+from collections.abc import Iterable
 
 # Allow `python scripts/eval_reviewer.py` as well as `-m scripts.eval_reviewer`.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from coworker.reviewer import Reviewer, Verdict  # noqa: E402
+from coworker.reviewer import Reviewer, Verdict
 
 CORPUS_DIR = Path(__file__).resolve().parent.parent / "tests" / "corpora"
 CORPORA = ("benign", "dangerous", "injection")

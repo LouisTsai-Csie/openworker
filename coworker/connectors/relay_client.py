@@ -27,7 +27,8 @@ import logging
 import os
 import re
 import time
-from typing import Any, Awaitable, Callable, Optional, Protocol
+from typing import Any, Optional, Protocol
+from collections.abc import Awaitable, Callable
 
 from .adapters import _SLACK_MENTION_RE, slack_event_to_event
 from .base import BasePlatformAdapter, InteractionEvent, SendResult, SessionSource

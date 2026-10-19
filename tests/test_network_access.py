@@ -11,7 +11,6 @@ from __future__ import annotations
 import socket
 from types import SimpleNamespace
 
-import pytest
 
 from coworker.permissions import NETWORK_ACCESS_TOOL, Mode, PermissionEngine, network_request_hosts
 from coworker.sandbox import netproxy

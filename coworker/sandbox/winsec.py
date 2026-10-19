@@ -27,7 +27,8 @@ import os
 import random
 import sys
 from functools import lru_cache
-from typing import Optional, Sequence
+from typing import Optional
+from collections.abc import Sequence
 
 if sys.platform == "win32":
     from ctypes import wintypes
@@ -256,7 +257,7 @@ class Desktop:
 class Process:
     """A process started by `spawn`, with the calls a provider uses on a Popen."""
 
-    def __init__(self, info: "PROCESS_INFORMATION", job: int) -> None:
+    def __init__(self, info: PROCESS_INFORMATION, job: int) -> None:
         self._handle = info.hProcess
         self._job = job
         self.pid = int(info.dwProcessId)
@@ -343,7 +344,7 @@ def spawn_as_account(
     return Process(info, job)
 
 
-def _explicit(sid: _Sid, mode: int, permissions: int = 0, inherit: bool = True) -> "EXPLICIT_ACCESS_W":
+def _explicit(sid: _Sid, mode: int, permissions: int = 0, inherit: bool = True) -> EXPLICIT_ACCESS_W:
     entry = EXPLICIT_ACCESS_W()
     entry.grfAccessPermissions = permissions or _FILE_GENERIC_MODIFY
     entry.grfAccessMode = mode

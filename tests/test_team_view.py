@@ -1,7 +1,6 @@
 """Team View contracts: status ownership, quiet delivery, projections and timing."""
 
 import asyncio
-import json
 from types import SimpleNamespace
 
 import pytest
@@ -15,7 +14,7 @@ from coworker.teams.summary import (
     make_summary,
 )
 from coworker.teams.tools import board_tools, with_mention
-from coworker.teams.registry import TeamRegistry, TeamWorker
+from coworker.teams.registry import TeamWorker
 from coworker.inbox import InboxStore
 from coworker.sessions import SessionRecord
 from coworker.server.manager import SessionManager

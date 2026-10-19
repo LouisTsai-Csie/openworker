@@ -99,7 +99,7 @@ class FakeSlack:
         return f"{self._ts_base + self._ts_seq}.{self._ts_seq:06d}"
 
     # -- lifecycle -------------------------------------------------------------
-    async def start(self) -> "FakeSlack":
+    async def start(self) -> FakeSlack:
         """Serve in-process on an ephemeral port; resolve the bound port."""
         config = uvicorn.Config(
             self.app,
@@ -135,7 +135,7 @@ class FakeSlack:
         self._server = None
         self._serve_task = None
 
-    async def __aenter__(self) -> "FakeSlack":
+    async def __aenter__(self) -> FakeSlack:
         return await self.start()
 
     async def __aexit__(self, *exc) -> None:

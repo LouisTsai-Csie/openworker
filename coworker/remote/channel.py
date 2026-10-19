@@ -37,7 +37,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Awaitable, Callable
 
 # v2: hello carries seal_sig — the sealing key attested by the identity key.
 PROTOCOL_VERSION = 2

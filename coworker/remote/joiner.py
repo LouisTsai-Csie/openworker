@@ -222,7 +222,7 @@ async def _serve_channel(
         manager = app.state.manager
         try:
             result = store_managed_grant_bundle(manager.secrets, name, form, grant)
-        except Exception as exc:  # noqa: BLE001 — the tab shows the reason
+        except Exception as exc:  # the tab shows the reason
             await reply(frame_id, 400, {"error": str(exc)[:200]})
             return
         if result.get("ok"):
@@ -787,7 +787,7 @@ def _run(state: Path, controller: str, name: str, token=None, on_welcome=None) -
     # One engine per state dir (statelock.py). A supervisor restart may find
     # the previous process still tearing down, so wait a little before refusing.
     try:
-        _lock = acquire(state, timeout=10.0)  # noqa: F841 — held for the process's life
+        _lock = acquire(state, timeout=10.0)  # held for the process's life
     except EngineBusy as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 3

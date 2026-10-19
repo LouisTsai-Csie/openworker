@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from email.message import EmailMessage
 
-import pytest
 
 from coworker.connectors.email_tools import (
     build_search_criteria,
@@ -184,7 +183,7 @@ def test_criteria_bad_date_is_rejected():
 def test_criteria_non_ascii_gets_utf8_charset():
     criteria, _ = build_search_criteria(subject="日本語")
     assert criteria.startswith(b"CHARSET UTF-8 ")
-    assert "日本語".encode("utf-8") in criteria
+    assert "日本語".encode() in criteria
 
 
 # -- MIME helpers ----------------------------------------------------------------

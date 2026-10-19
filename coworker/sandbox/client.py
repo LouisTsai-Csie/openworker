@@ -18,7 +18,8 @@ import logging
 import threading
 import time
 import uuid
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from .runner import protocol as P
 from .transport import Transport

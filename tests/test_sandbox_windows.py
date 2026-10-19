@@ -15,8 +15,8 @@ import pytest
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="the Windows sandbox exists only on Windows")
 
-from coworker.sandbox.bundle import build_runner_zipapp  # noqa: E402
-from coworker.sandbox.workspace import RunnerWorkspace  # noqa: E402
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.workspace import RunnerWorkspace
 
 
 def _has_setup() -> bool:

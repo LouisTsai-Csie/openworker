@@ -315,7 +315,7 @@ def _http_response(status: str, title: str, body: str) -> bytes:
 
 async def _start_callback_server(
     expected_state: str,
-) -> tuple[asyncio.AbstractServer, "asyncio.Future[str]"]:
+) -> tuple[asyncio.AbstractServer, asyncio.Future[str]]:
     """Bind the fixed loopback port and resolve the future with the auth code when
     the redirect (carrying the matching `state`) lands."""
     loop = asyncio.get_running_loop()
@@ -415,11 +415,11 @@ async def sign_in(
             await asyncio.get_running_loop().run_in_executor(None, webbrowser.open, url)
         try:
             code = await asyncio.wait_for(code_future, timeout)
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             raise CodexAuthError(
                 "Sign-in timed out — the browser window was not completed in "
                 f"{int(timeout) // 60} minutes."
-            )
+            ) from exc
     finally:
         server.close()
         await server.wait_closed()

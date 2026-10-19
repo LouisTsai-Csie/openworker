@@ -16,7 +16,8 @@ grant use, so a session started for a thread posts back to it without asking.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 import aisuite as ai
 
@@ -198,7 +199,7 @@ def make_chat_tools(
                 return {"error": "as_screenshot only applies to .html files"}
             try:
                 data = render_html(resolved)
-            except Exception as exc:  # noqa: BLE001 — surfaced to the model as a tool error
+            except Exception as exc:  # surfaced to the model as a tool error
                 return {"error": f"could not render the page: {exc}"}
             filename = resolved.stem + ".png"
         else:

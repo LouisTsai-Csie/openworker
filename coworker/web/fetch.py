@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import re
 from html.parser import HTMLParser
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 import aisuite as ai
 

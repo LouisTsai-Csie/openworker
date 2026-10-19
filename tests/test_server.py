@@ -579,9 +579,7 @@ def test_ws_turn_crash_broadcasts_error_event(tmp_path):
     """An exception escaping engine.run() (not a provider error the engine converts into an
     error event) must surface as an error event + turn_done — not die silently as an
     unretrieved task exception with only a bare turn_done (#367)."""
-    import asyncio
 
-    from coworker.engine import Event
 
     manager = SessionManager(workspace=tmp_path, provider=ScriptedProvider([]))
     engine = manager.get_engine("boom", workspace=tmp_path)

@@ -31,7 +31,8 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Iterator, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Callable, Iterator, Sequence
 
 from . import fsops, protocol as P, toolcalls, winpipe
 from .executor import LocalExecutor
@@ -121,9 +122,9 @@ class Daemon:
         self._shells_lock = threading.Lock()
         self._seq = 0
         self._out_lock = threading.Lock()  # guards seq, the result log and the active conn
-        self._results: "collections.deque[tuple[int, bytes]]" = collections.deque(maxlen=_RESULT_LOG_MAX)
+        self._results: collections.deque[tuple[int, bytes]] = collections.deque(maxlen=_RESULT_LOG_MAX)
         self._gap = False  # a result fell off the log before it was acknowledged
-        self._requests: "collections.OrderedDict[str, Optional[bytes]]" = collections.OrderedDict()
+        self._requests: collections.OrderedDict[str, Optional[bytes]] = collections.OrderedDict()
         self._conn: Optional[_Conn] = None
         self._cleanup: list[str] = []
         self._stop = threading.Event()
@@ -505,7 +506,7 @@ class Daemon:
             server.settimeout(timeout)
             try:
                 sock, _ = server.accept()
-            except socket.timeout:
+            except TimeoutError:
                 return None
             return _SocketStream(sock)
 

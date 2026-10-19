@@ -17,7 +17,8 @@ import sys
 import threading
 import time
 from collections import deque
-from typing import Optional, Sequence
+from typing import Optional
+from collections.abc import Sequence
 
 from . import network_profiles
 
@@ -227,6 +228,6 @@ def environment(proxy: AllowListProxy) -> dict[str, str]:
     """What a sandboxed process needs in its environment to find the proxy. Programs that
     ignore these variables get no network at all, which is the safe way to fail."""
     names = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy")
-    env = {name: proxy.url for name in names}
+    env = dict.fromkeys(names, proxy.url)
     env.update({"NO_PROXY": "", "no_proxy": "", "NODE_USE_ENV_PROXY": "1"})
     return env

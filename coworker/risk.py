@@ -12,7 +12,8 @@ to its aisuite metadata (``requires_approval`` → external) or is treated as re
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 
 class RiskClass(str, Enum):
@@ -54,9 +55,9 @@ EGRESS_TOOLS = {
 } | _ENRICHMENT_TOOLS
 
 _BASE: dict[str, RiskClass] = {
-    **{name: RiskClass.WRITE_LOCAL for name in WRITE_TOOLS},
+    **dict.fromkeys(WRITE_TOOLS, RiskClass.WRITE_LOCAL),
     SHELL_TOOL: RiskClass.EXEC,
-    **{name: RiskClass.EGRESS for name in EGRESS_TOOLS},
+    **dict.fromkeys(EGRESS_TOOLS, RiskClass.EGRESS),
 }
 
 # How much attention each class demands, for the override-tightening rule below. Higher =

@@ -43,7 +43,7 @@ def _text(content: Any) -> str:
         from ..attachments import content_to_text
 
         return content_to_text(content)
-    except Exception:  # noqa: BLE001 - never fail the trajectory over a content part
+    except Exception:  # never fail the trajectory over a content part
         return json.dumps(content, default=str)
 
 

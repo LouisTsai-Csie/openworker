@@ -6,7 +6,6 @@ of the write, which is readable by every other local process.
 """
 
 import json
-import os
 import stat
 import sys
 

@@ -12,7 +12,8 @@ from __future__ import annotations
 import sys
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from . import setup_cmd
 

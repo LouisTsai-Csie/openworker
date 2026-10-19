@@ -27,7 +27,8 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Awaitable, Callable
 
 _OCSF_VERSION = "1.1.0"
 _CLASS_API_ACTIVITY = 6003  # OCSF Application Activity › API Activity
@@ -54,7 +55,7 @@ class ExportPolicy:
     flush_seconds: float = 5.0
 
     @classmethod
-    def from_policy(cls, policy: Optional[dict[str, Any]]) -> "ExportPolicy":
+    def from_policy(cls, policy: Optional[dict[str, Any]]) -> ExportPolicy:
         """`policy` is the whole org policy record; this reads its `audit_export`
         field. Anything malformed reads as OFF — governance never turns on by
         accident."""

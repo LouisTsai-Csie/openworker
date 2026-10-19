@@ -19,7 +19,8 @@ import asyncio
 import json
 import logging
 from collections import deque
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 logger = logging.getLogger("coworker.connectors")
 

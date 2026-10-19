@@ -16,7 +16,8 @@ import re
 import threading
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
+from collections.abc import Callable
 
 DEFAULT_INBOX = "default"
 # Embeds the item id in a delivered message. Emitted as [ow:…] since the bot's rebrand

@@ -33,7 +33,8 @@ import sys
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from .. import config as app_config
 from .providers import openshell, openshell_policy
