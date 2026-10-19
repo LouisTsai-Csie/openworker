@@ -45,7 +45,6 @@ Homepage = "https://openworker.com"
 Source = "https://github.com/andrewyng/openworker"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio", "pytest-cov>=5", "httpx", "httpx2"]
 # Inbound messaging listeners (outbound send_message needs only httpx, already a core dep).
 # aiohttp is slack-bolt's Socket Mode transport at runtime (and the FakeSlack test harness
 # drives the real handler) — declare it so CI installs it, not just transitively.
@@ -56,6 +55,23 @@ browser = ["playwright>=1.44"]
 bedrock = ["boto3>=1.34"]
 # OpenShell sandbox provider: the runner's stream is a gRPC call to the OpenShell gateway.
 openshell = ["grpcio>=1.60"]
+
+# Dev toolchain (PEP 735). `uv sync` installs this group by default; it is NOT part of
+# the published wheel, so pip users never pull the linters down. CI runs `uv sync --locked`
+# against uv.lock, so a green CI run is reproducible on any machine.
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio",
+    "pytest-cov>=5",
+    "httpx",
+    "httpx2",
+    # Upper-bounded on purpose: both of these ARE the CI gate, and both add rules
+    # (ruff) or tighten inference (mypy) in a minor release. An unpinned bump turns
+    # main red for reasons nobody changed. Raise these deliberately, in their own PR.
+    "ruff>=0.17.1,<0.18",
+    "mypy>=2.4,<2.5",
+]
 
 # One command on the path. The server, the connectors tool, the acceptor and the team
 # board stay runnable as modules (`python -m coworker.server.run`, …) for development.

@@ -97,15 +97,14 @@ OpenWorker is local-first. Everything lives on your machine: the agent loop, you
 
 ## Run from source
 
-Prerequisites: Python 3.10+, Node 20+, and (for the desktop shell) the Rust toolchain via [rustup](https://rustup.rs/).
+Prerequisites: [uv](https://docs.astral.sh/uv/getting-started/installation/), Node 20+, and (for the desktop shell) the Rust toolchain via [rustup](https://rustup.rs/). uv fetches the Python it needs (3.12, per `.python-version`); no system Python required.
 
 ```shell
 git clone https://github.com/andrewyng/openworker
 cd openworker
 
-# 1. One-time bootstrap - creates the Python venv at .venv
-#    (on Windows, run from Git Bash or WSL)
-bash packaging/setup_dev_env.sh
+# 1. One-time bootstrap - creates .venv and installs from uv.lock
+uv sync --extra messaging --extra bedrock
 
 # 2. Start the local agent server
 .venv/bin/python -m coworker.server.run --cwd ~/some/project --port 8765
