@@ -85,3 +85,72 @@ def _no_cached_ollama_facts():
     ollama_facts.forget_all()
     yield
     ollama_facts.forget_all()
+
+
+GALLERY_OPUS, GALLERY_SONNET = "anthropic:claude-opus-4-8", "anthropic:claude-sonnet-4-8"
+
+
+# -- Shared SessionManager fixtures -------------------------------------------------
+#
+# These live here rather than in a test module because several modules need them.
+# A fixture imported across test modules (`from test_team_live_gaps import manager`)
+# reads to pyflakes as an unused import shadowed by the test's own parameter — F401
+# plus F811 — and `ruff check --fix` deletes it, with `fixture 'manager' not found`
+# at collection time as the only symptom. conftest.py is how pytest shares a fixture.
+
+
+@pytest.fixture
+def manager(tmp_path, monkeypatch):
+    """A SessionManager with one `lead` session and a team of one worker (`sam`)."""
+    import asyncio
+
+    from coworker.server.manager import SessionManager
+    from coworker.sessions import SessionRecord
+    from coworker.teams.registry import TeamWorker
+
+    monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
+    (tmp_path / "repo").mkdir()
+    m = SessionManager(data_dir=tmp_path / "data", workspace=tmp_path / "repo")
+    m.session_store.save(
+        SessionRecord(
+            session_id="lead",
+            workspace=m.default_workspace,
+            model="sample",
+            mode="interactive",
+            agent="swe-lead",
+        )
+    )
+    m.teams.create(
+        space=m._board_space("lead"),
+        lead_session="lead",
+        lead_actor="lead",
+        workers=[TeamWorker(actor="sam", persona="swe-worker", session_id="worker")],
+    )
+    yield m
+    asyncio.run(m.aclose())
+
+
+@pytest.fixture
+def gallery_manager(tmp_path, monkeypatch):
+    """A SessionManager on a fake two-model machine, with github/linear secrets set.
+
+    The card-gallery contract tests and the proposal-contract tests both build their
+    payloads from this one, so the fixture has to outlive either module.
+    """
+    from coworker.server.manager import SessionManager
+    from coworker.sessions import SessionRecord
+
+    opus, sonnet = GALLERY_OPUS, GALLERY_SONNET
+    monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
+    ws = tmp_path / "repo"
+    ws.mkdir()
+    m = SessionManager(data_dir=tmp_path / "data", workspace=str(ws))
+    m.secrets.put("github:default", {"token": "ghp_test", "enabled": True})
+    m.secrets.put("linear:default", {"token": "lin_test", "enabled": True})
+    # A machine that can run two models, so the payload carries real model information.
+    monkeypatch.setattr(m, "model_selectable", lambda model: model in (opus, sonnet))
+    monkeypatch.setattr(m, "_curated_models", lambda: [opus, sonnet])
+    m.session_store.save(
+        SessionRecord(session_id="lead-sid", workspace=m.default_workspace, model=sonnet, mode="auto-approve", messages=[], agent="swe-lead")
+    )
+    yield m

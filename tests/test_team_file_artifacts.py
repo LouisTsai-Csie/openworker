@@ -10,7 +10,6 @@ from coworker.teams.artifacts import artifact_tools
 from coworker.teams.attachments import AttachmentStore, stored_name
 from coworker.teams.registry import TeamWorker
 from coworker.server.app import create_app
-from test_team_live_gaps import manager
 from test_team_reader_recovery import create_item
 
 

@@ -6,7 +6,6 @@ from coworker.teams import Actor, Role
 from coworker.teams.store import TeamStore
 from coworker.teams.tools import board_tools
 from test_engine import ScriptedProvider, _text_turn
-from test_team_live_gaps import manager
 from test_team_reader_recovery import create_item
 from test_idle_checkins import timer, drain, finish
 

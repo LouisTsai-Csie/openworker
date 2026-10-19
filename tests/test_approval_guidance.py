@@ -10,7 +10,7 @@ from coworker.reviewer import Reviewer, Verdict
 from coworker.teams import Actor, Role
 from coworker.teams.registry import TeamRegistry
 from test_persona_manifest import VALID
-from test_team_live_gaps import manager, request_for
+from test_team_live_gaps import request_for
 from test_team_rehearsal_fixes import lead_for_review, authorize
 
 

@@ -8,7 +8,7 @@ from coworker.teams.model import Actor, Role
 from coworker.teams.proposals import validate_work_proposal, validate_team_proposal
 from coworker.teams.store import TeamStore
 from proposal_fixtures import work_proposal, team_proposal
-from test_gallery_contract import manager, _parked
+from test_gallery_contract import _parked
 
 
 def test_domain_examples_are_valid_tool_arguments():
@@ -97,43 +97,43 @@ def test_staffing_requires_declared_groups_and_unique_names():
 
 
 @pytest.mark.asyncio
-async def test_server_resolves_responsibilities_and_preserves_human_name_without_assigning(manager):
+async def test_server_resolves_responsibilities_and_preserves_human_name_without_assigning(gallery_manager):
     plan = work_proposal([{"title": "Assess", "criteria": "Evidence exists"}, {"title": "Accept", "criteria": "Evidence checked"}])
-    created = manager.board_create_items("lead-sid", plan["items"], proposal=plan)
+    created = gallery_manager.board_create_items("lead-sid", plan["items"], proposal=plan)
     item_id = created["items"][0]["id"]
     proposal = team_proposal([{"persona": "test-worker", "name": "maya", "item_ids": [item_id]}])
-    approve = manager.inbox_team_approver("lead-sid", "swe-lead")
-    task, prompt = await _parked(manager, approve(proposal, "staff"), "Create this team?")
+    approve = gallery_manager.inbox_team_approver("lead-sid", "swe-lead")
+    task, prompt = await _parked(gallery_manager, approve(proposal, "staff"), "Create this team?")
     assert prompt.data["planned_items"][0]["title"] == "Assess"
     assert prompt.data["planned_items"][0]["final_acceptance"]["owner"] == "lead"
-    manager.inbox.resolve(prompt.id, json.dumps({"approved": True, "members": [{"name": "maya-custom", "connectors": []}]}))
+    gallery_manager.inbox.resolve(prompt.id, json.dumps({"approved": True, "members": [{"name": "maya-custom", "connectors": []}]}))
     result = await task
     assert result["approved"] is True
     assert result["workers"][0]["actor"] == "maya-custom"
-    record = manager.session_store.load("lead-sid")
-    space = manager._space_for(record, record.workspace)
-    item = manager.team_store.get_item(space, item_id, actor=Actor("lead", Role.LEAD))
+    record = gallery_manager.session_store.load("lead-sid")
+    space = gallery_manager._space_for(record, record.workspace)
+    item = gallery_manager.team_store.get_item(space, item_id, actor=Actor("lead", Role.LEAD))
     assert item["assignee"] == "" and item["state"] == "open"
 
 
 @pytest.mark.asyncio
-async def test_unknown_board_responsibilities_do_not_park_a_card(manager):
+async def test_unknown_board_responsibilities_do_not_park_a_card(gallery_manager):
     proposal = team_proposal([{"persona": "test-worker", "name": "maya", "item_ids": [999]}])
-    result = await manager.inbox_team_approver("lead-sid", "swe-lead")(proposal, "invalid")
+    result = await gallery_manager.inbox_team_approver("lead-sid", "swe-lead")(proposal, "invalid")
     assert not result["approved"]
-    assert not manager.inbox.pending("lead-sid")
+    assert not gallery_manager.inbox.pending("lead-sid")
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("human", [None, "", "Run local tests.\n No pushes."])
-async def test_only_human_returned_guidance_is_saved(manager, human):
+async def test_only_human_returned_guidance_is_saved(gallery_manager, human):
     proposal = team_proposal([{"persona": "test-worker", "name": "maya", "approval_guidance": "Lead suggestion"}])
-    task, prompt = await _parked(manager, manager.inbox_team_approver("lead-sid", "swe-lead")(proposal, "staff"), "Create this team?")
+    task, prompt = await _parked(gallery_manager, gallery_manager.inbox_team_approver("lead-sid", "swe-lead")(proposal, "staff"), "Create this team?")
     assert prompt.data["members"][0]["approval_guidance"] == "Lead suggestion"
     decision = {"name": "maya", "connectors": []}
     if human is not None:
         decision["approval_guidance"] = human
-    manager.inbox.resolve(prompt.id, json.dumps({"approved": True, "members": [decision]}))
+    gallery_manager.inbox.resolve(prompt.id, json.dumps({"approved": True, "members": [decision]}))
     assert (await task)["approved"]
-    worker = manager.teams.for_lead_session("lead-sid").workers[0]
+    worker = gallery_manager.teams.for_lead_session("lead-sid").workers[0]
     assert worker.approval_guidance == (human or "")

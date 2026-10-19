@@ -13,7 +13,6 @@ from coworker.teams import Actor, Role
 from coworker.teams.store import WORKER_WAITING
 from coworker.teams.tools import board_tools
 from test_engine import ScriptedProvider, _text_turn
-from test_team_live_gaps import manager
 
 
 def create_item(manager, assignee="sam"):

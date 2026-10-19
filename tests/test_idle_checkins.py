@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from coworker.selfwake import WakeStore, selfwake_tools
 from coworker.teams import Actor, Role
 from test_engine import ScriptedProvider, _text_turn
-from test_team_live_gaps import manager
 from test_team_reader_recovery import create_item
 
 
