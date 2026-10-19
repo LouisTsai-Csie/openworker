@@ -269,7 +269,7 @@ class _FakeReviewer:
 def test_auto_approve_plus_auto_lets_the_reviewer_decide_and_refuses_escalations(tmp_path):
     turns = [_tool_turn("run_shell", {"command": "make"}), _text()]
     # Nobody attending: without "auto" the reviewer would be skipped (§1.5).
-    engine, rows, cards = _engine(tmp_path, list(turns), mode=Mode.AUTO_APPROVE)
+    engine, _rows, cards = _engine(tmp_path, list(turns), mode=Mode.AUTO_APPROVE)
     engine.is_attended = lambda: False
     engine.reviewer = _FakeReviewer("allow")
     events = _run(engine)

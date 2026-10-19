@@ -229,7 +229,7 @@ class Desktop:
         sddl = f"D:(A;;GA;;;{current_user_sid()})(A;;GA;;;{session})(A;;GA;;;{logon_sid()})"
         self._descriptor = _descriptor(sddl)
         attributes = SECURITY_ATTRIBUTES(ctypes.sizeof(SECURITY_ATTRIBUTES), self._descriptor, False)
-        self.station_name = "owsb-%08x" % random.SystemRandom().getrandbits(32)
+        self.station_name = f"owsb-{random.SystemRandom().getrandbits(32):08x}"
         self.station = _u32.CreateWindowStationW(self.station_name, 0, _WINSTA_ALL_ACCESS, ctypes.byref(attributes))
         if not self.station:
             raise _fail("CreateWindowStation")

@@ -149,7 +149,7 @@ def test_unreadable_single_skill_folder_is_skipped(tmp_path, monkeypatch):
     for name in ("alpha", "beta"):
         (root / name).mkdir(parents=True)
         (root / name / "SKILL.md").write_text(
-            "---\nname: %s\ndescription: d\n---\nbody\n" % name, encoding="utf-8"
+            f"---\nname: {name}\ndescription: d\n---\nbody\n", encoding="utf-8"
         )
 
     real_read_text = Path.read_text
