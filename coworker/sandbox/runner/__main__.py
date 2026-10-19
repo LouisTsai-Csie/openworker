@@ -10,8 +10,8 @@ import argparse
 import os
 import sys
 
-from coworker.sandbox.runner.daemon import RUNNER_VERSION, Daemon
-from coworker.sandbox.runner.relay import run as run_relay
+from .daemon import RUNNER_VERSION, Daemon
+from .relay import run as run_relay
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     connect.add_argument("port", type=int)
     args = parser.parse_args(argv)
     if args.command == "connect":
-        from coworker.sandbox.runner.connect import run as run_connect
+        from .connect import run as run_connect
 
         return run_connect(args.proxy_host, args.proxy_port, args.host, args.port)
     if args.command == "serve":

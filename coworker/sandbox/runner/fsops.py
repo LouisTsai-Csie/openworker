@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Optional
 
-from coworker.sandbox.runner.protocol import MAX_READ_BYTES
+from .protocol import MAX_READ_BYTES
 
 
 class FsError(Exception):

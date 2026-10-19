@@ -34,8 +34,8 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Callable, Iterator, Sequence
 
-from coworker.sandbox.runner import fsops, protocol as P, toolcalls, winpipe
-from coworker.sandbox.runner.executor import LocalExecutor
+from . import fsops, protocol as P, toolcalls, winpipe
+from .executor import LocalExecutor
 
 RUNNER_VERSION = "0.1.0"
 _RESULT_LOG_MAX = 5000
