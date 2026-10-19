@@ -21,13 +21,13 @@ from coworker.teams.proposals import WORK_PROPOSAL_SCHEMA, TEAM_PROPOSAL_SCHEMA,
 from coworker.teams.store import TeamStore
 
 READ_VERBS = ("get_item_comments", "get_item_comment", "get_proposal")
-LEAD_VERBS = ("create_item", "list_items", "get_item", "transition", "comment", "assign", "link") + READ_VERBS
+LEAD_VERBS = ("create_item", "list_items", "get_item", "transition", "comment", "assign", "link", *READ_VERBS)
 # Workers file items too (a bug spotted in passing, a follow-up) — new items land
 # `open` and unassigned; nothing runs until the item is assigned. `claim` is
 # self-assignment: on an open-claims board (the default) a worker may pick up an
 # open, unassigned item — the store arbitrates races, the lead supervises by
 # exception (every claim lands in its feed; reassign/cancel revokes).
-WORKER_VERBS = ("create_item", "list_items", "get_item", "transition", "comment", "claim", "set_status") + READ_VERBS
+WORKER_VERBS = ("create_item", "list_items", "get_item", "transition", "comment", "claim", "set_status", *READ_VERBS)
 JOURNAL_VERBS = ("journal_append", "journal_read")
 
 
@@ -262,7 +262,7 @@ def board_tools(
 
     verbs = LEAD_VERBS if actor.role in (Role.USER, Role.LEAD) else WORKER_VERBS
     if attachments is not None:
-        verbs = verbs + ("attach_image",)
+        verbs = (*verbs, "attach_image")
     local = locals()
     out = []
     for name in verbs:

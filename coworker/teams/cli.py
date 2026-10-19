@@ -83,7 +83,7 @@ def _parser() -> argparse.ArgumentParser:
 
     p = cmd("move", _cmd_move, "transition an item")
     p.add_argument("id", type=int)
-    p.add_argument("to", choices=_STATES[1:] + ("open",))
+    p.add_argument("to", choices=(*_STATES[1:], "open"))
     p.add_argument("--comment", default="")
     p.add_argument("--ref", action="append", default=[], dest="refs")
 

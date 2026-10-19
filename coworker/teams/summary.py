@@ -109,7 +109,7 @@ def breakdown(intervals, start, end):
     edges = sorted(
         {start, end, *(a for a, _, _ in clipped), *(b for _, b, _ in clipped)}
     )
-    out = dict(model_ms=0, tool_ms=0, waited_ms=0, queued_ms=0)
+    out = {"model_ms": 0, "tool_ms": 0, "waited_ms": 0, "queued_ms": 0}
     for a, b in pairwise(edges):
         active = {kind for x, y, kind in clipped if x < b and y > a}
         kind = next(

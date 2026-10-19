@@ -23,7 +23,7 @@ from coworker.memory.base import MemoryItem, MemoryStore, Scope
 
 _SCOPES = {s.value for s in Scope}
 
-_META = dict(category="memory", risk_level="low", capabilities=["remember"])
+_META = {"category": "memory", "risk_level": "low", "capabilities": ["remember"]}
 
 
 def memory_tools(

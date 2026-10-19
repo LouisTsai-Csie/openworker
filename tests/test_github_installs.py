@@ -91,11 +91,11 @@ def test_managed_callback_installs_and_hot_reloads(client, monkeypatch):
     assert client.manager.secrets.get("github:default")["mode"] == "relay"
     assert refreshes  # hot-add, like a Slack workspace
 
-    gh = [
+    gh = next(
         c
         for c in client.get("/v1/connectors").json()["connectors"]
         if c["name"] == "github"
-    ][0]
+    )
     assert gh["connected"] is True
     assert [i["installation_id"] for i in gh["installations"]] == ["101"]
     assert gh["installations"][0]["account_login"] == "acme"

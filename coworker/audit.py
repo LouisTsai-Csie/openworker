@@ -32,7 +32,7 @@ _BODY_KEYS = ("body", "content", "html")
 # A tool RESULT carries the same content the argument policy redacts, under other names:
 # a shell command's stdout, an email body, one message's text (#525). The audit row is for
 # triage — who ran what, against which resource — never for replaying the content.
-_RESULT_BODY_KEYS = _BODY_KEYS + ("output", "stdout", "stderr", "text", "snippet")
+_RESULT_BODY_KEYS = (*_BODY_KEYS, "output", "stdout", "stderr", "text", "snippet")
 # The engine's own preview length, so a rebuilt preview is the same size as the one it
 # replaces.
 _PREVIEW_LIMIT = 300

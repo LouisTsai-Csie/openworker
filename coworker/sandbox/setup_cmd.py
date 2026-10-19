@@ -405,7 +405,7 @@ def enable_linger() -> str | None:
     if _run(["loginctl", "enable-linger", user], 30).returncode == 0:
         return None
     prefix = admin_prefix()
-    if prefix is not None and _run(prefix + ["loginctl", "enable-linger", user], 120).returncode == 0:
+    if prefix is not None and _run([*prefix, "loginctl", "enable-linger", user], 120).returncode == 0:
         return None
     return f"sudo loginctl enable-linger {user}"
 

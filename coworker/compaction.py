@@ -373,7 +373,7 @@ def fit_user_messages(
         tail.append(_clip_to_tokens(text, budget_tokens))
         spent += cost
     tail.reverse()
-    return [kept_first] + tail, prior_dropped + (len(rest) - len(tail))
+    return [kept_first, *tail], prior_dropped + (len(rest) - len(tail))
 
 
 # -- summarizer ---------------------------------------------------------------

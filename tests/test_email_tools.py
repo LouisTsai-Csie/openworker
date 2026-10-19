@@ -46,7 +46,7 @@ class FakeIMAP:
         return "OK", [folder.encode() + b" (MESSAGES 7)"]
 
     def uid(self, command, *args):
-        self.commands.append(("uid", command) + args)
+        self.commands.append(("uid", command, *args))
         if command == "SEARCH":
             uids = b" ".join(uid.encode() for uid in sorted(self.messages, key=int))
             return "OK", [uids]

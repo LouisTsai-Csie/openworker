@@ -137,7 +137,7 @@ def test_parallel_time_is_wall_clock_union():
     result = breakdown(
         [(0, 5, "tool_ms"), (2, 8, "tool_ms"), (8, 9, "model_ms")], 0, 10
     )
-    assert result == dict(model_ms=1000, tool_ms=8000, waited_ms=0, queued_ms=1000)
+    assert result == {"model_ms": 1000, "tool_ms": 8000, "waited_ms": 0, "queued_ms": 1000}
     assert sum(result.values()) == 10000
 
 
@@ -145,13 +145,13 @@ def test_waiting_has_priority_and_intervals_are_clipped():
     result = breakdown(
         [(-5, 20, "model_ms"), (3, 6, "waited_ms"), (2, 7, "tool_ms")], 0, 10
     )
-    assert result == dict(model_ms=5000, tool_ms=2000, waited_ms=3000, queued_ms=0)
+    assert result == {"model_ms": 5000, "tool_ms": 2000, "waited_ms": 3000, "queued_ms": 0}
 
 
 def test_usage_is_normalized_defensively():
     assert tokens(
-        dict(input=-1, output="12", cache_read=None, cache_write="bad")
-    ) == dict(input=0, output=12, cache_read=0, cache_write=0)
+        {"input": -1, "output": "12", "cache_read": None, "cache_write": "bad"}
+    ) == {"input": 0, "output": 12, "cache_read": 0, "cache_write": 0}
 
 
 def test_event_reader_paginates(store):

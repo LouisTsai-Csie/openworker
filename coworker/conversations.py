@@ -407,24 +407,24 @@ class ConversationStore:
             message_count=len(messages),
             updated_at=row["updated_at"],
             extra_roots=_load_roots(
-                row["extra_roots"] if "extra_roots" in row.keys() else None
+                row["extra_roots"] if "extra_roots" in row else None
             ),
-            grants=_load_grants(row["grants"] if "grants" in row.keys() else None),
+            grants=_load_grants(row["grants"] if "grants" in row else None),
             # Auto-compaction state (OPE-27) — same defensive parse as grants.
             compaction=_load_grants(
-                row["compaction"] if "compaction" in row.keys() else None
+                row["compaction"] if "compaction" in row else None
             ),
             pinned=bool(row["pinned"]),
             archived=bool(row["archived"]),
             origin=row["origin"],
             origin_label=row["origin_label"],
-            actor=(row["actor"] if "actor" in row.keys() else None) or "",
-            team=_load_grants(row["team"] if "team" in row.keys() else None),
+            actor=(row["actor"] if "actor" in row else None) or "",
+            team=_load_grants(row["team"] if "team" in row else None),
             bindings=_load_grants(
-                row["bindings"] if "bindings" in row.keys() else None
+                row["bindings"] if "bindings" in row else None
             ),
-            usage=_load_grants(row["usage"] if "usage" in row.keys() else None),
-            spawn=_load_grants(row["spawn"] if "spawn" in row.keys() else None),
+            usage=_load_grants(row["usage"] if "usage" in row else None),
+            spawn=_load_grants(row["spawn"] if "spawn" in row else None),
         )
 
     def set_spawn(self, session_id: str, spawn: dict) -> None:
@@ -504,10 +504,10 @@ class ConversationStore:
                 archived=bool(r["archived"]),
                 origin=r["origin"],
                 origin_label=r["origin_label"],
-                actor=(r["actor"] if "actor" in r.keys() else None) or "",
-                team=_load_grants(r["team"] if "team" in r.keys() else None),
-                usage=_load_grants(r["usage"] if "usage" in r.keys() else None),
-                spawn=_load_grants(r["spawn"] if "spawn" in r.keys() else None),
+                actor=(r["actor"] if "actor" in r else None) or "",
+                team=_load_grants(r["team"] if "team" in r else None),
+                usage=_load_grants(r["usage"] if "usage" in r else None),
+                spawn=_load_grants(r["spawn"] if "spawn" in r else None),
             )
             for r in rows
         ]

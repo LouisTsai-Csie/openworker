@@ -139,7 +139,7 @@ def test_audit_migration_adds_columns_to_a_legacy_db(tmp_path):
     )
     stats = store.reviewer_stats("s1")
     assert stats["live"]["checks"] == 1 and stats["live"]["tokens_in"] == 50
-    row = [r for r in store.list(session_id="s1") if r["stage"] == "reviewer_verdict"][0]
+    row = next(r for r in store.list(session_id="s1") if r["stage"] == "reviewer_verdict")
     assert row["call_id"] == "c1"
     store.close()
 
