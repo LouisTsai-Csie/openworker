@@ -11,8 +11,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
-from ..secrets import SecretStore
-from .base import SessionSource
+from coworker.secrets import SecretStore
+from coworker.connectors.base import SessionSource
 
 PLATFORMS = ("telegram", "slack", "github")
 
@@ -132,6 +132,6 @@ def _slack_team_profiles(secrets: SecretStore) -> list[tuple[str, dict]]:
 
 def _github_install_profiles(secrets: SecretStore) -> list[tuple[str, dict]]:
     """(installation_id, profile) for every managed GitHub App installation."""
-    from .github_installs import list_installs
+    from coworker.connectors.github_installs import list_installs
 
     return [(iid, profile) for iid, profile in list_installs(secrets) if profile]

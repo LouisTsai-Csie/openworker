@@ -29,8 +29,8 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-from .providers.recommended import recommendation_for
-from .secrets import state_dir
+from coworker.providers.recommended import recommendation_for
+from coworker.secrets import state_dir
 
 FILE_NAME = "model_config.json"
 

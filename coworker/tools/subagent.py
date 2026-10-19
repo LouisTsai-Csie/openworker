@@ -19,13 +19,13 @@ from typing import Any, Optional
 
 import aisuite as ai
 
-from ..engine import TurnEngine
-from ..events import EventType
-from ..permissions import Mode, PermissionEngine
-from ..tools import ToolRegistry
-from .files import file_tools
-from .git import git_tools
-from .search import search_tools
+from coworker.engine import TurnEngine
+from coworker.events import EventType
+from coworker.permissions import Mode, PermissionEngine
+from coworker.tools import ToolRegistry
+from coworker.tools.files import file_tools
+from coworker.tools.git import git_tools
+from coworker.tools.search import search_tools
 
 EXPLORER_INSTRUCTIONS = """You are a read-only code explorer working inside the user's workspace. \
 Answer the research task you're given by searching and reading the code (`grep`, `read_file`, \

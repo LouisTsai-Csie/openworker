@@ -13,8 +13,8 @@ import logging
 from typing import Optional
 from collections.abc import Awaitable, Callable
 
-from .models import ScheduledTask, TaskRun
-from .store import TaskStore
+from coworker.automation.models import ScheduledTask, TaskRun
+from coworker.automation.store import TaskStore
 
 logger = logging.getLogger("coworker.automation")
 

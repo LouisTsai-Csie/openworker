@@ -28,7 +28,7 @@ from typing import Any, Optional
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 logger = logging.getLogger(__name__)
 

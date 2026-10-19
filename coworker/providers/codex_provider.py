@@ -18,14 +18,14 @@ from __future__ import annotations
 import uuid
 from typing import Any, Optional
 
-from .base import AssistantTurn
-from .codex_auth import (
+from coworker.providers.base import AssistantTurn
+from coworker.providers.codex_auth import (
     CODEX_BASE_URL,
     PLAN_LIMIT_ERROR,
     CodexTokenStore,
     backend_headers,
 )
-from .openai_responses import OpenAIResponsesProvider
+from coworker.providers.openai_responses import OpenAIResponsesProvider
 
 
 def _status_code(exc: Exception) -> Optional[int]:

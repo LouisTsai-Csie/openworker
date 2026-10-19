@@ -21,7 +21,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
-from .config import MCPServerDef
+from coworker.mcp.config import MCPServerDef
 
 
 _STDERR_TAIL_LINES = 20
@@ -146,8 +146,8 @@ class MCPManager:
                         )
                     auth = None
                     if server.auth == "oauth":
-                        from ..secrets import SecretStore
-                        from .oauth import build_auth
+                        from coworker.secrets import SecretStore
+                        from coworker.mcp.oauth import build_auth
 
                         if self._secrets is None:
                             self._secrets = SecretStore()

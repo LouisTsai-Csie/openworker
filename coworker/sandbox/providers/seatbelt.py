@@ -29,12 +29,12 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Callable, Sequence
 
-from .. import credentials as creds
-from .. import netproxy, network_profiles
-from ..bundle import build_runner_zipapp
-from ..launch import read_paths, runner_command
-from ..transport import PipeTransport, Transport
-from . import seatbelt_profile
+from coworker.sandbox import credentials as creds
+from coworker.sandbox import netproxy, network_profiles
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.launch import read_paths, runner_command
+from coworker.sandbox.transport import PipeTransport, Transport
+from coworker.sandbox.providers import seatbelt_profile
 
 SANDBOX_EXEC = "/usr/bin/sandbox-exec"
 _SECRET_NAME = re.compile(r"KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|AUTH|COOKIE|SESSION", re.IGNORECASE)
@@ -131,7 +131,7 @@ class SeatbeltProvider:
         }
 
     def profile_text(self) -> str:
-        from ... import toolchain
+        from coworker import toolchain
 
         return seatbelt_profile.render(
             self.roots,
@@ -211,7 +211,7 @@ class SeatbeltProvider:
     def verify(self, client: Any) -> None:
         """Every folder is reachable inside, and the wall is really up: the home folder,
         which no session is given as a whole, must NOT be listable."""
-        from ..runner.protocol import RunnerError
+        from coworker.sandbox.runner.protocol import RunnerError
 
         for root in self.roots:
             client.call("fs.list", {"path": root["path"], "limit": 1}, timeout=15)

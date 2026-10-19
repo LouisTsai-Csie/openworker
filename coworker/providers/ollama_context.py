@@ -28,7 +28,7 @@ from collections.abc import Iterator
 
 import httpx
 
-from . import local_machine
+from coworker.providers import local_machine
 
 # Used when `/api/show` is unreachable or does not report a context length. 128k is
 # the trained window of most current local models (Gemma 4, Qwen 3, Llama 3.x).
@@ -225,7 +225,7 @@ class OllamaContextTransport(httpx.BaseTransport):
         if self.num_ctx is not None:
             return self.num_ctx
         # A context size the user saved for this model wins over every rule.
-        from .. import model_config
+        from coworker import model_config
 
         chosen = model_config.context_size_for(f"ollama:{model}")
         if chosen:

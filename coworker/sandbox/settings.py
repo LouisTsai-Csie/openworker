@@ -8,9 +8,9 @@ from __future__ import annotations
 import sys
 from typing import Any, Optional
 
-from .. import config as app_config
-from . import credentials, network_profiles, toolchains
-from .workspace import DIRECT, OPENSHELL, SEATBELT, WINDOWS
+from coworker import config as app_config
+from coworker.sandbox import credentials, network_profiles, toolchains
+from coworker.sandbox.workspace import DIRECT, OPENSHELL, SEATBELT, WINDOWS
 
 
 def _availability(name: str) -> tuple[bool, str, str]:
@@ -23,7 +23,7 @@ def _availability(name: str) -> tuple[bool, str, str]:
     if name == SEATBELT:
         if sys.platform != "darwin":
             return False, "macOS only", "unavailable"
-        from .providers import seatbelt
+        from coworker.sandbox.providers import seatbelt
 
         try:
             seatbelt.preflight()
@@ -33,8 +33,8 @@ def _availability(name: str) -> tuple[bool, str, str]:
     if name == OPENSHELL:
         if sys.platform == "win32":  # its Windows driver is a preview; the setup command here sets up the Windows sandbox
             return False, "OpenShell is not available on Windows yet.", "unavailable"
-        from .providers.openshell import is_image_problem
-        from .selection import openshell_problem
+        from coworker.sandbox.providers.openshell import is_image_problem
+        from coworker.sandbox.selection import openshell_problem
 
         problem = openshell_problem()
         if problem is None:
@@ -43,7 +43,7 @@ def _availability(name: str) -> tuple[bool, str, str]:
     if name == WINDOWS:
         if sys.platform != "win32":
             return False, "Windows only", "unavailable"
-        from .providers import windows
+        from coworker.sandbox.providers import windows
 
         try:
             windows.preflight()
@@ -60,7 +60,7 @@ def native_sandbox() -> str:
 
 def snapshot(cfg: Optional[app_config.Config] = None) -> dict[str, Any]:
     cfg = cfg or app_config.load_config()
-    from .selection import select
+    from coworker.sandbox.selection import select
 
     try:
         chosen = select(cfg.sandbox_provider)
@@ -120,7 +120,7 @@ def _windows_setup_info() -> Optional[dict[str, Any]]:
     """The Windows setup's state for the page (UX-053): None off Windows."""
     if sys.platform != "win32":
         return None
-    from .providers import windows_setup
+    from coworker.sandbox.providers import windows_setup
 
     return windows_setup.info()
 
@@ -129,7 +129,7 @@ def readiness() -> dict[str, Any]:
     """The checklist Settings ▸ Sandbox shows for OpenShell: the same rows as `openworker
     machine sandbox status`, with keys and whether the app may fix each one itself
     (OPE-207). Costs a few CLI calls; the page asks for it separately from `snapshot`."""
-    from . import setup_cmd
+    from coworker.sandbox import setup_cmd
 
     if sys.platform == "win32":
         return {"platform": sys.platform, "supported": False, "steps": [], "all_ok": False}
@@ -162,7 +162,7 @@ def run_windows_setup() -> dict[str, Any]:
     machine's choice. Returns the outcome with the new snapshot."""
     if sys.platform != "win32":
         return {"ok": False, "error": "the Windows sandbox exists only on Windows", **snapshot()}
-    from .providers import windows_setup
+    from coworker.sandbox.providers import windows_setup
 
     ok, said = windows_setup.run_setup()
     if not ok:
@@ -178,7 +178,7 @@ def run_windows_remove() -> dict[str, Any]:
     """"Remove setup": undo what setup made and put the machine back on No sandbox."""
     if sys.platform != "win32":
         return {"ok": False, "error": "the Windows sandbox exists only on Windows", **snapshot()}
-    from .providers import windows_setup
+    from coworker.sandbox.providers import windows_setup
 
     ok, said = windows_setup.run_remove()
     if not ok:
@@ -194,7 +194,7 @@ def _throwaway_check() -> tuple[bool, str]:
     import shutil
     import tempfile
 
-    from .workspace import open_workspace
+    from coworker.sandbox.workspace import open_workspace
 
     folder = tempfile.mkdtemp(prefix="ow-check-")
     try:
@@ -219,7 +219,7 @@ def update(body: dict[str, Any]) -> dict[str, Any]:
         if provider and provider not in (DIRECT, SEATBELT, WINDOWS, OPENSHELL):
             return {"ok": False, "error": f"unknown sandbox provider: {provider}"}
         app_config.set_global_value("sandbox_provider", provider) if provider else _unset("sandbox_provider")
-        from .selection import openshell_problem
+        from coworker.sandbox.selection import openshell_problem
 
         if provider == OPENSHELL:
             openshell_problem(fresh=True)
@@ -330,7 +330,7 @@ def add_site(host: str) -> list[str]:
     """Add one site to the machine's allowed sites (the "Always allow <site>" choice on the
     allowed-sites card, OPE-219) and return the new list. A site already on it changes
     nothing. Raises ValueError for a host the list cannot hold."""
-    from .network_profiles import clean_host
+    from coworker.sandbox.network_profiles import clean_host
 
     entry = clean_host(host)
     current = list(app_config.load_config().sandbox_network_hosts or [])
@@ -351,7 +351,7 @@ def session_sandbox(engine: Any) -> dict[str, Any]:
       was opened before the switch). The one state worth a warning.
     - `off`: no sandbox on this machine and none here. Nothing was promised.
     """
-    from .workspace import DIRECT, provider_name
+    from coworker.sandbox.workspace import DIRECT, provider_name
 
     workspace = getattr(engine, "sandbox_workspace", None)
     provider = getattr(workspace, "provider", None)

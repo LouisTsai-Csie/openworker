@@ -36,7 +36,7 @@ import json
 import re
 from typing import Any, Optional
 
-from .base import (
+from coworker.providers.base import (
     AssistantTurn,
     ModelCapabilities,
     ProviderClient,
@@ -44,8 +44,8 @@ from .base import (
     TokenUsage,
     ToolCall,
 )
-from .capabilities import capabilities_for
-from .openai_provider import resolve_api_key
+from coworker.providers.capabilities import capabilities_for
+from coworker.providers.openai_provider import resolve_api_key
 
 # Request params passed through from model settings; everything else (frequency_penalty,
 # reasoning_effort — no effort knob in v1, the server default rides) is dropped.

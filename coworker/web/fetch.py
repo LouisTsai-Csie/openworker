@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from .guard import get_checked
+from coworker.web.guard import get_checked
 
 _MAX = 20000  # default chars returned
 

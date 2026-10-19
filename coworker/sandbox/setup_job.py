@@ -15,7 +15,7 @@ import time
 from typing import Any, Optional
 from collections.abc import Callable
 
-from . import setup_cmd
+from coworker.sandbox import setup_cmd
 
 
 class SetupJob:

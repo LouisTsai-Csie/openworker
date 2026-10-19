@@ -2,8 +2,8 @@
 the board log (space-scoped — a board lives and dies with its team) and the
 journal store (case-keyed — knowledge that outlives boards and teams)."""
 
-from .journal import JournalStore
-from .model import (
+from coworker.teams.journal import JournalStore
+from coworker.teams.model import (
     Actor,
     AuthorityError,
     BoardError,
@@ -12,8 +12,8 @@ from .model import (
     ItemState,
     Role,
 )
-from .store import TeamStore
-from .tools import board_tools, journal_tools
+from coworker.teams.store import TeamStore
+from coworker.teams.tools import board_tools, journal_tools
 
 __all__ = [
     "Actor",

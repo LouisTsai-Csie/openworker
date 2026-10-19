@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .base import (
+from coworker.connectors.base import (
     BasePlatformAdapter,
     MessageEvent,
     MessageSource,
@@ -12,21 +12,21 @@ from .base import (
     format_target,
     parse_target,
 )
-from .adapters import (
+from coworker.connectors.adapters import (
     SlackAdapter,
     TelegramAdapter,
     make_adapter,
     slack_event_to_event,
     telegram_message_to_event,
 )
-from .config import ConnectorSettings, TeamAuth, is_authorized, load_settings
-from .relay_client import SlackRelayAdapter
-from .slack_addr import qualify as slack_qualify, split as slack_split
-from .descriptors import ConnectorDescriptor, get_descriptor, list_descriptors
-from .fake import FakeAdapter
-from .gateway import Gateway
-from .senders import DEFAULT_SENDERS
-from .setup import (
+from coworker.connectors.config import ConnectorSettings, TeamAuth, is_authorized, load_settings
+from coworker.connectors.relay_client import SlackRelayAdapter
+from coworker.connectors.slack_addr import qualify as slack_qualify, split as slack_split
+from coworker.connectors.descriptors import ConnectorDescriptor, get_descriptor, list_descriptors
+from coworker.connectors.fake import FakeAdapter
+from coworker.connectors.gateway import Gateway
+from coworker.connectors.senders import DEFAULT_SENDERS
+from coworker.connectors.setup import (
     connect_connector,
     connector_list,
     disconnect_connector,
@@ -34,9 +34,9 @@ from .setup import (
     set_experimental_enabled,
     update_connector_tools,
 )
-from .integration_tools import make_integration_tools
-from .tools import make_send_file_tool, make_send_message_tool
-from .tool_defs import connector_for_tool
+from coworker.connectors.integration_tools import make_integration_tools
+from coworker.connectors.tools import make_send_file_tool, make_send_message_tool
+from coworker.connectors.tool_defs import connector_for_tool
 
 __all__ = [
     "DEFAULT_SENDERS",

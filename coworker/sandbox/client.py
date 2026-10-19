@@ -21,8 +21,8 @@ import uuid
 from typing import Any, Optional
 from collections.abc import Callable
 
-from .runner import protocol as P
-from .transport import Transport
+from coworker.sandbox.runner import protocol as P
+from coworker.sandbox.transport import Transport
 
 log = logging.getLogger(__name__)
 

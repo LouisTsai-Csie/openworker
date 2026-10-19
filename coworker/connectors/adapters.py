@@ -13,14 +13,14 @@ import os
 import re
 from typing import Any, Optional
 
-from .base import (
+from coworker.connectors.base import (
     BasePlatformAdapter,
     InteractionEvent,
     MessageEvent,
     SendResult,
     SessionSource,
 )
-from .senders import _send_slack, _send_slack_interactive, _send_telegram
+from coworker.connectors.senders import _send_slack, _send_slack_interactive, _send_telegram
 
 logger = logging.getLogger("coworker.connectors")
 
@@ -34,7 +34,7 @@ _SLACK_MENTION_RE = re.compile(r"<@([UW][A-Z0-9]+)(?:\|[^>]*)?>")
 
 def _poll_cursor_path(connection_id: str):
     """Where a box keeps its machine-events poll cursor for one connection."""
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
     safe = "".join(ch for ch in connection_id if ch.isalnum() or ch in "-_")
     return state_dir() / "poll-cursors" / f"{safe}.cursor"
@@ -466,8 +466,8 @@ def make_adapter(
                 and profile.get("broker_user_id")
                 and profile.get("connection_id")
             ):
-                from .machine_poll import MachinePollTransport
-                from .relay_client import SlackRelayAdapter
+                from coworker.connectors.machine_poll import MachinePollTransport
+                from coworker.connectors.relay_client import SlackRelayAdapter
 
                 def _poll_transport():
                     return MachinePollTransport(
@@ -491,7 +491,7 @@ def make_adapter(
                     "— sign in and set cloud_relay_ws_url; skipping"
                 )
                 return None
-            from .relay_client import SlackRelayAdapter
+            from coworker.connectors.relay_client import SlackRelayAdapter
 
             return SlackRelayAdapter(
                 relay_url,
@@ -502,9 +502,9 @@ def make_adapter(
         if profile.get("bot_token") and profile.get("app_token"):
             return SlackAdapter(profile["bot_token"], profile["app_token"])
     if platform == "github" and profile.get("mode") == "relay":
-        from .github_installs import list_installs
-        from .github_relay import GitHubRelayAdapter
-        from .relay_client import RelayHub
+        from coworker.connectors.github_installs import list_installs
+        from coworker.connectors.github_relay import GitHubRelayAdapter
+        from coworker.connectors.relay_client import RelayHub
 
         installs = (
             dict(list_installs(secrets)) if secrets else {}
@@ -521,7 +521,7 @@ def make_adapter(
             and profile.get("broker_user_id")
             and profile.get("connection_id")
         ):
-            from .machine_poll import MachinePollTransport
+            from coworker.connectors.machine_poll import MachinePollTransport
 
             def _gh_poll_transport():
                 return MachinePollTransport(

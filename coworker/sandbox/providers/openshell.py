@@ -36,13 +36,13 @@ from collections.abc import Callable, Sequence
 
 import yaml
 
-from ...secrets import state_dir
-from ..bundle import build_runner_zipapp
-from ..registry import REGISTRY_LABEL, registry_id
-from ..transport import Transport
-from .. import credentials as creds
-from . import openshell_policy as policy
-from . import openshell_wire as wire
+from coworker.secrets import state_dir
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.registry import REGISTRY_LABEL, registry_id
+from coworker.sandbox.transport import Transport
+from coworker.sandbox import credentials as creds
+from coworker.sandbox.providers import openshell_policy as policy
+from coworker.sandbox.providers import openshell_wire as wire
 
 log = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ def _host_network_problem() -> Optional[str]:
     OpenShell 0.1 cannot start a sandbox without it, and says only "failed to connect"."""
     if sys.platform != "darwin":
         return None
-    from ..setup_cmd import DOCKER_HOST_NETWORK_FIX, docker_host_network
+    from coworker.sandbox.setup_cmd import DOCKER_HOST_NETWORK_FIX, docker_host_network
 
     return f"{DOCKER_HOST_NETWORK_FIX}." if docker_host_network() is False else None
 
@@ -268,7 +268,7 @@ class DenialLog:
         found = _DENIED_LINE.search(line)
         if not found:
             return
-        from ..netproxy import _blocked_entry
+        from coworker.sandbox.netproxy import _blocked_entry
 
         entry = _blocked_entry(found.group(2))  # a host name or nothing: it is shown to the agent and the person
         item = (float(found.group(1)), entry)
@@ -385,14 +385,14 @@ class OpenShellProvider:
             if "ContainerExited" in str(exc) and sys.platform == "darwin":
                 # The container's own log says why; the CLI does not. The usual reason on a
                 # Mac is a Docker Desktop kernel without Landlock, which can be asked.
-                from ..setup_cmd import DOCKER_LANDLOCK_FIX, docker_landlock
+                from coworker.sandbox.setup_cmd import DOCKER_LANDLOCK_FIX, docker_landlock
 
                 if docker_landlock() is False:
                     raise OpenShellUnavailable(f"{DOCKER_LANDLOCK_FIX}. Then start the session again.") from exc
             if "failed to connect to OpenShell server" in str(exc) and sys.platform == "darwin":
                 # The sandbox's helper could not reach the gateway: on a Mac that is Docker
                 # Desktop's host networking being off, which can be asked.
-                from ..setup_cmd import DOCKER_HOST_NETWORK_FIX, docker_host_network
+                from coworker.sandbox.setup_cmd import DOCKER_HOST_NETWORK_FIX, docker_host_network
 
                 if docker_host_network() is False:
                     raise OpenShellUnavailable(f"{DOCKER_HOST_NETWORK_FIX}. Then start the session again.") from exc

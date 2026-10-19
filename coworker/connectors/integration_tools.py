@@ -19,11 +19,11 @@ from urllib.parse import quote
 
 import aisuite as ai
 
-from ..secrets import SecretStore
-from ..web.guard import get_checked
-from .browser_automation import make_browser_automation_tools
-from .email_tools import make_email_tools
-from .tool_defs import approval_for_tool, connector_for_tool
+from coworker.secrets import SecretStore
+from coworker.web.guard import get_checked
+from coworker.connectors.browser_automation import make_browser_automation_tools
+from coworker.connectors.email_tools import make_email_tools
+from coworker.connectors.tool_defs import approval_for_tool, connector_for_tool
 
 
 def _meta(
@@ -80,8 +80,8 @@ def _profile(
     if profile.get("managed"):
         # Managed-OAuth profiles renew through the cloud broker just before
         # expiry; manual token profiles are never touched (no-op inside).
-        from ..cloud import ensure_fresh_connector_token
-        from ..config import load_config
+        from coworker.cloud import ensure_fresh_connector_token
+        from coworker.config import load_config
 
         ensure_fresh_connector_token(secrets, load_config(), name)
         profile = secrets.get(f"{name}:default") or {}
@@ -97,7 +97,7 @@ def _account_profile(
     """(account_id, profile, err) for an account-patterned connector (generic
     accounts.py layer): requested — or default — account, managed tokens
     refreshed in place. The gmail/gcal/hubspot bespoke helpers predate this."""
-    from . import accounts as _accounts
+    from coworker.connectors import accounts as _accounts
 
     account_id, key, profile = _accounts.resolve(secrets, connector, account)
     if profile is None:
@@ -108,8 +108,8 @@ def _account_profile(
         )
         return "", None, {"error": hint}
     if profile.get("managed"):
-        from ..cloud import ensure_fresh_connector_token
-        from ..config import load_config
+        from coworker.cloud import ensure_fresh_connector_token
+        from coworker.config import load_config
 
         ensure_fresh_connector_token(secrets, load_config(), connector, profile_key=key)
         profile = secrets.get(key) or profile
@@ -142,7 +142,7 @@ def _gmail_profile(
 ) -> tuple[str, Optional[dict[str, Any]], Optional[dict[str, str]]]:
     """(email, profile, err) for the requested — or default — mailbox, with the
     managed token refreshed in place. Multi-account: `gmail:account:<email>`."""
-    from . import gmail_accounts
+    from coworker.connectors import gmail_accounts
 
     email, key, profile = gmail_accounts.resolve(secrets, account)
     if profile is None:
@@ -153,8 +153,8 @@ def _gmail_profile(
         )
         return "", None, {"error": hint}
     if profile.get("managed"):
-        from ..cloud import ensure_fresh_connector_token
-        from ..config import load_config
+        from coworker.cloud import ensure_fresh_connector_token
+        from coworker.config import load_config
 
         ensure_fresh_connector_token(secrets, load_config(), "gmail", profile_key=key)
         profile = secrets.get(key) or profile
@@ -169,7 +169,7 @@ def _gcal_profile(
     """(email, profile, err) for the requested — or default — Google account,
     with the managed token refreshed in place. Multi-account:
     `google_calendar:account:<email>`."""
-    from . import gcal_accounts
+    from coworker.connectors import gcal_accounts
 
     email, key, profile = gcal_accounts.resolve(secrets, account)
     if profile is None:
@@ -180,8 +180,8 @@ def _gcal_profile(
         )
         return "", None, {"error": hint}
     if profile.get("managed"):
-        from ..cloud import ensure_fresh_connector_token
-        from ..config import load_config
+        from coworker.cloud import ensure_fresh_connector_token
+        from coworker.config import load_config
 
         ensure_fresh_connector_token(
             secrets, load_config(), "google_calendar", profile_key=key
@@ -211,7 +211,7 @@ def _hubspot_profile(
 ) -> tuple[str, str, Optional[dict[str, str]]]:
     """(portal name, bearer token, err) for the requested — or default — portal,
     with a managed token refreshed in place. Multi-portal: `hubspot:portal:<id>`."""
-    from . import hubspot_portals
+    from coworker.connectors import hubspot_portals
 
     hub_id, key, profile = hubspot_portals.resolve(secrets, portal)
     if profile is None:
@@ -222,8 +222,8 @@ def _hubspot_profile(
         )
         return "", "", {"error": hint}
     if profile.get("managed"):
-        from ..cloud import ensure_fresh_connector_token
-        from ..config import load_config
+        from coworker.cloud import ensure_fresh_connector_token
+        from coworker.config import load_config
 
         ensure_fresh_connector_token(secrets, load_config(), "hubspot", profile_key=key)
         profile = secrets.get(key) or profile
@@ -240,7 +240,7 @@ def _hubspot_result(secrets: SecretStore, portal_name: str, result: dict) -> dic
     """Post-process a CRM read: strip denylisted fields (model-facing policy)
     and name the portal so transcripts/approvals say where data came from.
     Stripped-value counts ride `_display` → audit; agents see nothing."""
-    from . import hubspot_portals
+    from coworker.connectors import hubspot_portals
 
     if not result.get("ok"):
         return result
@@ -256,7 +256,7 @@ def _hubspot_result(secrets: SecretStore, portal_name: str, result: dict) -> dic
 
 
 def _gmail_filters(secrets: SecretStore) -> Optional[dict[str, list[str]]]:
-    from . import gmail_accounts
+    from coworker.connectors import gmail_accounts
 
     f = gmail_accounts.get_filters(secrets)
     return f if (f["senders"] or f["labels"]) else None
@@ -289,7 +289,7 @@ def _gmail_is_hidden(
     filters: dict[str, list[str]],
     label_map: dict[str, str],
 ) -> bool:
-    from .gmail_accounts import sender_matches
+    from coworker.connectors.gmail_accounts import sender_matches
 
     if filters["senders"] and sender_matches(
         _gmail_from_address(message), filters["senders"]
@@ -407,9 +407,9 @@ def _github_auth(
     if profile.get("token"):
         return _github_headers(profile["token"]), None
     if profile.get("mode") == "relay":
-        from ..cloud import github_installation_token
-        from ..config import load_config
-        from . import github_installs
+        from coworker.cloud import github_installation_token
+        from coworker.config import load_config
+        from coworker.connectors import github_installs
 
         installation_id, _prof = github_installs.resolve(secrets, install)
         if not installation_id and install:
@@ -559,7 +559,7 @@ def make_integration_tools(
     tools.extend(make_email_tools(secrets, roots=roots))
     # Chat connectors (spec §11): posting is a catalog tool, filtered below by the
     # session's enabled connectors like everything else here.
-    from .chat_tools import make_chat_tools
+    from coworker.connectors.chat_tools import make_chat_tools
 
     tools.extend(make_chat_tools(secrets, roots=roots))
 

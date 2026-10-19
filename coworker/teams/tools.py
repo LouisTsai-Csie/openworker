@@ -16,10 +16,10 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from .journal import JournalStore
-from .model import Actor, BoardError, Role
-from .proposals import WORK_PROPOSAL_SCHEMA, TEAM_PROPOSAL_SCHEMA, PROPOSAL_GUIDANCE
-from .store import TeamStore
+from coworker.teams.journal import JournalStore
+from coworker.teams.model import Actor, BoardError, Role
+from coworker.teams.proposals import WORK_PROPOSAL_SCHEMA, TEAM_PROPOSAL_SCHEMA, PROPOSAL_GUIDANCE
+from coworker.teams.store import TeamStore
 
 READ_VERBS = ("get_item_comments", "get_item_comment", "get_proposal")
 LEAD_VERBS = ("create_item", "list_items", "get_item", "transition", "comment", "assign", "link") + READ_VERBS
@@ -250,7 +250,7 @@ def board_tools(
         hand-off. Copies the image into OpenWorker's machine-local board store;
         the original/worktree can be removed after success. Use a path within
         your granted directories. `caption` says what the image proves."""
-        from .attachments import read_image_file
+        from coworker.teams.attachments import read_image_file
 
         try:
             store.require_attachment_write(space, actor, item)

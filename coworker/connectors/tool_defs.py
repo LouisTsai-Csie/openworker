@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 from collections.abc import Callable
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 
 @dataclass(frozen=True)

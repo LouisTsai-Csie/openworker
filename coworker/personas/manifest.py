@@ -129,8 +129,8 @@ class PersonaManifest:
 
     def to_agent(self):
         """Materialize the runtime Agent (prompt + catalog-expanded tools + traits)."""
-        from ..agents.base import Agent
-        from ..catalog import expand
+        from coworker.agents.base import Agent
+        from coworker.catalog import expand
 
         tool_ids = list(self.tools)
         factory = (lambda ctx: expand(tool_ids, ctx)) if tool_ids else None
@@ -395,7 +395,7 @@ def parse_manifest(
 
 def _validate_tools(persona_id: str, tools: list[str]) -> None:
     # Imported here to avoid a module-load cycle (catalog imports agents.base).
-    from ..catalog import CATALOG
+    from coworker.catalog import CATALOG
 
     unknown = [t for t in tools if t not in CATALOG]
     if unknown:

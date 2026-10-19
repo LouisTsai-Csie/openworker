@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from .secrets import state_dir, write_private_text
+from coworker.secrets import state_dir, write_private_text
 
 
 class WorkspaceTrustStore:

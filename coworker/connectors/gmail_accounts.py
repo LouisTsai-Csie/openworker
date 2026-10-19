@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 PREFIX = "gmail:account:"
 DEFAULT_KEY = "gmail:default"

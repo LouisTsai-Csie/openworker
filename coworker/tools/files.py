@@ -18,8 +18,8 @@ from typing import Any, Optional
 
 import aisuite as ai
 
-from ..sandbox.runner import tools_read as _impl
-from ..sandbox.runner.tools_read import (  # noqa: F401
+from coworker.sandbox.runner import tools_read as _impl
+from coworker.sandbox.runner.tools_read import (  # noqa: F401
     _DEFAULT_MAX_LINES,
     _DEFAULT_MAX_RESULTS,
     _MAX_LINE_CHARS,

@@ -15,7 +15,7 @@ import os
 from typing import Optional
 from collections.abc import Callable
 
-from .base import SendResult
+from coworker.connectors.base import SendResult
 
 Sender = Callable[[str, str, str, Optional[str]], SendResult]
 
@@ -61,7 +61,7 @@ def _send_slack(
 ) -> SendResult:
     import httpx
 
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     # A managed-relay chat_id is team-qualified ("T…/C…"); Slack's API wants the
     # bare channel. The per-team token is selected by the caller (send_message).
@@ -114,7 +114,7 @@ def _send_slack_interactive(
 ) -> SendResult:
     import httpx
 
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     _team, chat_id = split(chat_id)
     payload: dict = {
@@ -167,7 +167,7 @@ def _send_slack_file(
     """
     import httpx
 
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     _team, chat_id = split(chat_id)
     headers = {"Authorization": f"Bearer {token}"}

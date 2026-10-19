@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..secrets import SecretStore
-from .descriptors import ConnectorDescriptor, get_descriptor
+from coworker.secrets import SecretStore
+from coworker.connectors.descriptors import ConnectorDescriptor, get_descriptor
 
 IDENTITY = "@identity"
 

@@ -13,12 +13,12 @@ import subprocess
 from pathlib import Path
 from collections.abc import Callable
 
-from .manifest import PersonaManifest
+from coworker.personas.manifest import PersonaManifest
 
 
 def consent_summary(m: PersonaManifest) -> dict:
     """What a persona will be able to do — shown at install for the user to approve."""
-    from ..catalog import risk_summary
+    from coworker.catalog import risk_summary
 
     return {
         "id": m.id,

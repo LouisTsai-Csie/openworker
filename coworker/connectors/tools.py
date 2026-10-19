@@ -14,9 +14,9 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from ..secrets import SecretStore
-from .base import parse_target
-from .senders import DEFAULT_FILE_SENDERS, DEFAULT_SENDERS, FileSender, Sender
+from coworker.secrets import SecretStore
+from coworker.connectors.base import parse_target
+from coworker.connectors.senders import DEFAULT_FILE_SENDERS, DEFAULT_SENDERS, FileSender, Sender
 
 _SCHEMA = {
     "type": "function",
@@ -75,8 +75,8 @@ def _resolve_slack_channel(
     same cached conversations.list roster the GUI's channel picker uses. (chat_id, error):
     exactly one match wins; none/many return an actionable error instead of a guess
     (§36 — 'post Hi to <channel>' must just work when Slack is connected)."""
-    from .config import _slack_team_profiles
-    from .slack_directory import list_channels
+    from coworker.connectors.config import _slack_team_profiles
+    from coworker.connectors.slack_directory import list_channels
 
     query = name.lstrip("#").strip()
     teams = [team_id for team_id, _p in _slack_team_profiles(secrets)]
@@ -122,7 +122,7 @@ def _resolve_token(secrets: SecretStore, platform: str, chat_id: str) -> Optiona
     platforms always use `<platform>:default`.
     """
     if platform == "slack":
-        from .slack_addr import split
+        from coworker.connectors.slack_addr import split
 
         team, _channel = split(chat_id)
         if team:
@@ -150,7 +150,7 @@ def make_send_message_tool(
         # the token/sender machinery below (drill finding: this path simply
         # didn't exist, on any deployment).
         if platform == "github":
-            from .github_send import send_github_comment
+            from coworker.connectors.github_send import send_github_comment
 
             return send_github_comment(secrets, chat_id, text)
         sender = senders.get(platform)
@@ -165,7 +165,7 @@ def make_send_message_tool(
         if not token:
             return {"error": f"no bot token for {platform} — connect it first"}
         if platform == "slack":
-            from .attribution import sender_prefix
+            from coworker.connectors.attribution import sender_prefix
 
             text = sender_prefix(secrets, chat_id) + text
         result = sender(token, chat_id, text, thread_id)
@@ -331,7 +331,7 @@ def make_send_file_tool(
             data = resolved.read_bytes()
             filename = resolved.name
         if platform == "slack" and comment:
-            from .attribution import sender_prefix
+            from coworker.connectors.attribution import sender_prefix
 
             comment = sender_prefix(secrets, chat_id) + comment
         result = sender(token, chat_id, thread_id, filename, data, title, comment)

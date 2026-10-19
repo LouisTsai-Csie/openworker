@@ -18,12 +18,12 @@ import argparse
 import asyncio
 import sys
 
-from ..secrets import SecretStore
-from .base import MessageEvent
-from .config import ConnectorSettings, load_settings
-from .fake import FakeAdapter
-from .gateway import Gateway
-from .tools import make_send_message_tool
+from coworker.secrets import SecretStore
+from coworker.connectors.base import MessageEvent
+from coworker.connectors.config import ConnectorSettings, load_settings
+from coworker.connectors.fake import FakeAdapter
+from coworker.connectors.gateway import Gateway
+from coworker.connectors.tools import make_send_message_tool
 
 
 def _cmd_status() -> int:

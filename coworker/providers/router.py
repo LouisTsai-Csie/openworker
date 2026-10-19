@@ -15,9 +15,9 @@ from __future__ import annotations
 import threading
 from typing import Any, Optional
 
-from .base import ProviderClient
-from .capabilities import capabilities_for
-from .registry import build_provider_client, get_descriptor
+from coworker.providers.base import ProviderClient
+from coworker.providers.capabilities import capabilities_for
+from coworker.providers.registry import build_provider_client, get_descriptor
 
 
 class ProviderRouter(ProviderClient):

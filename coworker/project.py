@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from .secrets import state_dir
+from coworker.secrets import state_dir
 
 
 def default_global_agents_path() -> Path:

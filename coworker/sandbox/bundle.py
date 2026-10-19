@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from ..secrets import state_dir
+from coworker.secrets import state_dir
 
 _PACKAGE = "owrunner"  # the name the runner package has inside the zipapp
 _MAIN = f"from {_PACKAGE}.__main__ import main\nraise SystemExit(main())\n"

@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Sequence
 
-from .. import toolchains
+from coworker.sandbox import toolchains
 
 # Programs, libraries and settings. No entry here is under a home folder.
 _SYSTEM_READ = [

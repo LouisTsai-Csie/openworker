@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from .models import ScheduledTask, TaskRun
+from coworker.automation.models import ScheduledTask, TaskRun
 
 
 def compute_next_run(

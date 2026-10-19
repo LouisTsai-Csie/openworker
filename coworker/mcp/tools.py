@@ -16,7 +16,7 @@ from collections.abc import Awaitable, Callable
 
 import aisuite as ai
 
-from .config import MCPServerDef
+from coworker.mcp.config import MCPServerDef
 
 CallAsync = Callable[[str, dict[str, Any]], Awaitable[Any]]
 

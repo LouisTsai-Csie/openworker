@@ -15,8 +15,8 @@ import sys
 import threading
 import time
 
-from . import winpipe
-from .protocol import RELAY_SILENCE_SECONDS
+from coworker.sandbox.runner import winpipe
+from coworker.sandbox.runner.protocol import RELAY_SILENCE_SECONDS
 
 
 def _connect(socket_path: str):

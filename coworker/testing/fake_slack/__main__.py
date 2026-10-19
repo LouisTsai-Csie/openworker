@@ -13,7 +13,7 @@ import argparse
 
 import uvicorn
 
-from .server import FakeSlack
+from coworker.testing.fake_slack.server import FakeSlack
 
 
 def main() -> None:

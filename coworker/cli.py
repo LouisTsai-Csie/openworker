@@ -15,11 +15,11 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from .config import load_config
-from .conversations import ConversationStore
-from .memory import MemorySettingsStore, SQLiteMemoryStore
-from .permissions import Mode
-from .secrets import state_dir
+from coworker.config import load_config
+from coworker.conversations import ConversationStore
+from coworker.memory import MemorySettingsStore, SQLiteMemoryStore
+from coworker.permissions import Mode
+from coworker.secrets import state_dir
 
 
 HELP = """\
@@ -64,28 +64,28 @@ def _moved(typed: str, now: str) -> None:
 def main(argv: Optional[list[str]] = None) -> None:
     import sys
 
-    from .remote.joiner import MACHINE_COMMANDS, TOP_COMMANDS
+    from coworker.remote.joiner import MACHINE_COMMANDS, TOP_COMMANDS
 
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] in ("-h", "--help", "help"):
         print(HELP, end="")
         return
     if args[0] in ("version", "--version", "-V"):
-        from .remote.channel import app_version
+        from coworker.remote.channel import app_version
 
         print(f"openworker {app_version()}")
         return
     if args[0] in TOP_COMMANDS:
-        from .remote.joiner import cli as remote_cli
+        from coworker.remote.joiner import cli as remote_cli
 
         raise SystemExit(remote_cli(args, prog="openworker", only=TOP_COMMANDS))
     if args[0] == "run":
-        from .headless.runner import main as run_main
+        from coworker.headless.runner import main as run_main
 
         run_main(args[1:])  # exits with the run's code
         return
     if args[0] == "machine":
-        from .remote.joiner import cli as remote_cli
+        from coworker.remote.joiner import cli as remote_cli
 
         rest = args[1:] or ["--help"]
         if rest[0] in _AT_TOP:
@@ -144,7 +144,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             resume_messages = record.messages
             model, mode = record.model, record.mode
 
-    from .tui.app import CoworkerApp
+    from coworker.tui.app import CoworkerApp
 
     app = CoworkerApp(
         workspace=workspace,

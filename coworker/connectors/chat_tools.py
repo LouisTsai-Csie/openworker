@@ -21,10 +21,10 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from ..secrets import SecretStore
-from .senders import DEFAULT_FILE_SENDERS, DEFAULT_SENDERS, FileSender, Sender
-from .slack_addr import qualify
-from .tools import (
+from coworker.secrets import SecretStore
+from coworker.connectors.senders import DEFAULT_FILE_SENDERS, DEFAULT_SENDERS, FileSender, Sender
+from coworker.connectors.slack_addr import qualify
+from coworker.connectors.tools import (
     _MAX_FILE_BYTES,
     _render_html_png,
     _resolve_token,
@@ -69,7 +69,7 @@ def _attach(fn: Callable[..., Any], schema: dict[str, Any], caps: list[str]) -> 
 def slack_workspaces(secrets: SecretStore) -> list[str]:
     """Connected workspace ids: every managed `slack:team:<T…>` install, plus
     `default` when a manual single-workspace bot token exists."""
-    from .config import _slack_team_profiles
+    from coworker.connectors.config import _slack_team_profiles
 
     out = [team_id for team_id, _p in _slack_team_profiles(secrets)]
     if (secrets.get("slack:default") or {}).get("bot_token"):
@@ -96,7 +96,7 @@ def _pick_workspace(secrets: SecretStore, workspace: str) -> tuple[Optional[str]
 def _resolve_channel_in(secrets: SecretStore, workspace: str, channel: str) -> tuple[Optional[str], Optional[str]]:
     """A channel id passes through; a NAME resolves within the workspace via the same
     cached roster the GUI's channel picker uses. (channel_id, error)."""
-    from .slack_directory import list_channels
+    from coworker.connectors.slack_directory import list_channels
 
     raw = (channel or "").strip()
     if not raw:
@@ -154,7 +154,7 @@ def make_chat_tools(
         sender = senders.get("slack")
         if sender is None:
             return {"error": "slack sending is not available"}
-        from .attribution import sender_prefix
+        from coworker.connectors.attribution import sender_prefix
 
         result = sender(token, chat_id, sender_prefix(secrets, chat_id) + text, (thread_ts or "").strip() or None)
         if result.ok:
@@ -209,7 +209,7 @@ def make_chat_tools(
             filename = resolved.name
         note = comment or ""
         if note:
-            from .attribution import sender_prefix
+            from coworker.connectors.attribution import sender_prefix
 
             note = sender_prefix(secrets, chat_id) + note
         result = sender(token, chat_id, (thread_ts or "").strip() or None, filename, data, title or None, note or None)

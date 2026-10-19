@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .base import SessionSource
-from .slack_addr import split
+from coworker.connectors.base import SessionSource
+from coworker.connectors.slack_addr import split
 
 PLATFORM_LABELS = {
     "slack": "Slack",

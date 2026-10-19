@@ -1,4 +1,4 @@
-from .base import (
+from coworker.memory.base import (
     INDEX_THRESHOLD_CHARS,
     MemoryItem,
     MemoryStore,
@@ -7,9 +7,9 @@ from .base import (
     format_memory_index,
     render_memory_block,
 )
-from .settings import MemorySettingsStore, format_user_rules
-from .sqlite_store import SQLiteMemoryStore
-from .tools import memory_tools
+from coworker.memory.settings import MemorySettingsStore, format_user_rules
+from coworker.memory.sqlite_store import SQLiteMemoryStore
+from coworker.memory.tools import memory_tools
 
 __all__ = [
     "INDEX_THRESHOLD_CHARS",

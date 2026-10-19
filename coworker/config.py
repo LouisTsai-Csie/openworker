@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from .secrets import state_dir
+from coworker.secrets import state_dir
 
 # Commands auto-run WITHOUT an approval prompt. There is no generally safe executable:
 # nominally read-only programs can read secrets outside the workspace, expand environment

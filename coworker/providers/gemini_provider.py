@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass, field as dataclass_field
 from typing import Any, Optional
 
-from .base import (
+from coworker.providers.base import (
     AssistantTurn,
     ModelCapabilities,
     ProviderClient,
@@ -33,7 +33,7 @@ from .base import (
     TokenUsage,
     ToolCall,
 )
-from .capabilities import capabilities_for
+from coworker.providers.capabilities import capabilities_for
 
 
 def _usage_from(meta: Any) -> Optional[TokenUsage]:

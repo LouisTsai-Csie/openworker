@@ -24,13 +24,13 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import AsyncIterator, Awaitable, Callable
 
-from . import compaction as _compaction
-from . import provenance
-from . import session_facts
-from . import toolchain as _toolchain
-from . import toolresult
-from . import unattended as _attendance
-from .events import Event, EventType
+from coworker import compaction as _compaction
+from coworker import provenance
+from coworker import session_facts
+from coworker import toolchain as _toolchain
+from coworker import toolresult
+from coworker import unattended as _attendance
+from coworker.events import Event, EventType
 
 # §8.4 retry guard: the reviewer pauses for the rest of the turn after this many denials
 # IN A ROW (2→5 + streak semantics, owner ruling 2026-08-24 — a cumulative 2 silently
@@ -60,11 +60,11 @@ _REVIEWER_PAUSED_TEXT = (
     "Auto-approve is paused for the rest of this turn — the reviewer blocked "
     f"{_REVIEWER_TRIP} actions in a row, so approvals now come to you."
 )
-from .permissions import CLEARED_BY_MODE, Mode, PermissionEngine
-from .providers import AssistantTurn, ProviderClient, ToolCall
-from .providers.errors import friendly_model_error
-from .providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
-from .tools import ToolRegistry
+from coworker.permissions import CLEARED_BY_MODE, Mode, PermissionEngine
+from coworker.providers import AssistantTurn, ProviderClient, ToolCall
+from coworker.providers.errors import friendly_model_error
+from coworker.providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
+from coworker.tools import ToolRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ def _readonly_ok(arguments: dict) -> bool:
     command = str((arguments or {}).get("command", "") or "")
     if not command:
         return False
-    from .readonly import is_readonly_command
+    from coworker.readonly import is_readonly_command
 
     return is_readonly_command(command)
 
@@ -468,7 +468,7 @@ class TurnEngine:
             self.reviewer.model = model
         if not had_history:
             return None
-        from .providers.matrix import model_labels
+        from coworker.providers.matrix import model_labels
 
         text = f"Model switched to {model_labels().get(model, model)}"
         try:
@@ -879,7 +879,7 @@ class TurnEngine:
 
     # -- auto-compaction (OPE-27) ------------------------------------------------
     def _compaction_config(self) -> dict[str, Any]:
-        from . import model_config
+        from coworker import model_config
 
         cfg = dict(self.compaction_settings() or {}) if self.compaction_settings else {}
         # The user's per-model settings (model_config.py): a saved window stands in for
@@ -889,14 +889,14 @@ class TurnEngine:
         if saved_pct:
             cfg["threshold_pct"] = saved_pct
         if not cfg.get("context_window"):
-            from .providers.matrix import model_context_windows
+            from coworker.providers.matrix import model_context_windows
 
             cfg["context_window"] = model_context_windows().get(self.model) or saved_window
             if not cfg["context_window"]:
                 # Ollama's window is the num_ctx we send (providers/ollama_context.py),
                 # not the 128k guess — compact before that window context-shifts.
-                from .providers.local_server import context_window_for as _server_window
-                from .providers.ollama_context import context_window_for
+                from coworker.providers.local_server import context_window_for as _server_window
+                from coworker.providers.ollama_context import context_window_for
 
                 cfg["context_window"] = context_window_for(self.model) or _server_window(self.model)
             if not cfg["context_window"] and not self._warned_context_fallback:
@@ -1270,7 +1270,7 @@ class TurnEngine:
         a person attending (`is_attended` unset counts as NOT attended, so automations —
         which never set it — can never be reviewed; §1.5), or attendance "auto", where
         every escalation is refused by rule instead of parked."""
-        from .permissions import Mode
+        from coworker.permissions import Mode
 
         return (
             self.reviewer is not None
@@ -1296,7 +1296,7 @@ class TurnEngine:
         Attachments collapse to neutral markers via `reviewer_text` (§4.4): the reviewer
         learns a file was attached, never what it says — an attachment body is
         outside-authored text riding a user turn."""
-        from .attachments import reviewer_text
+        from coworker.attachments import reviewer_text
 
         texts: list[str] = []
         for msg in self.messages:
@@ -1417,13 +1417,13 @@ class TurnEngine:
         snapshot = self._reviewer_input_snapshots.pop(tool_call.id, None)
         if verdict is not None:
             if snapshot is not None and snapshot != self._review_inputs():
-                from .reviewer import Verdict
+                from coworker.reviewer import Verdict
                 return Verdict("unsure", "Approval context changed since review; a human must decide.")
             return verdict
         request, history, context = self._review_inputs()
         delegated = self._delegated_context(tool_call)
         if delegated:
-            from .reviewer import Verdict
+            from coworker.reviewer import Verdict
             if delegated.get("hard_deny") or delegated.get("human_only"):
                 return Verdict("unsure", delegated["reason"])
             verdict = await self.reviewer.review(
@@ -1444,7 +1444,7 @@ class TurnEngine:
             **({"action_context": context} if context else {}),
         )
         if (request, history, context) != self._review_inputs():
-            from .reviewer import Verdict
+            from coworker.reviewer import Verdict
             return Verdict("unsure", "Approval context changed during review; review the current request.")
         return result
 
@@ -1553,7 +1553,7 @@ class TurnEngine:
         """Permission flow for one call (TOOL_PROPOSED is emitted by the caller). Yields
         its events, then True/False (allowed) last. Denied/unknown calls get their
         tool-error message appended here."""
-        from .permissions import standing_rule_candidate
+        from coworker.permissions import standing_rule_candidate
 
         spec = self.registry.get(tool_call.name)
         metadata = spec.metadata if spec else None
@@ -1717,7 +1717,7 @@ class TurnEngine:
                 # §8.4 deny asymmetry — full reason to the USER (event + audit above),
                 # terse non-diagnostic refusal to the AGENT. The sanctioned way around a
                 # deny is ask the human, never reshape the request.
-                from .reviewer import AGENT_DENY_MESSAGE
+                from coworker.reviewer import AGENT_DENY_MESSAGE
 
                 self._reviewer_denials += 1
                 tripped = self._reviewer_denials == _REVIEWER_TRIP
@@ -2171,7 +2171,7 @@ class TurnEngine:
         """The decomposition gate: emit the proposed items, await the user's decision.
         Approval creates them on the board (server-side, inside the approver) and the
         result carries their ids; rejection returns feedback for a revised split."""
-        from .teams.proposals import validate_work_proposal
+        from coworker.teams.proposals import validate_work_proposal
         args = tool_call.arguments or {}
         problem = None
         try:
@@ -2264,8 +2264,8 @@ class TurnEngine:
         decision. Approval PRE-SPAWNS the worker sessions (server-side, inside the
         approver) and the result carries the roster with actor ids so the lead can
         assign; rejection returns the user's feedback for a revised proposal."""
-        from .teams.proposals import validate_team_proposal
-        from .teams.model import BoardError
+        from coworker.teams.proposals import validate_team_proposal
+        from coworker.teams.model import BoardError
         args = tool_call.arguments or {}
         problem = None
         try:
@@ -2800,7 +2800,7 @@ class TurnEngine:
         ):
             caps = self.provider.capabilities(self.model)
             if not getattr(caps, "pdf", False):
-                from . import pdf_support
+                from coworker import pdf_support
 
                 out = [
                     (

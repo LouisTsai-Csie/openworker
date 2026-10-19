@@ -5,8 +5,8 @@ Public API: config loading/mutation, the connection manager, and tool wrapping.
 
 from __future__ import annotations
 
-from .client import MCPManager
-from .config import (
+from coworker.mcp.client import MCPManager
+from coworker.mcp.config import (
     MCPServerDef,
     delete_global_server,
     load_mcp_servers,
@@ -14,7 +14,7 @@ from .config import (
     put_global_server,
     read_global,
 )
-from .tools import build_callables, tool_name
+from coworker.mcp.tools import build_callables, tool_name
 
 __all__ = [
     "MCPManager",

@@ -24,9 +24,9 @@ from typing import Any, Optional
 
 import httpx
 
-from .cloud import fresh_access_token
-from .config import Config
-from .secrets import SecretStore
+from coworker.cloud import fresh_access_token
+from coworker.config import Config
+from coworker.secrets import SecretStore
 
 logger = logging.getLogger("coworker.subscriptions")
 

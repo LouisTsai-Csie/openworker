@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 from collections.abc import Callable
 
-from .risk import RiskClass
+from coworker.risk import RiskClass
 
 
 @dataclass

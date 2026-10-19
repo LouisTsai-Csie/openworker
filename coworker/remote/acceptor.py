@@ -32,11 +32,11 @@ from typing import Any, Optional
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from . import channel as ch
-from .audit import AuditLog, NullAuditLog
-from .identity import seal_b64, verify_b64, verify_seal_attestation
-from .provision import LocalProvisioner, Provisioner
-from .stores import Ephemera, InMemoryEphemera, Registry
+from coworker.remote import channel as ch
+from coworker.remote.audit import AuditLog, NullAuditLog
+from coworker.remote.identity import seal_b64, verify_b64, verify_seal_attestation
+from coworker.remote.provision import LocalProvisioner, Provisioner
+from coworker.remote.stores import Ephemera, InMemoryEphemera, Registry
 
 TOKEN_TTL_SECONDS = 600.0
 _CHALLENGE_BYTES = 32

@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 PREFIX = "hubspot:portal:"
 DEFAULT_KEY = "hubspot:default"

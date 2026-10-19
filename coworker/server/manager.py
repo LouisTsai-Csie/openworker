@@ -22,33 +22,33 @@ import uuid
 from pathlib import Path
 from typing import Any, Optional
 
-from .. import model_config as _model_config
-from ..agent import build_engine
-from ..agents import get_agent
-from ..connections import (
+from coworker import model_config as _model_config
+from coworker.agent import build_engine
+from coworker.agents import get_agent
+from coworker.connections import (
     PersonaConnectionStore,
     SessionConnectionStore,
     effective as effective_connections,
 )
-from ..inbox import VIS_INBOX, InboxStore, args_preview
-from ..inbox_routing import InboxRouting
-from ..personas import PersonaRegistry
-from ..personas.registry import set_registry as set_persona_registry
-from ..selfwake import WakeStore
-from ..mentions import MentionSessionStore
-from ..subscriptions import ChannelBuffer, SubscriptionStore
-from ..teams.store import WORKER_WAITING
-from ..unrouted import UnroutedStore
-from ..unattended import UnattendedRegistry
-from ..audit import AuditStore
-from ..config import load_config, workspace_allowed_commands
-from ..conversations import ConversationStore, title_from
-from ..engine import ApprovalOutcome, Approver, TurnEngine
-from ..basedir import OutsideBaseDir, base_dir, ensure_under_base
-from ..roots import RootDir
-from ..workspace_trust import WorkspaceTrustStore
-from ..automation import Schedule, ScheduledTask, Scheduler, TaskRun, TaskStore
-from ..connectors import (
+from coworker.inbox import VIS_INBOX, InboxStore, args_preview
+from coworker.inbox_routing import InboxRouting
+from coworker.personas import PersonaRegistry
+from coworker.personas.registry import set_registry as set_persona_registry
+from coworker.selfwake import WakeStore
+from coworker.mentions import MentionSessionStore
+from coworker.subscriptions import ChannelBuffer, SubscriptionStore
+from coworker.teams.store import WORKER_WAITING
+from coworker.unrouted import UnroutedStore
+from coworker.unattended import UnattendedRegistry
+from coworker.audit import AuditStore
+from coworker.config import load_config, workspace_allowed_commands
+from coworker.conversations import ConversationStore, title_from
+from coworker.engine import ApprovalOutcome, Approver, TurnEngine
+from coworker.basedir import OutsideBaseDir, base_dir, ensure_under_base
+from coworker.roots import RootDir
+from coworker.workspace_trust import WorkspaceTrustStore
+from coworker.automation import Schedule, ScheduledTask, Scheduler, TaskRun, TaskStore
+from coworker.connectors import (
     Gateway,
     MessageSource,
     connect_connector,
@@ -61,13 +61,13 @@ from ..connectors import (
     slack_split,
     update_connector_tools,
 )
-from ..connectors.browser_automation import (
+from coworker.connectors.browser_automation import (
     browser_close_session,
     browser_state,
     browser_take_screenshot,
 )
-from ..connectors.parked import ParkedStore
-from ..mcp import (
+from coworker.connectors.parked import ParkedStore
+from coworker.mcp import (
     MCPManager,
     build_callables,
     delete_global_server,
@@ -76,10 +76,10 @@ from ..mcp import (
     put_global_server,
     read_global,
 )
-from ..memory import MemorySettingsStore, MemoryStore, Scope, SQLiteMemoryStore
-from ..permissions import Mode
-from ..agents import list_agents as _list_agents
-from ..providers import (
+from coworker.memory import MemorySettingsStore, MemoryStore, Scope, SQLiteMemoryStore
+from coworker.permissions import Mode
+from coworker.agents import list_agents as _list_agents
+from coworker.providers import (
     ProviderClient,
     ProviderRouter,
     descriptor_configured,
@@ -87,23 +87,23 @@ from ..providers import (
     provider_descriptors,
     verify_provider_key,
 )
-from ..secrets import SecretStore, state_dir
-from ..sessions import SessionRecord, usage_totals
-from ..teams import Actor as TeamActor
-from ..teams import BoardError as TeamsBoardError
-from ..teams import JournalStore, Role as TeamRole, TeamStore, board_tools, journal_tools
-from ..projects import (
+from coworker.secrets import SecretStore, state_dir
+from coworker.sessions import SessionRecord, usage_totals
+from coworker.teams import Actor as TeamActor
+from coworker.teams import BoardError as TeamsBoardError
+from coworker.teams import JournalStore, Role as TeamRole, TeamStore, board_tools, journal_tools
+from coworker.projects import (
     project_key,
     project_label,
     project_presence,
     resolve_board_space,
     resolve_memory_key,
 )
-from ..teams.chat import ChatStore
-from ..teams.registry import TeamRegistry, TeamWorker
-from ..teams.attachments import AttachmentStore
-from ..teams.tokens import BoardTokens
-from ..skills import (
+from coworker.teams.chat import ChatStore
+from coworker.teams.registry import TeamRegistry, TeamWorker
+from coworker.teams.attachments import AttachmentStore
+from coworker.teams.tokens import BoardTokens
+from coworker.skills import (
     SessionSkillStore,
     SkillLoader,
     SkillStore,
@@ -218,7 +218,7 @@ def mention_opening(src, text: str, thread: Optional[str] = None, context: str =
     came from. GitHub mentions read "on GitHub in owner/repo#12", never "on Slack"
     (ledgered 2026-09-01 — the first GitHub drill told the coworker it owned a
     Slack thread)."""
-    from ..connectors.origin import origin_block, platform_label
+    from coworker.connectors.origin import origin_block, platform_label
 
     label = platform_label(src.platform)
     thread_noun = "issue/PR thread" if src.platform == "github" else "thread"
@@ -237,7 +237,7 @@ def mention_opening(src, text: str, thread: Optional[str] = None, context: str =
 def configured_opening(event, thread_target: str, folder: str) -> str:
     """The opening turn of a configuration-started (or configuration-targeted)
     session: what happened, the origin block (where to answer), where the code is."""
-    from ..connectors.origin import origin_block
+    from coworker.connectors.origin import origin_block
 
     frame = getattr(event, "raw", None) or {}
     cfg = getattr(event, "configuration", None) or {}
@@ -408,7 +408,7 @@ class SessionManager:
             self.model = self._prefs["default_model"]
         # Seed the PDF-fallback module global from prefs so engines see the user's
         # choice from the first turn (set_pdf_settings keeps it in sync after).
-        from ..pdf_support import set_fallback_mode
+        from coworker.pdf_support import set_fallback_mode
 
         set_fallback_mode(self.pdf_settings()["pdf_fallback"])
         # Per-session live-view registry: every socket open on a session id gets the turn's events,
@@ -743,8 +743,8 @@ class SessionManager:
     def _wanted_sandbox_provider(self) -> str:
         """The provider a NEW engine would be built with right now, or "" for direct.
         Reads the config only, no preflight: it is asked on the event loop."""
-        from ..sandbox.selection import is_headless
-        from ..sandbox.workspace import DIRECT, OPENSHELL, PROVIDER_ENV
+        from coworker.sandbox.selection import is_headless
+        from coworker.sandbox.workspace import DIRECT, OPENSHELL, PROVIDER_ENV
 
         chosen = (os.environ.get(PROVIDER_ENV) or load_config().sandbox_provider or "").strip().lower()
         if chosen:
@@ -977,7 +977,7 @@ class SessionManager:
         # Auto-compaction (OPE-27): restore the persisted view boundary and wire the live
         # Settings getter — post-construction, so build_engine's signature stays put.
         if record is not None and record.compaction:
-            from ..compaction import CompactionState
+            from coworker.compaction import CompactionState
 
             engine.compaction_state = CompactionState.from_dict(record.compaction)
         engine.compaction_settings = self.compaction_settings
@@ -993,8 +993,8 @@ class SessionManager:
         signed out or opted out, and sends only content-free facts."""
         import threading
 
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         entry = self.personas.get(persona_id)
         # Wire fields kept stable; both now carry the workspace shape ("folder" = gated
@@ -1248,7 +1248,7 @@ class SessionManager:
         if not live and not shadow:
             engine.reviewer = None
         elif engine.reviewer is None:
-            from ..reviewer import Reviewer
+            from coworker.reviewer import Reviewer
             engine.reviewer = Reviewer(
                 provider=engine.provider, model=engine.model,
                 known_world=(engine.session_facts.world.render() if engine.session_facts else "") + "\nRUNTIME FACTS (availability, not access grants)\n" + json.dumps(getattr(engine, "runtime_facts", {})),
@@ -1567,7 +1567,7 @@ class SessionManager:
         async def ask(
             args: dict[str, Any], tool_call_id: Optional[str] = None
         ) -> dict[str, Any]:
-            from ..tools.ask import answer_result, question_item_fields
+            from coworker.tools.ask import answer_result, question_item_fields
 
             fields = question_item_fields(args)
             if fields is None:
@@ -1689,7 +1689,7 @@ class SessionManager:
         the item takes the queue's default like every other background prompt."""
 
         async def approve(args, tool_call_id=None):
-            from ..teams.proposals import validate_team_proposal
+            from coworker.teams.proposals import validate_team_proposal
             try:
                 args = validate_team_proposal(args)
                 self.team_planned_items(session_id, args["members"])
@@ -1793,7 +1793,7 @@ class SessionManager:
         """The decomposition gate for any turn (see inbox_team_approver)."""
 
         async def approve(args, tool_call_id=None):
-            from ..teams.proposals import validate_work_proposal
+            from coworker.teams.proposals import validate_work_proposal
             try:
                 args = validate_work_proposal(args)
             except ValueError as error:
@@ -1964,14 +1964,14 @@ class SessionManager:
         """
         if session_id in self._engines:
             return []
-        from ..connectors.descriptors import get_descriptor
-        from ..connectors.tool_defs import (
+        from coworker.connectors.descriptors import get_descriptor
+        from coworker.connectors.tool_defs import (
             approval_for_tool,
             mcp_tool_defs,
             tool_enabled,
         )
 
-        from ..mcp import oauth as mcp_oauth
+        from coworker.mcp import oauth as mcp_oauth
 
         ws = self.engine_workspace(session_id, workspace=workspace, agent=agent)
         loop = asyncio.get_running_loop()
@@ -2117,9 +2117,9 @@ class SessionManager:
 
     def list_mcp(self) -> list[dict[str, Any]]:
         """Servers from the global config + connection status (does not connect)."""
-        from ..mcp import oauth as mcp_oauth
+        from coworker.mcp import oauth as mcp_oauth
 
-        from ..connectors.descriptors import get_descriptor
+        from coworker.connectors.descriptors import get_descriptor
 
         out = []
         for name, raw in read_global().items():
@@ -2186,7 +2186,7 @@ class SessionManager:
         """Connect one server NOW — for OAuth servers this may open the browser and wait
         for the loopback callback, so callers run it as a background task and watch
         list_mcp for the status flip."""
-        from ..mcp import oauth as mcp_oauth
+        from coworker.mcp import oauth as mcp_oauth
 
         for server in load_mcp_servers(
             self.default_workspace,
@@ -2235,8 +2235,8 @@ class SessionManager:
         """One-click connect for an MCP-BACKED connector (descriptor.mcp_url): seed
         the global server entry pinned to the curated allowlist, run the browser
         OAuth flow, and mark the connector profile `mode: "mcp"` on success."""
-        from ..connectors.descriptors import get_descriptor
-        from ..connectors.tool_defs import mcp_pinned_tools
+        from coworker.connectors.descriptors import get_descriptor
+        from coworker.connectors.tool_defs import mcp_pinned_tools
 
         d = get_descriptor(name)
         if d is None or not d.mcp_url:
@@ -2270,7 +2270,7 @@ class SessionManager:
 
     async def signout_mcp(self, name: str) -> dict[str, Any]:
         """Drop the live connection (if any) and forget the stored OAuth tokens."""
-        from ..mcp import oauth as mcp_oauth
+        from coworker.mcp import oauth as mcp_oauth
 
         conn = self.mcp._conns.get(name)
         if conn is not None:
@@ -2307,7 +2307,7 @@ class SessionManager:
                     self._loop.call_soon_threadsafe(conn.shutdown.set)
                 else:
                     conn.shutdown.set()
-            from ..mcp import oauth as mcp_oauth
+            from coworker.mcp import oauth as mcp_oauth
 
             mcp_oauth.sign_out(name, self.secrets)
             # OPE-136 owner-hit 2026-08-30: trust rules live in a DIFFERENT store
@@ -2335,7 +2335,7 @@ class SessionManager:
         import subprocess
         import sys
 
-        from ..mcp.config import global_mcp_path
+        from coworker.mcp.config import global_mcp_path
 
         target = global_mcp_path()
         if not target.exists():
@@ -2365,8 +2365,8 @@ class SessionManager:
         """A fresh view of the user-local override store — the FILE is the source of
         truth (sessions hold their own instances; a fresh read here always agrees
         with disk)."""
-        from ..overrides import RiskOverrideStore
-        from ..secrets import state_dir
+        from coworker.overrides import RiskOverrideStore
+        from coworker.secrets import state_dir
 
         return RiskOverrideStore(state_dir() / "risk_overrides.json")
 
@@ -2626,7 +2626,7 @@ class SessionManager:
         return {"ok": True, "seq": event["seq"]}
 
     def team_summary(self, team_id: str) -> dict[str, Any]:
-        from ..teams.summary import make_summary
+        from coworker.teams.summary import make_summary
         team = self.teams.get(team_id)
         if team is None:
             return {"error": "team not found"}
@@ -2657,7 +2657,7 @@ class SessionManager:
                     if payload.get("comment"):
                         item["blocker"] = self._clamp(payload["comment"], 120)
                     break
-        from ..teams.summary import all_events, waiting_items
+        from coworker.teams.summary import all_events, waiting_items
         waits = waiting_items(all_events(self.team_store, space), self.inbox, items)
         for item in items:
             if item["id"] in waits:
@@ -2798,7 +2798,7 @@ class SessionManager:
         ) + journal_tools(
             self.journal_store, actor=actor, space=space
         )
-        from ..teams.artifacts import artifact_tools
+        from coworker.teams.artifacts import artifact_tools
 
         def team_identity():
             # Resolve live membership, never a model-supplied team/board id.
@@ -3817,7 +3817,7 @@ class SessionManager:
         # so a home-directory workspace walked into ~/Library and tripped the macOS App Data
         # TCC prompt ("OpenWorker would like to access data from other apps") on every turn.
         # Pruning here means those directories are never entered at all.
-        from ..tools.search import OS_DATA_DIRS
+        from coworker.tools.search import OS_DATA_DIRS
 
         skip = {"node_modules", "target", "dist", "__pycache__"} | OS_DATA_DIRS
         for dirpath, dirs, files in os.walk(root):
@@ -4003,8 +4003,8 @@ class SessionManager:
 
     # -- web search -------------------------------------------------------------
     def get_web_search(self) -> dict[str, Any]:
-        from ..config import load_config
-        from ..web import provider_names
+        from coworker.config import load_config
+        from coworker.web import provider_names
 
         profile = self.secrets.get("web_search:default") or {}
         provider = (
@@ -4019,7 +4019,7 @@ class SessionManager:
     def set_web_search(
         self, provider: str, api_key: Optional[str] = None
     ) -> dict[str, Any]:
-        from ..web import provider_names
+        from coworker.web import provider_names
 
         if provider not in provider_names():
             return {"ok": False, "error": f"unknown provider: {provider}"}
@@ -4163,7 +4163,7 @@ class SessionManager:
             return [m.split(":", 1)[-1] for m in self._ollama_models()]
         if name in ("llamacpp", "vllm"):
             return [m.split(":", 1)[-1] for m in self._local_server_models(name)]
-        from ..providers.matrix import models_for_provider
+        from coworker.providers.matrix import models_for_provider
 
         return list(
             dict.fromkeys(
@@ -4278,7 +4278,7 @@ class SessionManager:
         """Run the interactive browser sign-in and store the tokens. Long-running
         (the user completes it in the browser) — routes run it as a background task
         and the GUI polls codex_status for the flip."""
-        from ..providers import codex_auth
+        from coworker.providers import codex_auth
 
         self._codex_authorizing = True
         self._codex_error = None
@@ -4299,7 +4299,7 @@ class SessionManager:
         return result
 
     def codex_status(self) -> dict[str, Any]:
-        from ..providers import codex_auth
+        from coworker.providers import codex_auth
 
         store = codex_auth.CodexTokenStore(self.secrets)
         return {
@@ -4311,7 +4311,7 @@ class SessionManager:
         }
 
     def codex_signout(self) -> dict[str, Any]:
-        from ..providers import codex_auth
+        from coworker.providers import codex_auth
 
         had_tokens = codex_auth.CodexTokenStore(self.secrets).clear()
         self._codex_error = None
@@ -4331,7 +4331,7 @@ class SessionManager:
             return {"ok": False, "error": f"unknown provider: {name}"}
         if d.auth == "oauth":
             # No key form — verify from the stored token set (signed-out / expired / OK).
-            from ..providers import codex_auth
+            from coworker.providers import codex_auth
 
             return codex_auth.verify(self.secrets)
         fields = fields or {}
@@ -4434,7 +4434,7 @@ class SessionManager:
         `/api/tags`), as `ollama:<name>` so they're directly selectable. Empty if Ollama is
         unreachable — best-effort, never raises. No stored profile → the default localhost
         endpoint, same as `_ollama_alive` (keyless Ollama needs no saved form)."""
-        from ..providers import ollama_facts
+        from coworker.providers import ollama_facts
 
         profile = self.secrets.get("provider:ollama") or {}
         # Only models that can use tools: a coworker cannot work with the others, so
@@ -4450,7 +4450,7 @@ class SessionManager:
         """The models a local provider has, with size, tool support, thinking, context
         and how each sits on this machine. Ollama lists what it pulled; llama.cpp and
         vLLM report the model they serve."""
-        from ..providers import local_server, ollama_facts
+        from coworker.providers import local_server, ollama_facts
 
         if name == "ollama":
             profile = self.secrets.get("provider:ollama") or {}
@@ -4466,7 +4466,7 @@ class SessionManager:
         """Best-effort liveness of a llama.cpp or vLLM server, cached 30 s like Ollama's."""
         import time
 
-        from ..providers import local_server
+        from coworker.providers import local_server
 
         now = time.monotonic()
         cache = getattr(self, "_local_alive_cache", None) or {}
@@ -4482,7 +4482,7 @@ class SessionManager:
     def _local_server_models(self, name: str) -> list[str]:
         """The model ids a llama.cpp or vLLM server serves, as `<name>:<id>`; empty when
         it does not answer or was started without tool calling."""
-        from ..providers import local_server
+        from coworker.providers import local_server
 
         profile = self.secrets.get(f"provider:{name}") or {}
         return [
@@ -4494,7 +4494,7 @@ class SessionManager:
     def system_facts(self) -> dict[str, Any]:
         """This machine, for the "Your system" section: processor, graphics, memory,
         storage, and the largest model file that runs well here."""
-        from ..providers import local_machine
+        from coworker.providers import local_machine
 
         return local_machine.system_facts()
 
@@ -4542,7 +4542,7 @@ class SessionManager:
         first recommended model that can run; else the LEAD'S model (known to run — the
         lead is running on it) with a warning. Never an unrunnable model while anything
         else can run: a worker that dies on its first assignment helps nobody."""
-        from ..providers.matrix import model_labels
+        from coworker.providers.matrix import model_labels
 
         labels = model_labels()
         allowed = self.persona_models(persona_id)
@@ -4607,7 +4607,7 @@ class SessionManager:
         connectors, the lead's real mode, and per worker the model it will run on, the
         recommended models that can run here, and every runnable model with its label.
         One builder for both paths (live socket card and the parked Inbox item)."""
-        from ..providers.matrix import model_labels
+        from coworker.providers.matrix import model_labels
 
         labels = model_labels()
         lead_model = self.session_model_value(session_id)
@@ -4656,7 +4656,7 @@ class SessionManager:
         fresh install offers nothing until a provider key exists, and then exactly that
         provider's matrix models appear. The active default is always kept selectable.
         """
-        from ..providers.matrix import MATRIX
+        from coworker.providers.matrix import MATRIX
 
         user = self._prefs.get("models")
         user = user if isinstance(user, list) else []
@@ -4668,7 +4668,7 @@ class SessionManager:
         """Add a model id (e.g. `gpt-4o`, `ollama:qwen2.5-coder:32b`) to the picker.
         Custom ids persist in prefs; a previously removed matrix model is just unhidden
         (storing it too would shadow future matrix updates)."""
-        from ..providers.matrix import MATRIX
+        from coworker.providers.matrix import MATRIX
 
         model = (model or "").strip()
         if not model:
@@ -4690,7 +4690,7 @@ class SessionManager:
         """Remove a model id from the picker. Custom ids are dropped; matrix models are
         hidden by id (the matrix is derived, not stored, so a bare drop would resurrect
         them on the next read)."""
-        from ..providers.matrix import MATRIX
+        from coworker.providers.matrix import MATRIX
 
         models = self._prefs.get("models")
         models = models if isinstance(models, list) else []
@@ -4742,7 +4742,7 @@ class SessionManager:
                 selectable = list(dict.fromkeys([*selectable, *self._local_server_models(local)]))
         if self.model not in selectable:
             selectable.insert(0, self.model)
-        from ..providers.matrix import model_context_windows, model_labels
+        from coworker.providers.matrix import model_context_windows, model_labels
 
         return {
             "provider": "openai",
@@ -4853,7 +4853,7 @@ class SessionManager:
     # back to the config.toml value a power user may have hand-set. Prefs is user-global,
     # so a cloned repo still can't enable either — same guarantee as the config path.
     def auto_approve(self) -> bool:
-        from ..config import load_config
+        from coworker.config import load_config
 
         if "auto_approve" in self._prefs:
             return bool(self._prefs["auto_approve"])
@@ -4874,7 +4874,7 @@ class SessionManager:
             return False
 
     def auto_approve_shadow(self) -> bool:
-        from ..config import load_config
+        from coworker.config import load_config
 
         if "auto_approve_shadow" in self._prefs:
             return bool(self._prefs["auto_approve_shadow"])
@@ -4907,7 +4907,7 @@ class SessionManager:
     def pdf_settings(self) -> dict[str, Any]:
         """Fallback mode for models without native PDF support + the attach-time
         thresholds (Settings → Token savings: big PDFs quietly eat tokens)."""
-        from ..pdf_support import FALLBACK_MODES
+        from coworker.pdf_support import FALLBACK_MODES
 
         mode = self._prefs.get("pdf_fallback")
         try:
@@ -4928,7 +4928,7 @@ class SessionManager:
         """The live auto-compaction knobs (OPE-27) — read by every engine per check, so a
         Settings change applies without a rebuild. Only the two spec'd overrides plus the
         summarizer-model pin; absent keys fall back to compaction.py defaults."""
-        from ..compaction import DEFAULT_CAP_TOKENS, DEFAULT_THRESHOLD_PCT
+        from coworker.compaction import DEFAULT_CAP_TOKENS, DEFAULT_THRESHOLD_PCT
 
         return {
             "threshold_pct": float(
@@ -4989,7 +4989,7 @@ class SessionManager:
         max_pages: Any = None,
         max_mb: Any = None,
     ) -> dict[str, Any]:
-        from ..pdf_support import FALLBACK_MODES, set_fallback_mode
+        from coworker.pdf_support import FALLBACK_MODES, set_fallback_mode
 
         if fallback is not None:
             if fallback not in FALLBACK_MODES:
@@ -5347,8 +5347,8 @@ class SessionManager:
         the send is scheduled as a task; with no running loop (tests, CLI) it is skipped."""
         if self.gateway is None or not platform or not chat_id:
             return
-        from ..connectors.base import format_target
-        from ..connectors.gateway import APPROVAL_OWNER_REQUIRED
+        from coworker.connectors.base import format_target
+        from coworker.connectors.gateway import APPROVAL_OWNER_REQUIRED
 
         target = format_target(platform, str(chat_id), thread_id)
 
@@ -5422,7 +5422,7 @@ class SessionManager:
         # reflect into the live gateway so it takes effect without a restart
         if self.gateway is not None and name in self.gateway.settings:
             if team_id:
-                from ..connectors import TeamAuth
+                from coworker.connectors import TeamAuth
 
                 teams = self.gateway.settings[name].teams
                 team = teams.setdefault(team_id, TeamAuth())
@@ -5440,8 +5440,8 @@ class SessionManager:
         profile_key = f"slack:team:{team_id}"
         if not team_id or not self.secrets.get(profile_key):
             return {"ok": False, "error": "workspace not connected"}
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         await asyncio.to_thread(
             lambda: cloud.slack_disconnect_workspace(
@@ -5481,7 +5481,7 @@ class SessionManager:
         the desktop↔relay socket, the cloud sign-in that authorizes it, and each
         workspace's bot token. The desktop can't see the Slack↔cloud leg, so no
         layer here ever claims it — event silence ≠ outage."""
-        from .. import cloud
+        from coworker import cloud
 
         default = self.secrets.get("slack:default") or {}
         mode = default.get("mode") or ""
@@ -5518,9 +5518,9 @@ class SessionManager:
         (best-effort), drop the local profile, hot-reload the gateway. The Slack
         per-workspace disconnect, GitHub flavour — a manual PAT stays untouched."""
         installation_id = str(installation_id).strip()
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors import github_installs
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors import github_installs
 
         if not installation_id or not self.secrets.get(
             github_installs.PREFIX + installation_id
@@ -5538,7 +5538,7 @@ class SessionManager:
     def github_status(self) -> dict[str, Any]:
         """GitHub relay health, same three honest layers as Slack: the shared
         relay socket, the cloud sign-in, and per-installation token health."""
-        from .. import cloud
+        from coworker import cloud
 
         default = self.secrets.get("github:default") or {}
         signin = cloud.status(self.secrets)
@@ -5591,8 +5591,8 @@ class SessionManager:
         subscriptions this machine's sessions hold (rows created from another
         surface, e.g. a move taken here), rows that moved away, and the
         owner's People lists. Best effort, never blocks the gateway."""
-        from ..config import load_config
-        from .. import subscription_sync
+        from coworker.config import load_config
+        from coworker import subscription_sync
 
         counts = {"added": 0, "removed": 0, "orphans": 0, "people": 0}
         try:
@@ -5650,8 +5650,8 @@ class SessionManager:
         # Managed Slack relay wiring (only used when a connector picks relay mode):
         # the cloud sign-in JWT authorizes the relay WebSocket, and the relay
         # endpoint comes from config. Both are lazy — Socket Mode needs neither.
-        from ..cloud import fresh_access_token
-        from ..config import load_config
+        from coworker.cloud import fresh_access_token
+        from coworker.config import load_config
 
         cloud_config = load_config()
 
@@ -5663,12 +5663,12 @@ class SessionManager:
         relay_ws_url = getattr(cloud_config, "cloud_relay_ws_url", "") or None
         relay_hub = None
         if relay_ws_url:
-            from ..connectors.relay_client import RelayHub
+            from coworker.connectors.relay_client import RelayHub
 
             relay_hub = RelayHub(relay_ws_url, _relay_token)
 
         async def _github_token(installation_id: str) -> str:
-            from ..cloud import github_installation_token
+            from coworker.cloud import github_installation_token
 
             return await asyncio.to_thread(
                 github_installation_token, self.secrets, cloud_config, installation_id
@@ -5753,7 +5753,7 @@ class SessionManager:
         if not allowed.get("ok"):
             return allowed
         if action == "allow_deliver":
-            from ..connectors import MessageEvent, SessionSource
+            from coworker.connectors import MessageEvent, SessionSource
 
             event = MessageEvent(
                 text=item.text,
@@ -5882,7 +5882,7 @@ class SessionManager:
         if message.get("type") == "tool_finished" and engine and data.get("name") in _SITE_TOOLS:
             # OPE-218/219: a card on one of these may have allowed a site; the header chip
             # shows the session's list as it stands now.
-            from ..sandbox.settings import session_sandbox
+            from coworker.sandbox.settings import session_sandbox
 
             try:
                 message = {**message, "data": {**data, "sandbox": session_sandbox(engine)}}
@@ -5923,7 +5923,7 @@ class SessionManager:
     @staticmethod
     def _reap_sandboxes() -> None:
         try:
-            from ..sandbox.registry import SandboxRegistry
+            from coworker.sandbox.registry import SandboxRegistry
 
             removed = SandboxRegistry().reap()
             if removed:
@@ -5958,7 +5958,7 @@ class SessionManager:
         task_fields = {}
         found = self.teams.for_worker_session(item.session_id)
         if found:
-            from ..teams.summary import all_events
+            from coworker.teams.summary import all_events
             team, _worker = found
             for event in all_events(self.team_store, team.space):
                 if event["kind"] == WORKER_WAITING and event["payload"].get("prompt_id") == item.id and event.get("item_id") is not None:
@@ -6045,7 +6045,7 @@ class SessionManager:
         Read only harness state. No worker transcript, lead rationale, file contents,
         or environment values are added to the reviewer's context.
         """
-        from ..providers import ToolCall
+        from coworker.providers import ToolCall
         item = self._owned_worker_prompt(lead_session, arguments)
         if item is None or item.state != "pending":
             return {"hard_deny": True, "reason": "The worker request is missing, belongs to another team, or was already answered."}
@@ -6092,7 +6092,7 @@ class SessionManager:
         Automation runs additionally carry the owning task + (when the call is eligible)
         the exact target a standing rule would pin: the GUI offers "Allow every time" only
         when both are present — in-app only, never on Slack-mirrored buttons (§25)."""
-        from ..permissions import standing_rule_candidate
+        from coworker.permissions import standing_rule_candidate
 
         data: dict[str, Any] = {
             "tool": request.tool_name,
@@ -6140,7 +6140,7 @@ class SessionManager:
         card: the session must be an automation run and the call must be rule-eligible
         (external risk, declared target argument, non-empty target). Also applies the
         rule to the live engine so the run's next call auto-allows."""
-        from ..permissions import standing_rule_candidate
+        from coworker.permissions import standing_rule_candidate
 
         task = self.task_store.task_for_run_session(session_id)
         if task is None:
@@ -6248,7 +6248,7 @@ class SessionManager:
         attendance_order = {"attended": 0, "inbox": 1, "auto": 2}
 
         def _attendance_rank(value: Any) -> int:
-            from ..unattended import normalize_attendance
+            from coworker.unattended import normalize_attendance
 
             return attendance_order.get(normalize_attendance(value), 0)
 
@@ -6337,8 +6337,8 @@ class SessionManager:
     def model_controls(self, model: str) -> dict[str, Any]:
         """The thinking switch and reasoning-effort levels a model has, with its defaults
         (providers/model_controls.py). Local models: from what their server reports."""
-        from ..providers import local_server, model_controls, ollama_facts
-        from ..providers.recommended import recommendation_for
+        from coworker.providers import local_server, model_controls, ollama_facts
+        from coworker.providers.recommended import recommendation_for
 
         if not model:
             return model_controls.NONE.as_dict()
@@ -6491,7 +6491,7 @@ class SessionManager:
         options) render as BUTTONS — the item id rides in each, so a click resolves it
         unambiguously. Free-text answers aren't offered over messaging (open the app).
         """
-        from ..interactions import buttons_for
+        from coworker.interactions import buttons_for
 
         binding = self.inbox_routing.binding_for(item.inbox)
         if not (binding.channel and self.gateway is not None):
@@ -6521,7 +6521,7 @@ class SessionManager:
         """A button click on a mirrored Inbox prompt. The button value carries the item id + the
         resolution, so this is unambiguous — resolve the item, then swap the buttons for the
         outcome. Resolving releases any agent suspended on it (first-responder-wins)."""
-        from ..interactions import decode
+        from coworker.interactions import decode
 
         decoded = decode(getattr(event, "value", "") or "")
         if decoded is None:
@@ -6544,8 +6544,8 @@ class SessionManager:
                     # reject path is a no-op, so send the same sentence as a plain reply.
                     await self.gateway.reject_interaction(event)
                     if platform != "slack":
-                        from ..connectors.base import format_target
-                        from ..connectors.gateway import APPROVAL_OWNER_REQUIRED
+                        from coworker.connectors.base import format_target
+                        from coworker.connectors.gateway import APPROVAL_OWNER_REQUIRED
 
                         try:
                             await self.gateway.deliver(
@@ -6578,7 +6578,7 @@ class SessionManager:
         """Try to handle an inbound Slack/Telegram message as an Inbox reply. Returns True if the
         message carried an `[ow:<id>]` token (so it's consumed here, not routed as a new turn) —
         resolving the item also releases any agent suspended on it."""
-        from ..inbox_routing import resolve_from_reply
+        from coworker.inbox_routing import resolve_from_reply
 
         text = getattr(event, "text", "") or ""
 
@@ -6895,12 +6895,12 @@ class SessionManager:
     ) -> None:
         """The subscribed session's framing: a mention must be answered (in the
         thread, like the fan-out path); untagged traffic is judgement-only."""
-        from ..connectors.base import format_target
+        from coworker.connectors.base import format_target
 
         src = event.source
         who = src.user_name or src.user_id or "?"
         chan = f"#{src.chat_name}" if src.chat_name else src.chat_id
-        from ..connectors.origin import origin_block
+        from coworker.connectors.origin import origin_block
 
         cfg = getattr(event, "configuration", None) or {}
         thread_key = src.thread_id or getattr(event, "message_id", None)
@@ -6936,8 +6936,8 @@ class SessionManager:
         """Claim `channel` for `session_id`: at the broker FIRST (one session across all
         the user's machines answers a source), then in the local mirror. A clash returns
         the holder (`held_by`) and writes nothing; `move` takes it over."""
-        from ..config import load_config
-        from .. import subscription_sync
+        from coworker.config import load_config
+        from coworker import subscription_sync
 
         rec = self.session_store.load(session_id)
         title = (rec.title if rec else "") or ""
@@ -6966,8 +6966,8 @@ class SessionManager:
         return removed
 
     def _release_subscription(self, session_id: str, channel: str) -> None:
-        from ..config import load_config
-        from .. import subscription_sync
+        from coworker.config import load_config
+        from coworker import subscription_sync
 
         try:
             subscription_sync.remove(
@@ -6977,8 +6977,8 @@ class SessionManager:
             logger.info("subscription release for %s not sent", channel)
 
     def _report_orphan_subscription(self, channel: str) -> None:
-        from ..config import load_config
-        from .. import subscription_sync
+        from coworker.config import load_config
+        from coworker import subscription_sync
 
         try:
             subscription_sync.report_orphan(self.secrets, load_config(), source=channel)
@@ -6990,7 +6990,7 @@ class SessionManager:
         """@OpenWorker tagged in a channel. A subscribed (user-connected) coworker owns the channel
         and must answer; otherwise the per-thread coworker session handles it — spawned on the
         first tag, steered by follow-ups (deduped on the thread target)."""
-        from ..connectors.base import format_target
+        from coworker.connectors.base import format_target
 
         src = event.source
         # Slack semantics: replying to a top-level message threads on THAT message's ts, so a
@@ -7001,7 +7001,7 @@ class SessionManager:
         chan = f"#{src.chat_name}" if src.chat_name else src.chat_id
         if subs:
             # The user connected a coworker to this channel — it answers tags; no spawn.
-            from ..connectors.origin import origin_block
+            from coworker.connectors.origin import origin_block
 
             msg = (
                 f"🔔 You were tagged by {who} in {chan}: {event.text}\n"
@@ -7023,7 +7023,7 @@ class SessionManager:
         sid = self.mention_sessions.get(thread_target)
         if sid and self.session_store.load(sid) is not None:
             # Follow-up tag in a thread we already own → steer the same session.
-            from ..connectors.origin import origin_block, platform_label
+            from coworker.connectors.origin import origin_block, platform_label
 
             msg = (
                 f"💬 Follow-up in your {platform_label(src.platform)} thread ({chan}) from {who}: {event.text}\n"
@@ -7047,7 +7047,7 @@ class SessionManager:
     def _grant_thread(self, session_id: str, platform: str, chat_id: str, thread: Optional[str] = None) -> None:
         """Pre-approve the reply to one thread for a session (the mention grant, §25
         shape); persisted with the session's grants and re-applied on rebuild."""
-        from ..connectors.base import format_target
+        from coworker.connectors.base import format_target
 
         # A grant never creates a session: a subscription whose session is gone is
         # stale, and the delivery path reports that on its own.
@@ -7086,7 +7086,7 @@ class SessionManager:
 
     async def _reply_only(self, event) -> None:
         """An unknown `@openworker[name]`: one line on the thread, no session."""
-        from ..connectors.base import format_target
+        from coworker.connectors.base import format_target
 
         src = event.source
         name = str(((getattr(event, "raw", None) or {}).get("name")) or "")
@@ -7099,7 +7099,7 @@ class SessionManager:
             if src.platform == "github":
                 # Boxes post through the delegated-mint sender (the relay adapter's
                 # own send needs a desktop session); same path send_message uses.
-                from ..connectors.github_send import send_github_comment
+                from coworker.connectors.github_send import send_github_comment
 
                 out = await asyncio.to_thread(send_github_comment, self.secrets, src.chat_id, text)
                 if out.get("error"):
@@ -7115,7 +7115,7 @@ class SessionManager:
             logger.exception("reply-only frame for %s failed", src.chat_id)
     def _remove_spawn_worktree(self, session_id: str, record=None) -> None:
         """Legacy harness-owned checkouts only; agent-owned work is never removed here."""
-        from ..connectors.integration_tools import _run_git
+        from coworker.connectors.integration_tools import _run_git
 
         record = record if record is not None else self.session_store.load(session_id)
         spawn = (record.spawn if record else {}) or {}
@@ -7136,7 +7136,7 @@ class SessionManager:
         skills, the instructions — then the opening turn."""
         import uuid
 
-        from ..connectors.base import format_target
+        from coworker.connectors.base import format_target
 
         src = event.source
         who = src.user_name or src.user_id or "?"
@@ -7180,7 +7180,7 @@ class SessionManager:
         if mode is Mode.AUTO_APPROVE and not any(m.get("kind") == "mode_notice" for m in engine.messages):
             # The notice is the FIRST thing in the transcript, not wherever a viewer happened
             # to attach (owner-hit 2026-09-17: it appeared after four steps).
-            from ..permissions import AUTO_APPROVE_NOTICE
+            from coworker.permissions import AUTO_APPROVE_NOTICE
 
             engine._append_notice("mode_notice", AUTO_APPROVE_NOTICE, title="Auto-approve is on.")
         if bool(spawn.get("unattended", True)):
@@ -7361,8 +7361,8 @@ class SessionManager:
             },
         )
         if task.notify_target:
-            from ..connectors.base import parse_target
-            from ..connectors.senders import DEFAULT_SENDERS
+            from coworker.connectors.base import parse_target
+            from coworker.connectors.senders import DEFAULT_SENDERS
 
             try:
                 platform, chat_id, thread = parse_target(task.notify_target)
@@ -7444,7 +7444,7 @@ class SessionManager:
             fire_at=fire_at,
             timezone=timezone,
         )
-        from ..automation.models import grant_entries
+        from coworker.automation.models import grant_entries
 
         task = ScheduledTask(
             title=title,
@@ -7646,7 +7646,7 @@ class SessionManager:
         state = self.session_store.title_state(session_id)
         if state is None or state["renamed"] or state["auto_title"]:
             return
-        from ..attachments import content_to_text
+        from coworker.attachments import content_to_text
 
         openers = [
             text
@@ -7869,7 +7869,7 @@ class SessionManager:
     def session_sites(self, session_id: str) -> dict[str, Any]:
         """The session's sandbox as its header chip and Access section show it: the sites
         from Settings, and those allowed for this session only."""
-        from ..sandbox.settings import session_sandbox
+        from coworker.sandbox.settings import session_sandbox
 
         engine = self._engines.get(session_id)
         if engine is None:
@@ -7882,7 +7882,7 @@ class SessionManager:
     def _session_site_engine(self, session_id: str, host: str):
         """(engine, "host:port") for a change to the session's own sites, or an error text.
         Exact host names only, as on the agent's card: wildcards stay in Settings."""
-        from ..permissions import network_request_hosts
+        from coworker.permissions import network_request_hosts
 
         engine = self._engines.get(session_id)
         if engine is None or getattr(engine.permissions, "sandbox_sites", None) is None:

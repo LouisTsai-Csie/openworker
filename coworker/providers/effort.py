@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 from collections.abc import Sequence
 
-from ..config import EFFORT_LEVELS
+from coworker.config import EFFORT_LEVELS
 
 _RANK = {level: i for i, level in enumerate(EFFORT_LEVELS)}
 

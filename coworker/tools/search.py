@@ -12,8 +12,8 @@ from typing import Any, Optional
 
 import aisuite as ai
 
-from ..sandbox.runner import tools_grep as _impl
-from ..sandbox.runner.tools_grep import (  # noqa: F401  (re-exported: the logic moved)
+from coworker.sandbox.runner import tools_grep as _impl
+from coworker.sandbox.runner.tools_grep import (  # noqa: F401  (re-exported: the logic moved)
     _IGNORE_DIRS,
     OS_DATA_DIRS,
     _parse_rg,

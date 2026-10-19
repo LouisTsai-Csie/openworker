@@ -35,11 +35,11 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-from .anthropic_provider import AnthropicProvider
-from .base import AssistantTurn, ModelCapabilities, ProviderClient
-from .capabilities import capabilities_for
-from .gemini_provider import GeminiProvider
-from .openai_provider import OpenAIProvider
+from coworker.providers.anthropic_provider import AnthropicProvider
+from coworker.providers.base import AssistantTurn, ModelCapabilities, ProviderClient
+from coworker.providers.capabilities import capabilities_for
+from coworker.providers.gemini_provider import GeminiProvider
+from coworker.providers.openai_provider import OpenAIProvider
 
 _SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 

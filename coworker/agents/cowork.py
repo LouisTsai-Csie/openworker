@@ -8,8 +8,8 @@ shared with MyHelper (the always-on helper runs the same toolset under a differe
 
 from __future__ import annotations
 
-from ..catalog import expand
-from .base import Agent, AgentContext
+from coworker.catalog import expand
+from coworker.agents.base import Agent, AgentContext
 
 # Capabilities the knowledge-work surface composes from the vetted catalog. `files` is the
 # multi-root variant (reads/writes across added folders), unlike Code's single-root `code_files`.

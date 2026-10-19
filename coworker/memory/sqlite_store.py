@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from .base import MemoryItem, MemoryStore, Scope
+from coworker.memory.base import MemoryItem, MemoryStore, Scope
 
 
 class SQLiteMemoryStore(MemoryStore):

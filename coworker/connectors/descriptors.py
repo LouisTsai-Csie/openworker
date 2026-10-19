@@ -113,7 +113,7 @@ def _validate_telegram(creds: dict) -> ValidationResult:
 
 
 def _validate_email(creds: dict) -> ValidationResult:
-    from .email_tools import validate_email_account
+    from coworker.connectors.email_tools import validate_email_account
 
     ok, identity, error = validate_email_account(creds)
     return ValidationResult(ok, identity=identity or None, error=error or None)
@@ -1455,7 +1455,7 @@ def register_descriptor(descriptor: ConnectorDescriptor) -> None:
 # Experimental connectors live in a separate package so release builds can exclude the code
 # entirely (see packaging/openworker-server.spec). When the package is absent this is a no-op.
 try:
-    from .experimental import EXPERIMENTAL_DESCRIPTORS as _EXPERIMENTAL
+    from coworker.connectors.experimental import EXPERIMENTAL_DESCRIPTORS as _EXPERIMENTAL
 except ImportError:
     _EXPERIMENTAL = []
 for _exp in _EXPERIMENTAL:

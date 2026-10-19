@@ -30,10 +30,10 @@ import time
 from typing import Any, Optional, Protocol
 from collections.abc import Awaitable, Callable
 
-from .adapters import _SLACK_MENTION_RE, slack_event_to_event
-from .base import BasePlatformAdapter, InteractionEvent, SendResult, SessionSource
-from .senders import _send_slack, _send_slack_interactive
-from .slack_addr import qualify
+from coworker.connectors.adapters import _SLACK_MENTION_RE, slack_event_to_event
+from coworker.connectors.base import BasePlatformAdapter, InteractionEvent, SendResult
+from coworker.connectors.senders import _send_slack, _send_slack_interactive
+from coworker.connectors.slack_addr import qualify
 
 logger = logging.getLogger("coworker.connectors")
 
@@ -490,7 +490,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
         self, chat_id: str, text: str, *, thread_id: Optional[str] = None
     ) -> SendResult:
         """Reply directly via the Slack Web API with the per-team bot token."""
-        from .slack_addr import split
+        from coworker.connectors.slack_addr import split
 
         team_id, _channel = split(chat_id)
         token = self._bot_token(team_id or "")
@@ -503,7 +503,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
     async def send_interactive(
         self, chat_id: str, text: str, buttons, *, thread_id: Optional[str] = None
     ) -> SendResult:
-        from .slack_addr import split
+        from coworker.connectors.slack_addr import split
 
         team_id, _channel = split(chat_id)
         token = self._bot_token(team_id or "")

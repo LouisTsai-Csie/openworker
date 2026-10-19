@@ -13,10 +13,10 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from ..bundle import build_runner_zipapp
-from ..launch import runner_command, runner_dir, serve_arguments, spawn_kwargs, wait_for_runner
-from ..runner import winpipe
-from ..transport import PipeTransport, Transport
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.launch import runner_command, runner_dir, serve_arguments, spawn_kwargs, wait_for_runner
+from coworker.sandbox.runner import winpipe
+from coworker.sandbox.transport import PipeTransport, Transport
 
 
 class RunnerLocalProvider:

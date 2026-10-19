@@ -30,9 +30,9 @@ from __future__ import annotations
 
 from typing import Any, Optional, Protocol
 
-from .journal import JournalStore
-from .model import Actor, BoardError, Role
-from .store import TeamStore
+from coworker.teams.journal import JournalStore
+from coworker.teams.model import Actor, BoardError, Role
+from coworker.teams.store import TeamStore
 
 
 class BoardDialect(Protocol):
@@ -573,7 +573,7 @@ def local_dialect(
     backing for the CLI and MCP server when no OpenWorker server is running."""
     from pathlib import Path
 
-    from .attachments import AttachmentStore
+    from coworker.teams.attachments import AttachmentStore
 
     base = Path(db_dir).expanduser()
     journal = JournalStore(base / "journal.db")

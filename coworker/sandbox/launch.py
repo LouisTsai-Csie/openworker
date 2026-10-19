@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Optional
 from collections.abc import Sequence
 
-from .runner import winpipe
+from coworker.sandbox.runner import winpipe
 
 
 def frozen() -> bool:
@@ -64,7 +64,7 @@ def serve_arguments(address: str, folder: str, *, also_sids: Sequence[str] = ())
     under a write-restricted token may open further instances of its own pipe)."""
     args = ["--socket", address, "--dir", folder]
     if winpipe.is_pipe(address):
-        from . import winsec
+        from coworker.sandbox import winsec
 
         for sid in (winsec.current_user_sid(), *also_sids):
             args += ["--allow-sid", sid]
@@ -102,11 +102,11 @@ def maybe_run_runner(argv: list[str]) -> bool:
     Returns False when argv is anything else. Imports only the runner package, so the
     daemon inside a sandbox stays small and starts fast."""
     if argv[:1] == ["sandbox-wfp"]:  # the elevated setup step on Windows (windows_setup.py)
-        from . import windows_wfp
+        from coworker.sandbox import windows_wfp
 
         raise SystemExit(windows_wfp.main(argv[1:]))
     if argv[:1] != ["sandbox-runner"]:
         return False
-    from .runner.__main__ import main as runner_main
+    from coworker.sandbox.runner.__main__ import main as runner_main
 
     raise SystemExit(runner_main(argv[1:]))

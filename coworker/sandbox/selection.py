@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 
-from .workspace import DIRECT, OPENSHELL, PROVIDER_ENV, RUNNER_LOCAL, SEATBELT, WINDOWS
+from coworker.sandbox.workspace import DIRECT, OPENSHELL, PROVIDER_ENV, RUNNER_LOCAL, SEATBELT, WINDOWS
 
 HEADLESS_ENV = "OPENWORKER_HEADLESS"  # set by `openworker up` / `join` for their process
 KNOWN = (DIRECT, SEATBELT, WINDOWS, OPENSHELL, RUNNER_LOCAL)
@@ -45,7 +45,7 @@ def openshell_problem(*, fresh: bool = False) -> Optional[str]:
         when, problem = _probe
         if not fresh and when and time.monotonic() - when < _PROBE_SECONDS:
             return problem
-        from .providers import openshell
+        from coworker.sandbox.providers import openshell
 
         try:
             openshell.preflight()
@@ -66,13 +66,13 @@ def select(configured: Optional[str] = None, *, headless: Optional[bool] = None)
         if chosen == OPENSHELL:
             problem = openshell_problem(fresh=True)
             if problem:
-                from .providers.openshell import OpenShellUnavailable
+                from coworker.sandbox.providers.openshell import OpenShellUnavailable
 
                 raise OpenShellUnavailable(
                     f"This machine is set to run agents in OpenShell sandboxes, and OpenShell cannot be used right now, so no session will start. {problem}"
                 )
         if chosen == SEATBELT:
-            from .providers import seatbelt
+            from coworker.sandbox.providers import seatbelt
 
             try:
                 seatbelt.preflight()
@@ -81,7 +81,7 @@ def select(configured: Optional[str] = None, *, headless: Optional[bool] = None)
                     f"This machine is set to run agents in the macOS sandbox (Seatbelt), and it cannot be used right now, so no session will start. {exc}"
                 ) from None
         if chosen == WINDOWS:
-            from .providers import windows
+            from coworker.sandbox.providers import windows
 
             try:
                 windows.preflight()

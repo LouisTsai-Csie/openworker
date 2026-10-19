@@ -18,7 +18,7 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from ..web.guard import check_url
+from coworker.web.guard import check_url
 
 
 def _guard_route(route: Any) -> None:
@@ -84,7 +84,7 @@ def _schema(
 
 
 def _attach(fn: Callable[..., Any], schema: dict[str, Any], *, approval: bool = True):
-    from .tool_defs import approval_for_tool
+    from coworker.connectors.tool_defs import approval_for_tool
 
     name = schema["function"]["name"]
     # §36: the tool registry's read/write kind wins for registered tools — reads never gate.

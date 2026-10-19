@@ -40,13 +40,13 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Sequence
 
-from .. import credentials as creds
-from .. import netproxy, network_profiles
-from ..bundle import build_runner_zipapp
-from ..launch import runner_command, serve_arguments, spawn_kwargs, wait_for_runner
-from ..runner import winpipe
-from ..transport import PipeTransport, Transport
-from . import windows_setup
+from coworker.sandbox import credentials as creds
+from coworker.sandbox import netproxy, network_profiles
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.launch import runner_command, serve_arguments, spawn_kwargs, wait_for_runner
+from coworker.sandbox.runner import winpipe
+from coworker.sandbox.transport import PipeTransport, Transport
+from coworker.sandbox.providers import windows_setup
 
 FULL = "full"
 _FULL_REASON = (
@@ -64,7 +64,7 @@ def preflight() -> None:
     and this user can read the accounts' credentials. The message says what is missing."""
     if sys.platform != "win32":
         raise WindowsUnavailable("The Windows sandbox exists only on Windows.")
-    from .. import winsec
+    from coworker.sandbox import winsec
 
     try:
         winsec.current_user_sid()
@@ -154,7 +154,7 @@ class WindowsProvider:
 
     def _create(self) -> None:
         preflight()
-        from .. import winsec
+        from coworker.sandbox import winsec
 
         hosts = sorted({*self.extra_hosts, *(h for g in self.grants for h in g.hosts)})
         if self.network and not self.open_network:
@@ -205,7 +205,7 @@ class WindowsProvider:
         the daemon so that the account owns them (Windows OpenSSH refuses a key file owned
         by someone else). Whatever an earlier sandbox left there is removed first; the
         daemon removes them again when it leaves."""
-        from ..runner.protocol import RunnerError
+        from coworker.sandbox.runner.protocol import RunnerError
 
         home_inside = str(client.hello.get("home") or "")
         if not home_inside:
@@ -244,7 +244,7 @@ class WindowsProvider:
     def verify(self, client: Any) -> None:
         """Every folder is reachable inside, and the wall is really up: the user's profile
         cannot be listed, and in the closed mode no local port but the proxy's is reachable."""
-        from ..runner.protocol import RunnerError
+        from coworker.sandbox.runner.protocol import RunnerError
 
         for root in self.roots:
             client.call("fs.list", {"path": root["path"], "limit": 1}, timeout=15)
@@ -305,13 +305,13 @@ class WindowsProvider:
         return wanted
 
     def _grant(self, folder: str, kind: str) -> None:
-        from .. import winsec
+        from coworker.sandbox import winsec
 
         {"write": winsec.grant_write, "read": winsec.grant_read, "traverse": winsec.grant_traverse}[kind](folder, self.session_sid)
         self._granted.append((folder, kind))
 
     def _revoke(self, folder: str, kind: str) -> None:
-        from .. import winsec
+        from coworker.sandbox import winsec
 
         try:
             winsec.revoke(folder, self.session_sid)

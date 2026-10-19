@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 _TIMEOUT = 10.0
 
@@ -52,7 +52,7 @@ def _fetch_display_name(token: str, user_id: str) -> Optional[str]:
 
 def sender_prefix(secrets: SecretStore, chat_id: str) -> str:
     """'[Rohit] ' for a Slack chat_id whose workspace install knows its human, else ''."""
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     team, channel = split(chat_id)
     if channel.startswith("D"):  # DM with the bot — nothing to disambiguate

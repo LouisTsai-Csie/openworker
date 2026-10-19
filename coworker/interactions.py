@@ -16,8 +16,8 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
-from .inbox import KIND_APPROVAL, KIND_QUESTION
-from .tools.ask import SKIP_SENTINEL, option_label
+from coworker.inbox import KIND_APPROVAL, KIND_QUESTION
+from coworker.tools.ask import SKIP_SENTINEL, option_label
 
 
 @dataclass

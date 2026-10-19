@@ -8,11 +8,11 @@ import secrets
 import sys
 from pathlib import Path
 
-from ..config import load_config
-from ..permissions import Mode
-from ..secrets import state_dir, write_private_text
-from .app import _WS_MAX_FRAME_BYTES, create_app
-from .manager import SessionManager
+from coworker.config import load_config
+from coworker.permissions import Mode
+from coworker.secrets import state_dir, write_private_text
+from coworker.server.app import _WS_MAX_FRAME_BYTES, create_app
+from coworker.server.manager import SessionManager
 
 
 def _exit_when_orphaned() -> None:
@@ -145,7 +145,7 @@ def _warn_if_state_shared() -> None:
     WARNS about a second engine (statelock.py). `openworker up` refuses outright;
     set COWORKER_STATE_LOCK=strict to make this server refuse too."""
     global _ENGINE_LOCK
-    from ..statelock import EngineBusy, acquire
+    from coworker.statelock import EngineBusy, acquire
 
     strict = os.environ.get("COWORKER_STATE_LOCK") == "strict"
     try:
@@ -158,7 +158,7 @@ def _warn_if_state_shared() -> None:
 
 
 def main(argv=None) -> None:
-    from ..sandbox.launch import maybe_run_runner
+    from coworker.sandbox.launch import maybe_run_runner
 
     maybe_run_runner(list(sys.argv[1:] if argv is None else argv))  # `sandbox-runner ...`
     _ensure_ca_bundle()

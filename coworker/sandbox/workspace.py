@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Callable, Sequence
 
-from .runner.executor import Executor
+from coworker.sandbox.runner.executor import Executor
 
 PROVIDER_ENV = "OPENWORKER_SANDBOX_PROVIDER"
 DIRECT = "direct"
@@ -51,7 +51,7 @@ class Workspace(ABC):
 
 class DirectWorkspace(Workspace):
     def __init__(self, *, cwd: str | Path) -> None:
-        from ..tools.shell import LocalExecutor  # here, not at the top: tools.shell imports us
+        from coworker.tools.shell import LocalExecutor  # here, not at the top: tools.shell imports us
 
         self._executor = LocalExecutor(cwd=cwd)
 
@@ -84,8 +84,8 @@ class RunnerWorkspace(Workspace):
         live_roots: Optional[list] = None,
         start: bool = True,
     ) -> None:
-        from .client import RunnerClient
-        from .executor import RunnerExecutor
+        from coworker.sandbox.client import RunnerClient
+        from coworker.sandbox.executor import RunnerExecutor
 
         self.provider = provider
         self.registry = registry
@@ -213,7 +213,7 @@ class RunnerWorkspace(Workspace):
 
     def context(self) -> str:
         """What the agent is told about this sandbox each turn (ruling 21)."""
-        from .credentials import context_lines
+        from coworker.sandbox.credentials import context_lines
 
         text = context_lines(getattr(self.provider, "copied", None))
         notes = getattr(self.provider, "notes", None) or []
@@ -388,24 +388,24 @@ def open_workspace(
     if name == DIRECT:
         return DirectWorkspace(cwd=cwd)
     if name == RUNNER_LOCAL:
-        from .providers.runner_local import RunnerLocalProvider
+        from coworker.sandbox.providers.runner_local import RunnerLocalProvider
 
         return RunnerWorkspace(RunnerLocalProvider(cwd=cwd), cwd=cwd)
     listed = [{"path": str(r.path), "writable": bool(r.writable)} for r in (roots or [])]
     listed = listed or [{"path": str(cwd), "writable": True}]
-    from .credentials import granted
+    from coworker.sandbox.credentials import granted
 
     grants = granted(credentials)
-    from .network_profiles import check, clean_hosts, default_profile
+    from coworker.sandbox.network_profiles import check, clean_hosts, default_profile
 
     profile = check((network_profile or "").strip().lower() or default_profile())
     added = clean_hosts(extra_hosts)
-    from . import toolchains as toolchain_list
+    from coworker.sandbox import toolchains as toolchain_list
 
     tool_dirs = toolchain_list.granted(toolchains)
     if name == SEATBELT:
-        from .providers.seatbelt import SeatbeltProvider
-        from .registry import SandboxRegistry
+        from coworker.sandbox.providers.seatbelt import SeatbeltProvider
+        from coworker.sandbox.registry import SandboxRegistry
 
         return RunnerWorkspace(
             SeatbeltProvider(roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added),
@@ -417,8 +417,8 @@ def open_workspace(
             start=start,
         )
     if name == OPENSHELL:
-        from .providers.openshell import OpenShellProvider
-        from .registry import SandboxRegistry
+        from coworker.sandbox.providers.openshell import OpenShellProvider
+        from coworker.sandbox.registry import SandboxRegistry
 
         label = "-".join(part for part in (session_id[:24], agent[:24]) if part)
         registry = SandboxRegistry()
@@ -432,8 +432,8 @@ def open_workspace(
             start=start,
         )
     if name == WINDOWS:
-        from .providers.windows import WindowsProvider
-        from .registry import SandboxRegistry
+        from coworker.sandbox.providers.windows import WindowsProvider
+        from coworker.sandbox.registry import SandboxRegistry
 
         return RunnerWorkspace(
             WindowsProvider(roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added),

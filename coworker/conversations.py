@@ -18,7 +18,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from .sessions import SessionRecord
+from coworker.sessions import SessionRecord
 
 # A session id becomes a filename (`<id>.jsonl`) and a scratch dir name, so it must be a
 # single, benign path component. Every legitimate id is hex or a `__run__`/`__task__`-
@@ -63,7 +63,7 @@ def _display_title(row: sqlite3.Row) -> Optional[str]:
 
 
 def title_from(messages: list[dict]) -> str:
-    from .attachments import content_to_text
+    from coworker.attachments import content_to_text
 
     for m in messages:
         if m.get("role") == "user":
@@ -452,7 +452,7 @@ class ConversationStore:
 
     def names(self):
         """The project-names alias table, riding this store's connection."""
-        from .projects import ProjectNames
+        from coworker.projects import ProjectNames
 
         if not hasattr(self, "_names"):
             self._names = ProjectNames(self._conn, self._lock)

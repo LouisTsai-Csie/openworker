@@ -186,7 +186,7 @@ class _StoreLock:
         self._thread.release()
 
     def _lock_file(self, timeout: float) -> Any:
-        from .statelock import _try_lock
+        from coworker.statelock import _try_lock
 
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)

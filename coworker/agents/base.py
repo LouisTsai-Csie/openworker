@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Callable
 
-from ..tools.todo import TodoList
+from coworker.tools.todo import TodoList
 
 
 @dataclass

@@ -87,7 +87,7 @@ def bare_name(model: str) -> str:
     """`ollama:qwen3-coder:30b` → `qwen3-coder:30b`; a name with no known prefix is itself.
     Model names carry colons of their own (version tags), so only a known provider
     prefix is stripped."""
-    from .registry import provider_names
+    from coworker.providers.registry import provider_names
 
     vendor, sep, rest = model.partition(":")
     if sep and vendor in provider_names():

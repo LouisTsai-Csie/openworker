@@ -36,7 +36,7 @@ from typing import Optional
 from collections.abc import Iterable
 from urllib.parse import urlparse
 
-from .secrets import state_dir
+from coworker.secrets import state_dir
 
 # Dirs that hold user-installed CLIs but never appear in launchd's PATH. Mirrors
 # KNOWN_TOOL_DIRS in the desktop shell (src-tauri/src/lib.rs) — keep the two in step.

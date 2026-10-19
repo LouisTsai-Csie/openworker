@@ -15,8 +15,8 @@ from typing import Optional
 from collections.abc import Callable
 from urllib.parse import urlparse
 
-from ..secrets import SecretStore
-from .base import (
+from coworker.secrets import SecretStore
+from coworker.connectors.base import (
     BasePlatformAdapter,
     InteractionEvent,
     MessageEvent,
@@ -25,7 +25,7 @@ from .base import (
     SessionSource,
     parse_target,
 )
-from .config import ConnectorSettings, is_authorized, load_settings
+from coworker.connectors.config import ConnectorSettings, is_authorized, load_settings
 
 logger = logging.getLogger("coworker.connectors")
 

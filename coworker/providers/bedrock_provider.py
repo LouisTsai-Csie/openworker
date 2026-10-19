@@ -37,8 +37,8 @@ import os
 import re
 from typing import Any, Optional
 
-from .anthropic_provider import AnthropicProvider
-from .base import (
+from coworker.providers.anthropic_provider import AnthropicProvider
+from coworker.providers.base import (
     AssistantTurn,
     ModelCapabilities,
     ProviderClient,
@@ -46,7 +46,7 @@ from .base import (
     TokenUsage,
     ToolCall,
 )
-from .capabilities import capabilities_for
+from coworker.providers.capabilities import capabilities_for
 
 
 def _usage_from(usage: Any) -> Optional[TokenUsage]:

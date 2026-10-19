@@ -23,8 +23,8 @@ import time
 from typing import Any, Optional
 from collections.abc import Awaitable, Callable
 
-from .base import BasePlatformAdapter, MessageEvent, SendResult, SessionSource
-from .relay_client import RelayHub
+from coworker.connectors.base import BasePlatformAdapter, MessageEvent, SendResult, SessionSource
+from coworker.connectors.relay_client import RelayHub
 
 logger = logging.getLogger("coworker.connectors")
 

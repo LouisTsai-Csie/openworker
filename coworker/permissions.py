@@ -104,7 +104,7 @@ def network_request_hosts(arguments: dict[str, Any]) -> tuple[list[str], list[st
     """The hosts a `request_network_access` call names, as ("host:port" entries, rejected
     inputs). Exact host names only: no wildcards, no addresses, nothing that is not a name,
     since the entry is shown to a person and opened on the sandbox as written."""
-    from .sandbox.network_profiles import clean_host
+    from coworker.sandbox.network_profiles import clean_host
 
     raw = (arguments or {}).get("hosts")
     items = [raw] if isinstance(raw, str) else list(raw or []) if isinstance(raw, (list, tuple)) else []
@@ -131,7 +131,7 @@ def protected_paths() -> list[Path]:
     ordinary-looking command, it quietly appends to the rule file, every future session is
     more permissive. That happens in the DEFAULT interactive mode, so this cannot be a
     property of a sandbox or of any one mode; it is a floor."""
-    from .secrets import state_dir
+    from coworker.secrets import state_dir
 
     base = state_dir()
     return [
@@ -331,7 +331,7 @@ def standing_rule_candidate(
     (UX-DECISIONS §25): external-risk only (never exec/write-local — shell asks forever),
     the tool must declare a target argument, and the call must actually name a target.
     Returns None otherwise — ineligible calls keep parking approvals as today."""
-    from .connectors.tool_defs import standing_target_for
+    from coworker.connectors.tool_defs import standing_target_for
 
     if classify(tool_name, metadata, overrides) is not RiskClass.EXTERNAL:
         return None
@@ -584,7 +584,7 @@ class PermissionEngine:
             # Also a session grant, so §1.5 applies: in Auto-Approve the reviewer judges
             # these rather than the classifier waving them through.
             if honor_session_grants and self.session_readonly and command:
-                from .readonly import is_readonly_command, read_targets
+                from coworker.readonly import is_readonly_command, read_targets
 
                 # The classifier vets what a command DOES; the roots vet what it READS
                 # (OPE-130). Without the second half, a grant the user reads as "stop
@@ -762,7 +762,7 @@ class PermissionEngine:
         return True
 
     def _note_session_site(self, host_or_entry: str) -> None:
-        from .sandbox.network_profiles import clean_host
+        from coworker.sandbox.network_profiles import clean_host
 
         try:
             entry = clean_host(host_or_entry)
@@ -786,7 +786,7 @@ class PermissionEngine:
         """Whether a "host:port" entry is already open to this session's commands: on the
         machine's list (same port; `*.example.com` covers subdomains) or allowed for the
         session."""
-        from .sandbox.network_profiles import clean_host
+        from coworker.sandbox.network_profiles import clean_host
 
         if entry in self.session_sites:
             return True

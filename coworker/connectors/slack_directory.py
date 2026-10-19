@@ -19,7 +19,7 @@ import os
 import time
 from typing import Any, Optional
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 _TTL = 900.0  # 15 min — rosters drift slowly; a Refresh affordance can force it
 # users.list: Slack recommends ≤200/page. conversations.list allows 1000 — use it:

@@ -13,7 +13,7 @@ import copy
 from typing import Any, Optional
 from collections.abc import Sequence
 
-from .. import network_profiles
+from coworker.sandbox import network_profiles
 
 RUNNER_MOUNT = "/opt/openworker"
 RUNTIME_DIR = "/tmp"  # the runner's socket and HOME live here; always read-write

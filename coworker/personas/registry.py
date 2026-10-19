@@ -20,10 +20,10 @@ from pathlib import Path
 from typing import Optional
 from collections.abc import Callable
 
-from ..agents.base import Agent
-from ..agents.code import CODE_CAPABILITIES, code_agent
-from ..agents.cowork import COWORK_CAPABILITIES, cowork_agent
-from .manifest import PersonaManifest, load_manifest_file
+from coworker.agents.base import Agent
+from coworker.agents.code import CODE_CAPABILITIES, code_agent
+from coworker.agents.cowork import COWORK_CAPABILITIES, cowork_agent
+from coworker.personas.manifest import PersonaManifest, load_manifest_file
 
 DEFAULT_PERSONA_ID = "cowork"
 
@@ -402,7 +402,7 @@ class PersonaRegistry:
 
         NOTE: re-installing an updated persona overwrites the snapshot; live sessions on it simply
         resume with the new prompt/tools. We accept that for now (see PERSONAS.md)."""
-        from .loading import consent_summary
+        from coworker.personas.loading import consent_summary
 
         d = Path(directory)
         if not d.is_dir():
@@ -444,7 +444,7 @@ class PersonaRegistry:
     def _replaces_of(self, incoming) -> Optional[dict]:
         """When re-installing an already-installed persona id: what the new copy
         replaces ({version, installed_at, capabilities_grew}), else None."""
-        from .loading import capability_set
+        from coworker.personas.loading import capability_set
 
         existing = self._entries.get(incoming.id)
         if existing is None or existing.builtin or existing.manifest is None:
@@ -537,7 +537,7 @@ class PersonaRegistry:
         self, url: str, *, cache_base: Optional[str | Path] = None, clone=None
     ) -> list[dict]:
         """Clone a persona repo and install its personas (disabled pending consent)."""
-        from .loading import clone_persona_repo, git_clone
+        from coworker.personas.loading import clone_persona_repo, git_clone
 
         base = (
             Path(cache_base)
@@ -558,7 +558,7 @@ _singleton: Optional[PersonaRegistry] = None
 def get_registry() -> PersonaRegistry:
     global _singleton
     if _singleton is None:
-        from ..secrets import state_dir
+        from coworker.secrets import state_dir
 
         _singleton = PersonaRegistry(state_path=state_dir() / "personas.json")
     return _singleton

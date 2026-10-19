@@ -83,7 +83,7 @@ def _vet(url: str) -> tuple[Optional[str], Optional[str]]:
     # name with a placeholder address in 198.18.0.0/15, which this guard would refuse as
     # private. So the name is neither vetted nor pinned here. (A literal address was still
     # judged above.)
-    from ..sandbox.inside import inside_openshell
+    from coworker.sandbox.inside import inside_openshell
 
     if inside_openshell():
         return None, None

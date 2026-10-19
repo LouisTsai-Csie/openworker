@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ..catalog import expand
-from .base import Agent
+from coworker.catalog import expand
+from coworker.agents.base import Agent
 
 # Capabilities this surface composes from the vetted catalog (was a hand-written factory).
 CODE_CAPABILITIES = ["code_files", "git", "search", "shell", "todo"]

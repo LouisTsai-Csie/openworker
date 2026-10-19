@@ -29,8 +29,8 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Callable
 
-from ..engine import ApprovalOutcome, PermissionRequest
-from ..permissions import NETWORK_ACCESS_TOOL
+from coworker.engine import ApprovalOutcome, PermissionRequest
+from coworker.permissions import NETWORK_ACCESS_TOOL
 
 _VALUE_LIMIT = 400
 
@@ -67,7 +67,7 @@ def session_outcome(request: PermissionRequest) -> Optional[ApprovalOutcome]:
     """The grant "[s] yes, for this session" stands for on this card: the narrowest one the
     app's card would offer (this command, this site, this tool). None when the card has no
     session choice, and then the prompt offers yes and no only."""
-    from ..server.manager import _grant_offered
+    from coworker.server.manager import _grant_offered
 
     for outcome in (
         ApprovalOutcome.ALWAYS_COMMAND,
@@ -333,7 +333,7 @@ class Terminal:
     async def tool(self, args: dict[str, Any], _call_id: Optional[str] = None) -> dict[str, Any]:
         """The engine's tool-install hook: only reached for a tool in the pinned catalog,
         so yes installs the verified build."""
-        from .. import toolchain
+        from coworker import toolchain
 
         name = str(args.get("name") or "").strip()
         info = toolchain.describe(name) or {}

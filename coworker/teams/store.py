@@ -31,8 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .attachments import stored_name, validate_stored_name
-from .model import (
+from coworker.teams.attachments import stored_name, validate_stored_name
+from coworker.teams.model import (
     EDGES,
     LINK_KINDS,
     WORKER_TARGETS,
@@ -527,7 +527,7 @@ class TeamStore:
 
     def create_proposal(self, space: str, actor: Actor, proposal: dict) -> dict:
         """Atomically materialize an accepted plan, its intent and dependency links."""
-        from .proposals import validate_work_proposal
+        from coworker.teams.proposals import validate_work_proposal
         proposal = validate_work_proposal(proposal)
         self._require(actor, {Role.USER, Role.LEAD}, "create_proposal")
         # Journal failures must not leave committed board items followed by an error
@@ -758,7 +758,7 @@ class TeamStore:
                 raise BoardNotFoundError("comment not found")
             e = rows[0]
             body = e["payload"].get("body") or e["payload"].get("comment") or ""
-            from ..toolresult import PagedToolResult
+            from coworker.toolresult import PagedToolResult
             refs = e["payload"].get("refs", [])
             refs_detail = {"refs": refs} if len(json.dumps(refs)) <= 8000 else {
                 "refs_omitted": True, "ref_count": len(refs), "refs_read_tool": "get_item"}

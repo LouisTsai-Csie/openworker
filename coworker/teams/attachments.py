@@ -25,7 +25,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from .model import BoardError, BoardNotFoundError
+from coworker.teams.model import BoardError, BoardNotFoundError
 
 ATTACHMENT_SCHEME = "attachment://"
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
@@ -113,7 +113,7 @@ def read_attachment_file(path: str | Path, *, roots=None) -> tuple[bytes, str]:
     None is reserved for operator CLI/MCP callers with their own filesystem access;
     an empty agent root list fails closed. Relative agent paths use the primary root.
     """
-    from ..roots import normalize_roots
+    from coworker.roots import normalize_roots
 
     allowed = normalize_roots(roots) if roots is not None else None
     source = Path(path).expanduser()

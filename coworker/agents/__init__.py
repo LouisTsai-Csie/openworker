@@ -1,9 +1,9 @@
-from .base import Agent, AgentContext
-from .chat import chat_agent
-from .code import code_agent
-from .cowork import cowork_agent
-from .myhelper import myhelper_agent
-from .registry import get_agent, list_agents
+from coworker.agents.base import Agent, AgentContext
+from coworker.agents.chat import chat_agent
+from coworker.agents.code import code_agent
+from coworker.agents.cowork import cowork_agent
+from coworker.agents.myhelper import myhelper_agent
+from coworker.agents.registry import get_agent, list_agents
 
 __all__ = [
     "Agent",

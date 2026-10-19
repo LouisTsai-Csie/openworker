@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .model import (
+from coworker.teams.model import (
     JOURNAL_BODY_LIMIT,
     JOURNAL_KINDS,
     Actor,
@@ -38,7 +38,7 @@ from .model import (
     ChainError,
     Role,
 )
-from .store import GENESIS, _canonical, _hash
+from coworker.teams.store import GENESIS, _canonical, _hash
 
 _HASHED_FIELDS = (
     "ts",

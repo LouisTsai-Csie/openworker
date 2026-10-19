@@ -36,15 +36,15 @@ from pathlib import Path
 from typing import Any, Optional
 from collections.abc import Callable
 
-from .. import config as app_config
-from .providers import openshell, openshell_policy
-from .providers.openshell import PINNED_VERSION
+from coworker import config as app_config
+from coworker.sandbox.providers import openshell, openshell_policy
+from coworker.sandbox.providers.openshell import PINNED_VERSION
 
 try:
     import tomllib  # stdlib since 3.11
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10
     import tomli as tomllib  # type: ignore[no-redef]
-from .selection import openshell_problem, select
+from coworker.sandbox.selection import openshell_problem, select
 
 _INSTALLER = "https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh"
 # Where the page's "Guide" links point: how OpenShell fits, what a machine needs, setup.
@@ -464,7 +464,7 @@ def pull_image(on_progress: Optional[Callable[[PullProgress], None]] = None, can
 
 
 def seatbelt_check() -> tuple[str, bool, str]:
-    from .providers import seatbelt
+    from coworker.sandbox.providers import seatbelt
 
     try:
         seatbelt.preflight()
@@ -475,7 +475,7 @@ def seatbelt_check() -> tuple[str, bool, str]:
 
 def windows_rows(print_fn: Callable[[str], None]) -> None:
     """The Windows sandbox's own lines of `status`; the OpenShell lines follow them."""
-    from .providers import windows, windows_setup
+    from coworker.sandbox.providers import windows_setup
 
     for what, ok, detail in windows_setup.checks():
         print_fn(f"  [{'ok' if ok else '--'}] {what}" + (f"  ({detail})" if detail and not ok else ""))
@@ -490,9 +490,9 @@ def windows_rows(print_fn: Callable[[str], None]) -> None:
 
 
 def windows_setup_command(*, confirm: Callable[[str], bool], print_fn: Callable[[str], None]) -> int:
-    from .providers import windows_setup
+    from coworker.sandbox.providers import windows_setup
 
-    from . import netproxy
+    from coworker.sandbox import netproxy
 
     ports = netproxy.WINDOWS_PORTS
     print_fn(
@@ -521,7 +521,7 @@ def windows_setup_command(*, confirm: Callable[[str], bool], print_fn: Callable[
 
 
 def windows_remove_command(*, confirm: Callable[[str], bool], print_fn: Callable[[str], None]) -> int:
-    from .providers import windows_setup
+    from coworker.sandbox.providers import windows_setup
 
     print_fn(
         "This removes everything `sandbox setup` made on this machine (one administrator prompt): the two sandbox accounts\n"

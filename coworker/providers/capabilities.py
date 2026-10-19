@@ -6,14 +6,14 @@ either bare model names (`gpt-5.5`) or provider-qualified ones (`openai:gpt-5.5`
 
 from __future__ import annotations
 
-from .base import ModelCapabilities
+from coworker.providers.base import ModelCapabilities
 
 
 def capabilities_for(model: str) -> ModelCapabilities:
     # Curated models answer from the matrix (exact full-id match — including reseller ids
     # like `together:zai-org/GLM-5.2`, whose names defeat the prefix heuristics below).
     # Custom user-added models fall through to the heuristics, at their own risk.
-    from .matrix import entry_for
+    from coworker.providers.matrix import entry_for
 
     entry = entry_for(model)
     if entry is not None:

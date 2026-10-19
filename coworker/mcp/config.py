@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from ..secrets import SecretStore, state_dir
+from coworker.secrets import SecretStore, state_dir
 
 _HTTP_TYPES = {"http", "https", "sse", "streamable-http", "streamable_http"}
 

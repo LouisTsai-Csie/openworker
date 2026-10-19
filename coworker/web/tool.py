@@ -14,8 +14,8 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from ..secrets import SecretStore
-from .providers import WebSearchProvider, build_provider
+from coworker.secrets import SecretStore
+from coworker.web.providers import WebSearchProvider, build_provider
 
 _SCHEMA = {
     "type": "function",
@@ -78,7 +78,7 @@ def resolve_provider(
 
 def _config_provider() -> Optional[str]:
     try:
-        from ..config import load_config
+        from coworker.config import load_config
 
         return load_config().web_search_provider
     except Exception:

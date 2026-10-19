@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 from typing import Any, Optional
 
-from .connectors import connector_for_tool
+from coworker.connectors import connector_for_tool
 
 # Matched as substrings of a lowercased key name, at EVERY level of a structure (#397):
 # an HTTP-shaped or MCP tool takes its credential in a nested `headers` / `auth` / `config`

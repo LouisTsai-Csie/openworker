@@ -24,9 +24,9 @@ from typing import Any, Optional
 
 import httpx
 
-from .. import model_config
-from . import local_machine
-from .recommended import recommendation_for
+from coworker import model_config
+from coworker.providers import local_machine
+from coworker.providers.recommended import recommendation_for
 
 LOCAL_SERVERS: dict[str, dict[str, str]] = {
     "llamacpp": {"title": "llama.cpp", "default_base": "http://localhost:8080"},

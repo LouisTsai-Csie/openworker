@@ -27,8 +27,8 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from ..roots import RootDir
-from ..secrets import SecretStore
+from coworker.roots import RootDir
+from coworker.secrets import SecretStore
 
 _TIMEOUT = 30.0
 _BODY_CHAR_LIMIT = 20_000
@@ -340,7 +340,7 @@ def _attach(
     approval: bool,
     caps: list[str],
 ):
-    from .tool_defs import approval_for_tool
+    from coworker.connectors.tool_defs import approval_for_tool
 
     name = schema["function"]["name"]
     # §36: the tool registry's read/write kind wins for registered tools — reads never gate.

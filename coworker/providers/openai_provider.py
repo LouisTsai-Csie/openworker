@@ -14,8 +14,8 @@ import json
 import re
 from typing import Any, Optional
 
-from .effort import NO_EFFORT, EffortPlan, mentions_effort, openai_compat_effort
-from .base import (
+from coworker.providers.effort import NO_EFFORT, EffortPlan, openai_compat_effort
+from coworker.providers.base import (
     AssistantTurn,
     ModelCapabilities,
     ProviderClient,
@@ -23,7 +23,7 @@ from .base import (
     TokenUsage,
     ToolCall,
 )
-from .capabilities import capabilities_for
+from coworker.providers.capabilities import capabilities_for
 
 
 def resolve_api_key(secrets: Any = None) -> Optional[str]:

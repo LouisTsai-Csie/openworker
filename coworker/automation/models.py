@@ -43,7 +43,7 @@ def grant_entries(permissions: Any) -> list[str]:
     tools by construction) and the target must be non-empty. Reads are disclosure-only —
     rendered on the consent card, never stored. Anything else is dropped, fail-closed.
     """
-    from ..connectors.tool_defs import rule_eligible
+    from coworker.connectors.tool_defs import rule_eligible
 
     entries: list[str] = []
     for item in permissions or []:

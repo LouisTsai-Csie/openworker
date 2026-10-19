@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .model import Actor, Role
+from coworker.teams.model import Actor, Role
 
 _TOKEN_PREFIX = "owb_"  # OpenWorker board — greppable in configs, meaningless to guess
 

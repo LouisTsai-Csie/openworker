@@ -24,35 +24,35 @@ from coworker.connectors import (
     make_send_file_tool,
     make_send_message_tool,
 )
-from .engine import Approver, TurnEngine
-from .environment import environment_context
-from .memory import (
+from coworker.engine import Approver, TurnEngine
+from coworker.environment import environment_context
+from coworker.memory import (
     MemoryStore,
     Scope,
     format_user_rules,
     memory_tools,
     render_memory_block,
 )
-from .permissions import Mode, PermissionEngine
-from .project import load_agents_md
-from . import session_facts
-from .roots import RootDir, normalize_roots, render_context
-from .providers import ProviderClient, ProviderRouter
-from .overrides import RiskOverrideStore
-from .secrets import SecretStore, state_dir
-from .skills import SkillLoader, save_skill_tool, skill_catalog_text, skill_tools
-from .tools import ToolRegistry
-from .tools.ask import ask_user_tool
-from .tools.directories import request_directory_tool
-from .tools.plan import propose_plan_tool
-from .tools.toolreq import request_tool_tool
-from .tools.subagent import explorer_tools
-from .web import make_web_fetch_tool, make_web_search_tool
-from .workspace_trust import WorkspaceTrustStore
-from .sandbox import inside as _openshell
-from .sandbox.selection import select as select_sandbox
-from .sandbox.workspace import open_workspace
-from .tools.todo import TodoList
+from coworker.permissions import Mode, PermissionEngine
+from coworker.project import load_agents_md
+from coworker import session_facts
+from coworker.roots import RootDir, normalize_roots, render_context
+from coworker.providers import ProviderClient, ProviderRouter
+from coworker.overrides import RiskOverrideStore
+from coworker.secrets import SecretStore, state_dir
+from coworker.skills import SkillLoader, save_skill_tool, skill_catalog_text, skill_tools
+from coworker.tools import ToolRegistry
+from coworker.tools.ask import ask_user_tool
+from coworker.tools.directories import request_directory_tool
+from coworker.tools.plan import propose_plan_tool
+from coworker.tools.toolreq import request_tool_tool
+from coworker.tools.subagent import explorer_tools
+from coworker.web import make_web_fetch_tool, make_web_search_tool
+from coworker.workspace_trust import WorkspaceTrustStore
+from coworker.sandbox import inside as _openshell
+from coworker.sandbox.selection import select as select_sandbox
+from coworker.sandbox.workspace import open_workspace
+from coworker.tools.todo import TodoList
 
 # Appended each turn while discuss mode is active: enforcement-only read-only, with no
 # pressure toward a plan proposal (that's what distinguishes it from plan mode).
@@ -479,7 +479,7 @@ def build_engine(
 
     instructions = f"{agent.system_prompt}\n\n{_NARRATION_GUIDANCE}\n\n{_FIRST_CONTACT_GUIDANCE}"
     if agent.team == "lead":
-        from .teams.proposals import PROPOSAL_GUIDANCE
+        from coworker.teams.proposals import PROPOSAL_GUIDANCE
         instructions += "\n\n" + PROPOSAL_GUIDANCE
     if agent.team in ("lead", "worker"):
         instructions += (
@@ -609,8 +609,8 @@ def build_engine(
     # The lead's gates: propose_work_items (decomposition → items on approval, any
     # mode) and propose_team (staffing → pre-spawn on approval).
     if agent.team == "lead":
-        from .teams.tools import propose_team_tool, propose_work_items_tool
-        from .tools.connreq import grant_connector_tool
+        from coworker.teams.tools import propose_team_tool, propose_work_items_tool
+        from coworker.tools.connreq import grant_connector_tool
 
         registry.register(propose_work_items_tool())
         registry.register(propose_team_tool())
@@ -618,13 +618,13 @@ def build_engine(
         # Manual lead answers its workers' parked calls (the call itself asks the human).
         registry.register(grant_connector_tool())
         if worker_decider is not None:
-            from .teams.tools import decide_worker_call_tool
+            from coworker.teams.tools import decide_worker_call_tool
 
             registry.register(decide_worker_call_tool(worker_decider))
     # §11.6: any connector-capable coworker may ask the human to connect a service it
     # could use (bounded by its `connectors:` declaration — the consent ceiling).
     if agent.connectors:
-        from .tools.connreq import request_connector_tool
+        from coworker.tools.connreq import request_connector_tool
 
         registry.register(request_connector_tool())
 
@@ -751,8 +751,8 @@ def build_engine(
     # permission engine is the wall for them. No sandbox, or "Allow everything": no wall.
     _sandbox_provider = getattr(sandbox_workspace, "provider", None)
     if _sandbox_provider is not None and getattr(_sandbox_provider, "profile", "") == "allowlist":
-        from .sandbox import settings as _sandbox_settings
-        from .web import provider_host as _provider_host
+        from coworker.sandbox import settings as _sandbox_settings
+        from coworker.web import provider_host as _provider_host
 
         engine.permissions.sandbox_sites = list(getattr(_sandbox_provider, "extra_hosts", None) or [])
         engine.permissions.search_host = lambda: _provider_host(secrets)
@@ -766,7 +766,7 @@ def build_engine(
             # and the app can say that commands still lack the site.
             import logging
 
-            from .sandbox.network_profiles import clean_host
+            from coworker.sandbox.network_profiles import clean_host
 
             try:
                 sandbox_workspace.add_hosts([clean_host(host)])
@@ -778,15 +778,15 @@ def build_engine(
         engine.permissions.open_site = _open_site
         engine.permissions.close_site = lambda entry: sandbox_workspace.remove_hosts([entry])
         # The agent can ask for a site, except where nobody can answer (full access).
-        from .permissions import Mode as _Mode
-        from .tools.network import request_network_access_tool
+        from coworker.permissions import Mode as _Mode
+        from coworker.tools.network import request_network_access_tool
 
         registry.register(request_network_access_tool(engine.permissions))
         sandbox_workspace.can_ask_network = lambda: engine.permissions.mode is not _Mode.BYPASS_APPROVALS
     engine.todo = todo  # type: ignore[attr-defined]
     engine.agent_name = agent.name  # type: ignore[attr-defined]
     engine.roots = root_list  # type: ignore[attr-defined]  # shared list; Slice C mutates in place
-    from .runtime_context import capture as capture_runtime, runtime_context_tool
+    from coworker.runtime_context import capture as capture_runtime, runtime_context_tool
     registry.register(runtime_context_tool(engine.permissions))
     engine.runtime_facts = capture_runtime(engine.permissions.workspace_root, engine.permissions._resolved_roots())
     # Session facts (spec Part 0 / §2.4): freeze the known world NOW, before the agent has
@@ -806,7 +806,7 @@ def build_engine(
     # not at session start, so a mid-session Settings change shows through.
     def _approval_extras(tool_name: str, _arguments: dict) -> dict:
         if tool_name == "web_search":
-            from .web import provider_name
+            from coworker.web import provider_name
 
             return {"search_provider": provider_name(secrets)}
         return {}
@@ -842,7 +842,7 @@ def build_engine(
     )
     engine.reviewer_enabled = bool(live_on)
     if live_on or shadow_on:
-        from .reviewer import Reviewer
+        from coworker.reviewer import Reviewer
 
         engine.reviewer = Reviewer(
             provider=provider,

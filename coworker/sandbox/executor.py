@@ -13,9 +13,9 @@ import time
 from typing import Any, Optional
 from collections.abc import Callable
 
-from .client import RunnerClient
-from .runner import protocol as P
-from .runner.executor import Executor
+from coworker.sandbox.client import RunnerClient
+from coworker.sandbox.runner import protocol as P
+from coworker.sandbox.runner.executor import Executor
 
 _RESULT_KEYS = ("command", "cwd", "exit_code", "output", "timed_out", "truncated", "error")
 _DEFAULT_TIMEOUT = 120.0

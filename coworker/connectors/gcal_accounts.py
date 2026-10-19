@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 PREFIX = "google_calendar:account:"
 DEFAULT_KEY = "google_calendar:default"

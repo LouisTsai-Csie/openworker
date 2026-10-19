@@ -26,8 +26,8 @@ import os
 import re
 from typing import Any, Optional
 
-from .effort import EffortPlan, anthropic_effort, mentions_effort
-from .base import (
+from coworker.providers.effort import EffortPlan, anthropic_effort, mentions_effort
+from coworker.providers.base import (
     AssistantTurn,
     ModelCapabilities,
     ProviderClient,
@@ -35,7 +35,7 @@ from .base import (
     TokenUsage,
     ToolCall,
 )
-from .capabilities import capabilities_for
+from coworker.providers.capabilities import capabilities_for
 
 
 def _usage_from(usage: Any) -> Optional[TokenUsage]:

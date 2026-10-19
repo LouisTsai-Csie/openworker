@@ -27,7 +27,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
-from ..config import EFFORT_LEVELS
+from coworker.config import EFFORT_LEVELS
 
 _TABLE = Path(__file__).with_name("model_controls.json")
 

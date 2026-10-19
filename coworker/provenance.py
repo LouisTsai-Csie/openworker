@@ -134,7 +134,7 @@ def _sub_commands(command: str) -> list[list[str]]:
     """Every sub-command of a compound command, tokenized. Splitting is textual and
     deliberately over-eager (see `permissions._split_commands`): more parts to scan can
     only ever surface more paths, never hide one."""
-    from .permissions import _split_commands
+    from coworker.permissions import _split_commands
 
     out: list[list[str]] = []
     for part in _split_commands(command):
@@ -204,8 +204,8 @@ def created_paths(
     tool_name: str, arguments: dict[str, Any], result: Any
 ) -> tuple[list[str], str]:
     """(paths, origin) for a call that just SUCCEEDED, or ([], "") when it created nothing."""
-    from .permissions import write_paths
-    from .risk import WRITE_TOOLS
+    from coworker.permissions import write_paths
+    from coworker.risk import WRITE_TOOLS
 
     if tool_name in WRITE_TOOLS:
         paths, located = write_paths(tool_name, arguments or {})

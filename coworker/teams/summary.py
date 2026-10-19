@@ -8,7 +8,7 @@ from datetime import datetime
 from itertools import pairwise
 from statistics import median
 
-from .store import ITEM_STATUS, WORKER_WAITING
+from coworker.teams.store import ITEM_STATUS, WORKER_WAITING
 
 KINDS = ("input", "cache_read", "output", "cache_write")
 

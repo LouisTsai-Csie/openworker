@@ -1,3 +1,3 @@
-from .registry import ToolRegistry, ToolSpec
+from coworker.tools.registry import ToolRegistry, ToolSpec
 
 __all__ = ["ToolRegistry", "ToolSpec"]

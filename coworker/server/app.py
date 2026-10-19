@@ -145,7 +145,7 @@ def _browser_page(
 
 def _connector_title(name: str) -> str:
     """Display name for the loopback page — 'Slack connected', never 'slack connected'."""
-    from ..connectors.descriptors import get_descriptor
+    from coworker.connectors.descriptors import get_descriptor
 
     d = get_descriptor(name)
     return d.title if d else (name[:1].upper() + name[1:])
@@ -156,7 +156,7 @@ _CONNECT_FAILED_DETAIL = (
     "Close this tab and try again from OpenWorker."
 )
 
-from ..attachments import (
+from coworker.attachments import (
     MAX_ATTACHMENTS as _MAX_ATTACHMENTS,
     MAX_IMAGE_CHARS,
     MAX_PDF_CHARS,
@@ -174,24 +174,24 @@ def _session_sandbox(engine: Any) -> dict[str, Any]:
     """The session's sandbox, for its header chip. Never raises: a header must not break
     a session."""
     try:
-        from ..sandbox.settings import session_sandbox
+        from coworker.sandbox.settings import session_sandbox
 
         return session_sandbox(engine)
     except Exception:
         return {"state": "off"}
-from ..teams.model import AuthorityError as TeamsAuthorityError
-from ..teams.model import BoardError as TeamsBoardError
-from ..teams.model import BoardNotFoundError as TeamsBoardNotFoundError
-from .manager import SessionManager, _approval_body
+from coworker.teams.model import AuthorityError as TeamsAuthorityError
+from coworker.teams.model import BoardError as TeamsBoardError
+from coworker.teams.model import BoardNotFoundError as TeamsBoardNotFoundError
+from coworker.server.manager import SessionManager, _approval_body
 
 
 def create_app(manager: SessionManager) -> FastAPI:
-    from ..providers.openrouter_auth import OpenRouterAuth
+    from coworker.providers.openrouter_auth import OpenRouterAuth
 
     def openrouter_changed() -> None:
         manager._refresh_provider("openrouter-account")
         if manager._provider_configured("openrouter-account"):
-            from ..providers.registry import get_descriptor
+            from coworker.providers.registry import get_descriptor
 
             model = get_descriptor("openrouter-account").recommended_model
             if model:
@@ -316,7 +316,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.get("/v1/personas")
     def personas() -> dict[str, Any]:
-        from ..personas.registry import include_unshipped
+        from coworker.personas.registry import include_unshipped
 
         # `internal` tells the GUI it may show internal-build affordances (the
         # "Not in this release" group, the Gallery entry point).
@@ -410,7 +410,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/subscriptions")
     def subscribe(body: dict) -> dict[str, Any]:
-        from ..subscriptions import resolve_channel
+        from coworker.subscriptions import resolve_channel
 
         session_id = str(body.get("session_id", "")).strip()
         raw = str(body.get("channel", ""))
@@ -432,7 +432,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/subscriptions/remove")
     def unsubscribe(body: dict) -> dict[str, Any]:
-        from ..subscriptions import resolve_channel
+        from coworker.subscriptions import resolve_channel
 
         session_id = str(body.get("session_id", "")).strip()
         addr = resolve_channel(str(body.get("channel", "")))
@@ -568,8 +568,8 @@ def create_app(manager: SessionManager) -> FastAPI:
                 import hashlib
                 import tempfile
 
-                from .. import cloud
-                from ..config import load_config
+                from coworker import cloud
+                from coworker.config import load_config
 
                 slug = str(body["gallery_slug"]).strip()
                 manifest = cloud.gallery_manifest(manager.secrets, load_config(), slug)
@@ -610,8 +610,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     def cloud_gallery_detail(slug: str) -> dict[str, Any]:
         """Solo page for one gallery coworker: publisher pitch + capabilities
         derived locally from the manifest (same parser as install)."""
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         body = cloud.gallery_detail(manager.secrets, load_config(), slug)
         if body is None:
@@ -622,8 +622,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     def cloud_gallery() -> dict[str, Any]:
         """Gallery cards for the GUI. Signed out ⇒ ok:false (the gallery is a
         signed-in feature by design; local personas are unaffected)."""
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         body = cloud.gallery_list(manager.secrets, load_config())
         if body is None:
@@ -1367,7 +1367,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # returns the same styled page as the managed-connector callbacks.
         from fastapi.responses import HTMLResponse
 
-        from ..mcp import oauth as mcp_oauth
+        from coworker.mcp import oauth as mcp_oauth
 
         if error:
             return HTMLResponse(
@@ -1409,7 +1409,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # New/removed creds only take effect when the platform socket reconnects (Socket Mode
         # authenticates at connect time) — hot-reload the listeners in-process so pasting
         # tokens works immediately, no sidecar restart (§19).
-        from ..connectors.config import PLATFORMS
+        from coworker.connectors.config import PLATFORMS
 
         if name in PLATFORMS:
             try:
@@ -1437,7 +1437,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # One-click connect for an MCP-backed connector: the browser OAuth flow can
         # take minutes, so it runs in the background; the GUI polls /v1/connectors
         # until the card flips to connected (mode "mcp").
-        from ..connectors.descriptors import get_descriptor
+        from coworker.connectors.descriptors import get_descriptor
 
         d = get_descriptor(name)
         if d is None or not d.mcp_url:
@@ -1451,7 +1451,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         can move to a machine, and which profile keys the move carries. The
         GUI then wallet-sends those names (sealed, existing path) and
         disconnects here — one grant, one holder."""
-        from ..connectors.setup import connector_handoff_info
+        from coworker.connectors.setup import connector_handoff_info
 
         return connector_handoff_info(manager.secrets, name)
 
@@ -1467,9 +1467,9 @@ def create_app(manager: SessionManager) -> FastAPI:
         alongside. Delegation is ONE call per connection_id: several profiles
         can share a connection (every Slack workspace does), and a second
         call would rotate the credential the first one minted."""
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors.setup import connector_profile_keys
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors.setup import connector_profile_keys
 
         cfg = load_config()
         seal_pubkey = str((body or {}).get("seal_pubkey") or "")
@@ -1529,8 +1529,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     # broker directly with the user's token; the desktop goes through here so
     # the token never leaves the sidecar. Explicit paths, no generic proxy.
     async def _broker(method: str, path: str, body: Optional[dict] = None) -> Any:
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         status, data = await asyncio.to_thread(
             cloud.broker_request, manager.secrets, load_config(), method, path, body
@@ -1601,8 +1601,8 @@ def create_app(manager: SessionManager) -> FastAPI:
         proxy; this — from the desktop, which holds the session — kills the
         delegation at the broker so events stop queueing for a machine that
         no longer listens. Best-effort and idempotent."""
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         revoked = await asyncio.to_thread(
             lambda: cloud.revoke_connector_connections(
@@ -1619,8 +1619,8 @@ def create_app(manager: SessionManager) -> FastAPI:
         credential), sealed to the target's pinned key. The caller relays the
         ciphertext to the target's deploy route; no plaintext ever leaves
         this process. Nothing is forgotten here — Enable is a copy."""
-        from ..connectors.setup import connector_handoff_info, connector_profile_keys
-        from ..remote.identity import seal_b64
+        from coworker.connectors.setup import connector_handoff_info, connector_profile_keys
+        from coworker.remote.identity import seal_b64
 
         seal_pubkey = str((body or {}).get("seal_pubkey") or "")
         grant = dict((body or {}).get("grant") or {})
@@ -1648,7 +1648,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         """The handoff's forget step: delete local profiles WITHOUT telling
         the broker — the connection is not ending, it MOVED, and a broker
         disconnect would revoke the delegation the machine now lives on."""
-        from ..connectors.setup import disconnect_connector as _local_disconnect
+        from coworker.connectors.setup import disconnect_connector as _local_disconnect
 
         return await asyncio.to_thread(_local_disconnect, manager.secrets, name)
 
@@ -1656,8 +1656,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def connector_disconnect(name: str) -> dict[str, Any]:
         # Managed profiles: best-effort flip of the cloud metadata record first
         # (network call → off the loop). Local deletion always proceeds.
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         await asyncio.to_thread(
             lambda: cloud.cloud_disconnect(manager.secrets, load_config(), name)
@@ -1693,9 +1693,9 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def gmail_account_disconnect(email: str) -> dict[str, Any]:
         """Drop ONE mailbox (cloud metadata best-effort first, like a full
         disconnect); the default pointer moves to the next account."""
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors import gmail_accounts
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors import gmail_accounts
 
         profile_key = gmail_accounts.PREFIX + email.strip().lower()
         await asyncio.to_thread(
@@ -1707,7 +1707,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/gmail/accounts/{email}/default")
     def gmail_account_default(email: str) -> dict[str, Any]:
-        from ..connectors import gmail_accounts
+        from coworker.connectors import gmail_accounts
 
         return gmail_accounts.set_default(manager.secrets, email)
 
@@ -1715,7 +1715,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     def gmail_filters(body: dict) -> dict[str, Any]:
         """Replace the "Never show agents" lists. Enforced in the local tool
         layer; agents see silent omissions, the user sees counts + audit."""
-        from ..connectors import gmail_accounts
+        from coworker.connectors import gmail_accounts
 
         senders = body.get("senders") if isinstance(body, dict) else None
         labels = body.get("labels") if isinstance(body, dict) else None
@@ -1729,9 +1729,9 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def gcal_account_disconnect(email: str) -> dict[str, Any]:
         """Drop ONE Google Calendar account (cloud metadata best-effort first);
         the default pointer moves to the next account."""
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors import gcal_accounts
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors import gcal_accounts
 
         profile_key = gcal_accounts.PREFIX + email.strip().lower()
         await asyncio.to_thread(
@@ -1746,15 +1746,15 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/google_calendar/accounts/{email}/default")
     def gcal_account_default(email: str) -> dict[str, Any]:
-        from ..connectors import gcal_accounts
+        from coworker.connectors import gcal_accounts
 
         return gcal_accounts.set_default(manager.secrets, email)
 
     @app.post("/v1/connectors/hubspot/portals/{hub_id}/disconnect")
     async def hubspot_portal_disconnect(hub_id: str) -> dict[str, Any]:
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors import hubspot_portals
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors import hubspot_portals
 
         profile_key = hubspot_portals.PREFIX + hub_id.strip()
         await asyncio.to_thread(
@@ -1766,7 +1766,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/hubspot/portals/{hub_id}/default")
     def hubspot_portal_default(hub_id: str) -> dict[str, Any]:
-        from ..connectors import hubspot_portals
+        from coworker.connectors import hubspot_portals
 
         return hubspot_portals.set_default(manager.secrets, hub_id)
 
@@ -1774,9 +1774,9 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def account_disconnect(name: str, account_id: str) -> dict[str, Any]:
         """Generic per-account disconnect for account-patterned connectors
         (batch 2+). Gmail/Calendar keep their specific email routes."""
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors import accounts
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors import accounts
 
         if not accounts.is_account_connector(name):
             return {"ok": False, "error": "not a multi-account connector"}
@@ -1791,7 +1791,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/{name}/accounts/{account_id}/default")
     def account_default(name: str, account_id: str) -> dict[str, Any]:
-        from ..connectors import accounts
+        from coworker.connectors import accounts
 
         if not accounts.is_account_connector(name):
             return {"ok": False, "error": "not a multi-account connector"}
@@ -1801,7 +1801,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     def hubspot_hidden_fields(body: dict) -> dict[str, Any]:
         """Replace the hidden-fields denylist (property names stripped from every
         record agents read — model-facing policy, not a human ACL)."""
-        from ..connectors import hubspot_portals
+        from coworker.connectors import hubspot_portals
 
         fields = body.get("hidden_fields") if isinstance(body, dict) else None
         if not isinstance(fields, list):
@@ -1822,7 +1822,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.get("/v1/cloud/status")
     def cloud_status() -> dict[str, Any]:
-        from .. import cloud
+        from coworker import cloud
 
         return {
             **cloud.status(manager.secrets),
@@ -1833,7 +1833,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     def cloud_telemetry(body: dict) -> dict[str, Any]:
         """The Phase 5 opt-out toggle. Local preference only — signed-out users
         send nothing regardless of this value."""
-        from .. import cloud
+        from coworker import cloud
 
         return cloud.set_telemetry_enabled(
             manager.secrets, bool((body or {}).get("enabled", True))
@@ -1845,8 +1845,8 @@ def create_app(manager: SessionManager) -> FastAPI:
         (works identically under Tauri and plain-browser dev)."""
         import webbrowser
 
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         out = cloud.begin_login(load_config())
         webbrowser.open(out["authorize_url"])
@@ -1854,7 +1854,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/cloud/logout")
     def cloud_logout() -> dict[str, Any]:
-        from .. import cloud
+        from coworker import cloud
 
         return cloud.logout(manager.secrets)
 
@@ -1862,8 +1862,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def cloud_auth_callback(code: str = "", state: str = "", error: str = ""):
         from fastapi.responses import HTMLResponse
 
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         signin_failed_detail = (
             "Close this tab and try signing in again from OpenWorker."
@@ -1922,9 +1922,9 @@ def create_app(manager: SessionManager) -> FastAPI:
         tier by NAME (e.g. hubspot read | write) — the broker owns the scopes."""
         import webbrowser
 
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors.descriptors import get_descriptor
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors.descriptors import get_descriptor
 
         d = get_descriptor(name)
         if d is not None and d.managed_paused:
@@ -1967,8 +1967,8 @@ def create_app(manager: SessionManager) -> FastAPI:
         bare machine id); raises RuntimeError for a missing cloud session."""
         import httpx as _httpx
 
-        from .. import cloud
-        from ..config import load_config
+        from coworker import cloud
+        from coworker.config import load_config
 
         if machine_id.startswith("cloud:"):
             token = await asyncio.to_thread(
@@ -2000,8 +2000,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def _post_sealed_profiles(
         client, headers: dict, mid: str, seal_pubkey: str, profiles: dict[str, Any]
     ) -> dict[str, Any]:
-        from ..remote.acceptor import _hash_profile
-        from ..remote.identity import seal_b64
+        from coworker.remote.acceptor import _hash_profile
+        from coworker.remote.identity import seal_b64
 
         names = sorted(profiles)
         sealed = seal_b64(seal_pubkey, json.dumps({"profiles": profiles}).encode())
@@ -2032,14 +2032,14 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def managed_oauth_callback(request: Request) -> Any:
         from fastapi.responses import HTMLResponse
 
-        from .. import cloud
-        from ..config import load_config
-        from ..connectors.setup import (
+        from coworker import cloud
+        from coworker.config import load_config
+        from coworker.connectors.setup import (
             managed_connect_slack_install,
             store_managed_grant,
             store_managed_grant_bundle,
         )
-        from ..secrets import EphemeralSecretStore
+        from coworker.secrets import EphemeralSecretStore
 
         form = await request.form()
         data = {k: str(v) for k, v in form.items()}
@@ -2151,7 +2151,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # is routing metadata only (installation tokens are minted on demand,
         # github-relay-spec §4) — so its branch precedes the access_token check.
         if connector == "github" and data.get("installation_id"):
-            from ..connectors.github_installs import managed_connect_install
+            from coworker.connectors.github_installs import managed_connect_install
 
             if target_machine:
                 # Connect-direct: the shared bundle routine stages EVERY
@@ -2256,7 +2256,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     ) -> dict[str, Any]:
         """Workspace member roster for the people picker (team_id "default" =
         the manual Socket-Mode workspace). Cached locally; never leaves this machine."""
-        from ..connectors import slack_directory as roster
+        from coworker.connectors import slack_directory as roster
 
         return await asyncio.to_thread(
             lambda: roster.list_members(manager.secrets, team_id, q, limit)
@@ -2268,7 +2268,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     ) -> dict[str, Any]:
         """Channel roster for the channel typeahead: all public channels, private
         ones only where the bot is a member (Slack API constraint)."""
-        from ..connectors import slack_directory as roster
+        from coworker.connectors import slack_directory as roster
 
         return await asyncio.to_thread(
             lambda: roster.list_channels(manager.secrets, team_id, q, limit)
@@ -2516,13 +2516,13 @@ def create_app(manager: SessionManager) -> FastAPI:
     def settings_get_sandbox() -> dict[str, Any]:
         # Settings ▸ Sandbox (UX-051 A): provider, network profile, credential grants.
         # Machine-level, read from the machine's config.toml.
-        from ..sandbox import settings as sandbox_settings
+        from coworker.sandbox import settings as sandbox_settings
 
         return sandbox_settings.snapshot()
 
     @app.post("/v1/settings/sandbox")
     def settings_set_sandbox(body: dict) -> dict[str, Any]:
-        from ..sandbox import settings as sandbox_settings
+        from coworker.sandbox import settings as sandbox_settings
 
         result = sandbox_settings.update(body or {})
         if result.get("ok") and "provider" in (body or {}):
@@ -2534,13 +2534,13 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.get("/v1/settings/sandbox/readiness")
     async def settings_sandbox_readiness() -> dict[str, Any]:
         # OPE-207: the checklist behind "Set up sandbox". A few CLI calls, so off the loop.
-        from ..sandbox import settings as sandbox_settings
+        from coworker.sandbox import settings as sandbox_settings
 
         return await asyncio.to_thread(sandbox_settings.readiness)
 
     @app.get("/v1/settings/sandbox/setup")
     def settings_sandbox_setup_state() -> dict[str, Any]:
-        from ..sandbox import setup_job
+        from coworker.sandbox import setup_job
 
         return setup_job.job().state()
 
@@ -2548,13 +2548,13 @@ def create_app(manager: SessionManager) -> FastAPI:
     def settings_sandbox_setup_start() -> dict[str, Any]:
         # Runs on its own thread: fixes what the app may fix (never as root), hands the
         # rest over as commands, downloads the image with progress. GET polls the state.
-        from ..sandbox import setup_job
+        from coworker.sandbox import setup_job
 
         return setup_job.job().start()
 
     @app.post("/v1/settings/sandbox/setup/cancel")
     def settings_sandbox_setup_cancel() -> dict[str, Any]:
-        from ..sandbox import setup_job
+        from coworker.sandbox import setup_job
 
         return setup_job.job().cancel()
 
@@ -2563,13 +2563,13 @@ def create_app(manager: SessionManager) -> FastAPI:
         # UX-053: the Windows setup dialog. Runs the elevated setup (Windows shows its own
         # prompt), proves the wall in a throwaway sandbox, then makes it the choice. Blocks
         # until Windows answers, unlike the OpenShell setup job above.
-        from ..sandbox import settings as sandbox_settings
+        from coworker.sandbox import settings as sandbox_settings
 
         return sandbox_settings.run_windows_setup()
 
     @app.post("/v1/settings/sandbox/windows/remove")
     def settings_sandbox_windows_remove() -> dict[str, Any]:
-        from ..sandbox import settings as sandbox_settings
+        from coworker.sandbox import settings as sandbox_settings
 
         return sandbox_settings.run_windows_remove()
 
@@ -2587,7 +2587,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.post("/v1/attachments/inspect-pdf")
     def attachments_inspect_pdf(body: dict) -> dict[str, Any]:
         # Attach-time page/size probe for the composer's threshold check. Local only.
-        from ..pdf_support import inspect
+        from coworker.pdf_support import inspect
 
         return inspect(str((body or {}).get("data_url", "")))
 
@@ -2606,7 +2606,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # messaging stack can be exercised without a live bot connection. Not registered otherwise.
         @app.post("/v1/_debug/inject_inbound")
         async def debug_inject_inbound(body: dict) -> dict[str, Any]:
-            from ..connectors.base import MessageEvent, SessionSource
+            from coworker.connectors.base import MessageEvent, SessionSource
 
             event = MessageEvent(
                 text=str((body or {}).get("text", "")),
@@ -2739,7 +2739,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
         async def question_asker(args: dict, tool_call_id=None) -> dict:
             # ask_user (engine does NOT emit the event — we do, only when attended).
-            from ..tools.ask import answer_result, question_item_fields
+            from coworker.tools.ask import answer_result, question_item_fields
 
             fields = question_item_fields(args)
             if fields is None:  # engine guards too; belt-and-braces
@@ -3480,9 +3480,9 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     # Remote homes: the join-acceptor is a separate module mounted here (never
     # inlined) so the cloud service can deploy it without the engine.
-    from ..remote.acceptor import mount_acceptor
-    from ..remote.audit import AuditLog
-    from ..remote.registry import MachinesRegistry
+    from coworker.remote.acceptor import mount_acceptor
+    from coworker.remote.audit import AuditLog
+    from coworker.remote.registry import MachinesRegistry
 
     app.state.remote_acceptor = mount_acceptor(
         app,
@@ -3504,14 +3504,14 @@ def create_app(manager: SessionManager) -> FastAPI:
     # desktop also shows the hosted cloud's machines, proxied through here so
     # the cloud session token never enters the webview. Signed out or expired
     # degrades the cloud section only — never the local path.
-    from ..config import load_config as _load_cfg
-    from ..remote.cloudproxy import mount_cloud_proxy
+    from coworker.config import load_config as _load_cfg
+    from coworker.remote.cloudproxy import mount_cloud_proxy
 
     _machines_base = _load_cfg().cloud_machines_base
     if _machines_base:
 
         async def _cloud_machines_token() -> tuple[str, Optional[str]]:
-            from .. import cloud as _cloud
+            from coworker import cloud as _cloud
 
             profile = manager.secrets.get(_cloud.CLOUD_AUTH_PROFILE) or {}
             if not profile.get("access_token"):

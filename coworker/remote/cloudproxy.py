@@ -24,7 +24,7 @@ import httpx
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
 
-from .identity import seal_b64
+from coworker.remote.identity import seal_b64
 
 # "signed_out" = no cloud profile at all; "expired" = a profile exists but the
 # session could not be refreshed (Auth0 refresh tokens die from inactivity);
@@ -193,7 +193,7 @@ def mount_cloud_proxy(
                     {"error": f"profile '{name}' not in the wallet"}, status_code=400
                 )
             profiles[name] = data
-        from .acceptor import _hash_profile
+        from coworker.remote.acceptor import _hash_profile
 
         sealed = seal_b64(seal_pubkey, json.dumps({"profiles": profiles}).encode())
         body = {

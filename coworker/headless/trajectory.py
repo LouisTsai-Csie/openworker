@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .pricing import estimate_cost
+from coworker.headless.pricing import estimate_cost
 
 SCHEMA_VERSION = "ATIF-v1.7"
 
@@ -40,7 +40,7 @@ def _text(content: Any) -> str:
     if isinstance(content, str):
         return content
     try:
-        from ..attachments import content_to_text
+        from coworker.attachments import content_to_text
 
         return content_to_text(content)
     except Exception:  # never fail the trajectory over a content part

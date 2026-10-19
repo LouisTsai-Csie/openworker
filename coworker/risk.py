@@ -81,7 +81,7 @@ def _catalog_floor(tool_name: str) -> Optional[RiskClass]:
     read-only mode in a single step (OPE-111). Lazy import: risk.py must stay importable
     without the connectors package."""
     try:
-        from .connectors.tool_defs import _KIND_BY_NAME
+        from coworker.connectors.tool_defs import _KIND_BY_NAME
     except ImportError:  # pragma: no cover - connectors always ship, but fail open to base
         return None
     kind = _KIND_BY_NAME.get(tool_name)

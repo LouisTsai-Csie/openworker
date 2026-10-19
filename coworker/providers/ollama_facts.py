@@ -18,10 +18,10 @@ from typing import Any, Optional
 
 import httpx
 
-from .. import model_config
-from . import local_machine
-from .ollama_context import context_length_from_show, resolve_num_ctx
-from .recommended import recommendation_for
+from coworker import model_config
+from coworker.providers import local_machine
+from coworker.providers.ollama_context import context_length_from_show, resolve_num_ctx
+from coworker.providers.recommended import recommendation_for
 
 CACHE_SECONDS = 60.0
 _cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}

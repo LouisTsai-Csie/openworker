@@ -14,8 +14,8 @@ import inspect
 from typing import Any, Optional
 from collections.abc import Callable
 
-from .runner import protocol as P
-from .runner.toolcalls import TOOLS
+from coworker.sandbox.runner import protocol as P
+from coworker.sandbox.runner.toolcalls import TOOLS
 
 _TOOL_TIMEOUT = 180.0
 

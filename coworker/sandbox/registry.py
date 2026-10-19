@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from ..secrets import state_dir
+from coworker.secrets import state_dir
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def registry_id(path: Optional[Path] = None) -> str:
 def _alive(pid: int) -> bool:
     if sys.platform == "win32":
         # `os.kill(pid, 0)` is TerminateProcess on Windows, not a probe.
-        from .runner import winpipe
+        from coworker.sandbox.runner import winpipe
 
         return not winpipe.process_is_gone(pid)
     try:
@@ -164,7 +164,7 @@ class SandboxRegistry:
         dead = [r for r in rows if not _alive(int(r["server_pid"]))]
         openshell_names: set[str] = set()
         if any(r["provider"] == "openshell" for r in dead) or _openshell_present():
-            from .providers import openshell
+            from coworker.sandbox.providers import openshell
 
             try:
                 listed = openshell.list_our_sandboxes(self.id)
@@ -187,7 +187,7 @@ class SandboxRegistry:
                 except Exception:
                     pass
         if _openshell_present():
-            from .providers import openshell
+            from coworker.sandbox.providers import openshell
 
             try:
                 openshell.reap_runtime_dirs(_alive)  # copied credentials of dead servers

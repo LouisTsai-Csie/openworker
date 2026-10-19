@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .base import BasePlatformAdapter, MessageEvent, SendResult, SessionSource
+from coworker.connectors.base import BasePlatformAdapter, MessageEvent, SendResult, SessionSource
 
 
 class FakeAdapter(BasePlatformAdapter):

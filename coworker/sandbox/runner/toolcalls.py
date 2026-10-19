@@ -14,11 +14,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from . import tools_git, tools_grep, tools_read
+from coworker.sandbox.runner import tools_git, tools_grep, tools_read
 
 try:  # inside the packed runner
-    from .aisuite_toolkits.files import FileToolkit
-    from .aisuite_toolkits.git import GitToolkit
+    from coworker.sandbox.runner.aisuite_toolkits.files import FileToolkit
+    from coworker.sandbox.runner.aisuite_toolkits.git import GitToolkit
 except ImportError:  # from a checkout (tests, development)
     from aisuite.toolkits.files import FileToolkit  # type: ignore[no-redef]
     from aisuite.toolkits.git import GitToolkit  # type: ignore[no-redef]

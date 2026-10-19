@@ -31,13 +31,13 @@ from typing import Any, Optional
 
 import httpx
 
-from .config import Config
-from .secrets import SecretStore
+from coworker.config import Config
+from coworker.secrets import SecretStore
 
 CLOUD_AUTH_PROFILE = "cloud:auth"
 LOGIN_SCOPES = "openid profile email offline_access"
 
-from . import __version__ as APP_VERSION  # noqa: E402
+from coworker import __version__ as APP_VERSION
 
 # connector id (canonical, = descriptor name) -> broker provider key
 PROVIDER_FOR_CONNECTOR = {
@@ -176,7 +176,7 @@ def sync_connections(secrets: SecretStore, config: Config) -> dict[str, Any]:
     if resp.status_code != 200:
         return {"ok": False, "error": f"connections fetch failed ({resp.status_code})"}
 
-    from .connectors.github_installs import managed_connect_install
+    from coworker.connectors.github_installs import managed_connect_install
 
     restored: list[str] = []
     for row in resp.json().get("connections", []):
@@ -840,8 +840,8 @@ def gallery_detail(secrets: SecretStore, config: Config, slug: str) -> Optional[
     if card is None or manifest is None:
         return None
     try:
-        from .personas.loading import consent_summary
-        from .personas.manifest import parse_manifest
+        from coworker.personas.loading import consent_summary
+        from coworker.personas.manifest import parse_manifest
 
         m = parse_manifest(manifest.get("manifest_markdown", ""), fallback_id=slug)
         capabilities = consent_summary(m)

@@ -20,7 +20,7 @@ from collections.abc import Callable
 
 import aisuite as ai
 
-from .base import MemoryItem, MemoryStore, Scope
+from coworker.memory.base import MemoryItem, MemoryStore, Scope
 
 _SCOPES = {s.value for s in Scope}
 

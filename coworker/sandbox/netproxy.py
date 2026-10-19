@@ -20,7 +20,7 @@ from collections import deque
 from typing import Optional
 from collections.abc import Sequence
 
-from . import network_profiles
+from coworker.sandbox import network_profiles
 
 # On Windows the proxy listens inside a FIXED range, because the closed sandbox account's
 # loopback filters (windows_wfp.py) are written once at setup and name this range: every

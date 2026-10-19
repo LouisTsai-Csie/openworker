@@ -203,7 +203,7 @@ def normalize_model(model: str) -> str:
     """Accept `provider:model` or `provider/model`; return OpenWorker's form. Splits on
     the FIRST slash only, so `together/moonshotai/Kimi-K3` becomes
     `together:moonshotai/Kimi-K3`."""
-    from ..providers.registry import get_descriptor
+    from coworker.providers.registry import get_descriptor
 
     if ":" in model and get_descriptor(model.split(":", 1)[0]) is not None:
         return model
@@ -345,8 +345,8 @@ def scripted_provider(path: Path):
     """A fake model that replays turns from a JSON file: [{"text": ..., "tool_calls":
     [{"name": ..., "arguments": {...}}], "usage": {...}, "finish_reason": ...}, ...].
     For the offline tests only (`--scripted`)."""
-    from ..providers import AssistantTurn, ModelCapabilities, ProviderClient, ToolCall
-    from ..providers.base import TokenUsage
+    from coworker.providers import AssistantTurn, ModelCapabilities, ProviderClient, ToolCall
+    from coworker.providers.base import TokenUsage
 
     turns = json.loads(path.read_text(encoding="utf-8"))
 
@@ -422,7 +422,7 @@ def describe_reasoning_effort(model: str) -> dict[str, Any]:
     }
     if provider in ("anthropic", "bedrock", "vertex"):
         try:
-            from ..providers.anthropic_provider import (
+            from coworker.providers.anthropic_provider import (
                 DEFAULT_MAX_TOKENS,
                 DEFAULT_THINKING_BUDGET,
                 _uses_budget_thinking,
@@ -519,7 +519,7 @@ def recording_provider(inner, log_path: Path):
     `log_path` with its full cause chain (credentials redacted), then re-raised unchanged.
     The engine reports only the top-level message; the chain underneath is what says
     whether it was DNS, TLS, a proxy, a refused socket, or a malformed header."""
-    from ..providers import ProviderClient
+    from coworker.providers import ProviderClient
 
     class Recording(ProviderClient):
         def __init__(self) -> None:
@@ -685,7 +685,7 @@ def _agent_version(explicit: Optional[str]) -> str:
 def _extra_dirs(args: argparse.Namespace, workspace: Path) -> list:
     """The `--add-dir DIR` folders as writable roots: created if missing, deduplicated, and
     without the workspace itself (always the first root)."""
-    from ..roots import RootDir
+    from coworker.roots import RootDir
 
     found: list = []
     for raw in args.add_dir or []:
@@ -714,7 +714,7 @@ def workspace_folder_name(workspace: Path) -> str:
 
 
 def session_folder(workspace: Path, run_id: str) -> Path:
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
     return state_dir() / "sessions" / workspace_folder_name(workspace) / run_id
 
@@ -722,7 +722,7 @@ def session_folder(workspace: Path, run_id: str) -> Path:
 def allowed_sites(args: argparse.Namespace) -> list[str]:
     """`--allow-site` and `--allow-sites-file` as "host:port" entries. Exact host names,
     as on the network-access card; anything else stops the run before it starts."""
-    from ..permissions import network_request_hosts
+    from coworker.permissions import network_request_hosts
 
     wanted = list(args.allow_site or [])
     if args.allow_sites_file:
@@ -789,18 +789,18 @@ def _run(args: argparse.Namespace) -> int:
         print(f"openworker run: stripped stray whitespace from {', '.join(cleaned_keys)}", file=sys.stderr)
 
     # Build the engine only now, after the isolation variables are set.
-    from ..agent import build_engine
-    from ..agents.registry import get_agent
-    from ..audit import AuditStore
-    from ..events import EventType
-    from ..permissions import Mode
-    from ..providers import ProviderRouter
-    from ..roots import RootDir
-    from ..secrets import SecretStore, state_dir
-    from ..unattended import DANGEROUS_MODE_WARNING
+    from coworker.agent import build_engine
+    from coworker.agents.registry import get_agent
+    from coworker.audit import AuditStore
+    from coworker.events import EventType
+    from coworker.permissions import Mode
+    from coworker.providers import ProviderRouter
+    from coworker.roots import RootDir
+    from coworker.secrets import SecretStore, state_dir
+    from coworker.unattended import DANGEROUS_MODE_WARNING
 
     # An unknown id would otherwise run the default coworker without saying so.
-    from ..personas.registry import get_registry
+    from coworker.personas.registry import get_registry
 
     known = get_registry().ids()
     if args.coworker not in known:
@@ -818,7 +818,7 @@ def _run(args: argparse.Namespace) -> int:
     extra_dirs = _extra_dirs(args, workspace)
     roots = [RootDir(path=workspace, writable=True), *extra_dirs] if extra_dirs else None
     if not args.model:
-        from ..config import load_config
+        from coworker.config import load_config
 
         args.model = load_config(workspace).model
     model = normalize_model(args.model)
@@ -828,7 +828,7 @@ def _run(args: argparse.Namespace) -> int:
     # Who answers. Approvals and questions are separate: an approval is the person's at a
     # terminal and refused without one; a question is the person's at a terminal unless
     # --auto-answer says nobody will answer, and answered by rule without a terminal.
-    from .terminal import Terminal
+    from coworker.headless.terminal import Terminal
 
     terminal = Terminal.attached(cwd=workspace)
     auto_answer = bool(args.auto_answer) or terminal is None
@@ -894,7 +894,7 @@ def _run(args: argparse.Namespace) -> int:
             """The person gave the coworker another folder. The engine's list of folders is
             shared with the file tools, the permission checks and the sandbox, so they all
             see it from the next call."""
-            from ..basedir import ensure_under_base
+            from coworker.basedir import ensure_under_base
 
             resolved = ensure_under_base(folder, "folder")
             for root in engine.roots:
@@ -1235,7 +1235,7 @@ def _final_answer(engine: Any) -> str:
 
 
 def _merged_model_settings(args: argparse.Namespace, model: str) -> Optional[dict[str, Any]]:
-    from .. import model_config
+    from coworker import model_config
 
     saved = {} if getattr(args, "isolated", False) else model_config.model_settings_for(model)
     merged = {**saved, **(_model_settings(args) or {})}
@@ -1288,7 +1288,7 @@ def _effort_summary(args: argparse.Namespace, model: str, events: list[dict[str,
 
 def _context_record(engine: Any) -> dict[str, Any]:
     try:
-        from .. import compaction as _compaction
+        from coworker import compaction as _compaction
 
         cfg = engine._compaction_config()
         window = cfg.get("context_window")
@@ -1324,9 +1324,9 @@ def _write_records(
     messages.json, answers.json, and trajectory.json. Called after every iteration with a
     provisional outcome and once more at the end with the final one, so a process killed
     by an outer time limit still leaves a usable record."""
-    from ..events import EventType
-    from .pricing import estimate_cost
-    from .trajectory import build_trajectory, write_trajectory
+    from coworker.events import EventType
+    from coworker.headless.pricing import estimate_cost
+    from coworker.headless.trajectory import build_trajectory, write_trajectory
 
     tool_finished = [e for e in events if e["type"] == EventType.TOOL_FINISHED.value]
     assistant = [e for e in events if e["type"] == EventType.ASSISTANT_MESSAGE.value]

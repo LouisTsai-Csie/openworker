@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 import aisuite as ai
 
-from ..sandbox.runner import tools_git as _impl
+from coworker.sandbox.runner import tools_git as _impl
 
 _SCHEMA = {
     "type": "function",

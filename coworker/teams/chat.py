@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from .model import BoardError
+from coworker.teams.model import BoardError
 
 
 class ChatStore:

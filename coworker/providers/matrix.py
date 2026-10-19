@@ -26,7 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .base import ModelCapabilities
+from coworker.providers.base import ModelCapabilities
 
 _AGENTIC = ModelCapabilities(
     tools=True, vision=False, parallel_tool_calls=True, streaming=True
