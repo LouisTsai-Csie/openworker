@@ -27,6 +27,19 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger("coworker.server.app")
 
+# Background tasks the routes fire and forget. The event loop keeps only a weak
+# reference to a task, so one that nothing else holds can be collected mid-flight
+# and its work vanish silently; the set holds each until it completes.
+_BACKGROUND_TASKS: set[asyncio.Task] = set()
+
+
+def _spawn(coro) -> asyncio.Task:
+    """Run `coro` in the background, keeping a strong reference until it finishes."""
+    task = asyncio.create_task(coro)
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+    return task
+
 # Origins allowed to talk to the local sidecar. It binds to 127.0.0.1, but a page in the
 # user's own browser can still reach loopback — so without an origin gate, any website they
 # visit could read `GET /v1/sessions` (CORS was `*`) and drive a session over the WS (which
@@ -1352,7 +1365,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # runs as a background task; the GUI polls /v1/mcp for the status flip
         # (authorizing → connected | needs_auth + last_error).
         manager.begin_mcp_connect(name)  # authorizing shows on the very next poll
-        asyncio.create_task(manager.connect_mcp(name))
+        _spawn(manager.connect_mcp(name))
         return {"ok": True, "started": True}
 
     @app.post("/v1/mcp/{name}/signout")
@@ -1442,7 +1455,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         d = get_descriptor(name)
         if d is None or not d.mcp_url:
             return {"ok": False, "error": f"{name} has no MCP connect path"}
-        asyncio.create_task(manager.mcp_connect_connector(name))
+        _spawn(manager.mcp_connect_connector(name))
         return {"ok": True, "started": True}
 
     @app.get("/v1/connectors/{name}/handoff-info")
@@ -2391,7 +2404,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # route for the flip (authorizing → signed_in | last_error). Same shape as
         # the MCP OAuth connect route.
         manager.begin_codex_signin()
-        asyncio.create_task(manager.codex_signin())
+        _spawn(manager.codex_signin())
         return {"ok": True, "started": True}
 
     @app.get("/v1/providers/openrouter-account/status")
@@ -3164,7 +3177,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                     "This session is already running a turn. Wait for it to finish or stop it."
                 )
                 return
-            asyncio.create_task(run_turn(content, retry=retry, display=display))
+            _spawn(run_turn(content, retry=retry, display=display))
 
         try:
             while True:

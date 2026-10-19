@@ -369,6 +369,9 @@ class SessionManager:
         # Sessions with an auto-title LLM call in flight (FB-010) — one call at a time.
         self._autotitle_inflight: set[str] = set()
         self._autotitle_tasks: set[asyncio.Task] = set()
+        # Fire-and-forget delivery tasks. The loop holds only a weak reference to a
+        # task, so one nothing else keeps can be collected mid-flight; see _spawn.
+        self._background_tasks: set[asyncio.Task] = set()
         self._autotitle_attempts: dict[str, int] = {}
         # Opener-count signature of the last attempt: titling fires at TURN START (owner
         # catch 2026-08-24 — waiting for an agentic turn to COMPLETE left sessions
@@ -3250,7 +3253,7 @@ class SessionManager:
             finally:
                 self._team_inflight.discard(sid)
 
-        asyncio.create_task(_deliver())
+        self._spawn(_deliver())
         return 1
 
     async def _drain_team_member(
@@ -3326,7 +3329,7 @@ class SessionManager:
                     loop = asyncio.get_running_loop()
                     def flush():
                         self._team_batch_handles.pop(session_id, None)
-                        asyncio.create_task(self.team_tick())
+                        self._spawn(self.team_tick())
                     self._team_batch_handles[session_id] = loop.call_later(max(0, deadline - time.monotonic()), flush)
                 return 0
         if self.is_running(session_id) or session_id in self._team_inflight:
@@ -3347,7 +3350,7 @@ class SessionManager:
                 self._team_inflight.discard(session_id)
                 self.kick_team_tick()
 
-        asyncio.create_task(_deliver())
+        self._spawn(_deliver())
         return 1
 
     def _clear_team_batch(self, session_id: str) -> None:
@@ -6646,7 +6649,7 @@ class SessionManager:
                 finally:
                     self._team_inflight.discard(wake.session_id)
                     self.kick_team_tick()
-            asyncio.create_task(deliver())
+            self._spawn(deliver())
             resumed += 1
         return resumed
 
@@ -7692,6 +7695,13 @@ class SessionManager:
         )
         self._autotitle_tasks.add(task)
         task.add_done_callback(self._autotitle_tasks.discard)
+
+    def _spawn(self, coro) -> asyncio.Task:
+        """Run `coro` in the background, keeping a strong reference until it finishes."""
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     async def _generate_autotitle(
         self,

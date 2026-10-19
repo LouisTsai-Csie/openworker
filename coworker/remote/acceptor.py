@@ -948,6 +948,10 @@ def mount_acceptor(
         machine_id = pubkey = ""
         attached = leased = False
         heartbeat_task: asyncio.Task | None = None
+        # Policy pushes are fire-and-forget, but the loop keeps only a weak reference
+        # to a task: one nothing else holds can be collected mid-send and the push
+        # would vanish without a record. Hold each until it completes.
+        policy_tasks: set[asyncio.Task] = set()
         try:
             hello = json.loads(await ws.receive_text())
             if hello.get("type") != "hello":
@@ -1141,7 +1145,9 @@ def mount_acceptor(
                             except (asyncio.TimeoutError, ConnectionError):
                                 _record(policy_status, machine_id, known, reported, "unreachable")
 
-                        asyncio.create_task(_send_newer())
+                        _policy_task = asyncio.create_task(_send_newer())
+                        policy_tasks.add(_policy_task)
+                        _policy_task.add_done_callback(policy_tasks.discard)
                     else:
                         await ws.send_text(
                             json.dumps({"type": "policy_current", "version": reported})
