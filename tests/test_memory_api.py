@@ -76,7 +76,7 @@ def test_delete_all_journey(tmp_path):
 
 def test_toast_undo_journey(tmp_path):
     """§5.1: the toast's [Undo] deletes exactly the row the save created."""
-    client, manager = _fixture(tmp_path)
+    client, _manager = _fixture(tmp_path)
     kept = client.post("/v1/memory", json={"content": "keep me", "scope": "global"}).json()
     saved = client.post("/v1/memory", json={"content": "oops", "scope": "global"}).json()
 

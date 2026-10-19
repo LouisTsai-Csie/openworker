@@ -133,7 +133,7 @@ async def test_rename_before_generation_blocks_it(tmp_path):
 
 
 async def test_provider_failure_is_swallowed(tmp_path):
-    mgr, provider = _mgr(tmp_path, [_text("ok")], [RuntimeError("model down")])
+    mgr, _provider = _mgr(tmp_path, [_text("ok")], [RuntimeError("model down")])
     await _turn(mgr, "s6", "summarize this doc")  # must not raise
     assert mgr.session_store.title_state("s6")["auto_title"] is None
     assert mgr.session_store.load("s6").title == "summarize this doc"
@@ -156,7 +156,7 @@ def test_turn_start_titles_before_the_turn_completes(tmp_path):
     # agentic turn left the session titled by its first message for the whole run. The
     # turn-start hook titles on the user's words the moment they land.
     async def go():
-        mgr, provider = _mgr(tmp_path, [_text("working on it…")], ["Scan the API for secrets"])
+        mgr, _provider = _mgr(tmp_path, [_text("working on it…")], ["Scan the API for secrets"])
         sid = "early1"
         engine = mgr.get_engine(sid, agent="chat")
         engine.messages.append({"role": "user", "content": "scan code for vuln and secrets"})

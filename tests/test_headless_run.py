@@ -435,7 +435,7 @@ def test_the_earlier_flag_names_are_gone(tmp_path: Path, old: list[str]) -> None
 
 
 def test_an_unknown_coworker_id_stops_the_run(tmp_path: Path) -> None:
-    proc, ws, out = _run(tmp_path, "bypass-approvals", extra=["--coworker", "no-such-coworker"])
+    proc, _ws, out = _run(tmp_path, "bypass-approvals", extra=["--coworker", "no-such-coworker"])
     assert proc.returncode == 2
     assert "no-such-coworker" in proc.stderr and "cowork" in proc.stderr
     assert not (out / "summary.json").exists()

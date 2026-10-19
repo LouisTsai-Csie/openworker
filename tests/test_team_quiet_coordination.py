@@ -74,7 +74,7 @@ def test_dependency_completion_only_wakes_live_dependent_worker(manager):
 
 def test_explicit_worker_question_wakes_lead_without_batch_delay(manager):
     manager.provider = ScriptedProvider([_text_turn("Answering the question")])
-    space, _, item = create_item(manager)
+    space, _, _item = create_item(manager)
     # Worker-created task: lead is not its creator/assignee. Subscription still works.
     question = manager.team_store.create_item(space, SAM, title="Question", criteria="Decision")
     manager.team_store.comment(space, SAM, question["id"], "Which acceptance rule?", needs_attention=True)
@@ -166,7 +166,7 @@ def test_watchdog_ignores_busy_workers_and_human_waits(manager):
 
 
 def test_native_question_and_transition_kick_delivery(manager):
-    space, lead, item = create_item(manager)
+    space, _lead, item = create_item(manager)
     notify = Mock()
     tools = {t.__name__: t for t in board_tools(manager.team_store, space=space, actor=SAM, on_change=notify)}
     tools["comment"](item["id"], "Question", needs_attention=True)

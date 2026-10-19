@@ -167,7 +167,7 @@ def test_cut_off_reply_with_a_tool_call_is_not_nudged(tmp_path):
         tool_calls=[ToolCall(id="c1", name="read_file", arguments={"path": "a.txt"})],
         finish_reason="length",
     )
-    engine, provider = _engine(tmp_path, [cut_with_call, _stop("it says hello")])
+    engine, _provider = _engine(tmp_path, [cut_with_call, _stop("it says hello")])
     events = _run(engine)
     assert EventType.CONTINUATION not in _types(events)
     assert EventType.TOOL_FINISHED in _types(events)
@@ -210,7 +210,7 @@ def test_counter_resets_between_turns(tmp_path):
 
 
 def test_normal_completion_is_untouched(tmp_path):
-    engine, provider = _engine(tmp_path, [_stop("all done")])
+    engine, _provider = _engine(tmp_path, [_stop("all done")])
     events = _run(engine)
     assert _types(events) == [
         EventType.TURN_START,

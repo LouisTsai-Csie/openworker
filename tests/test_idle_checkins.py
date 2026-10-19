@@ -15,7 +15,7 @@ def timer(manager, seconds=180, note="Verify Maya's tests"):
 
 
 def review(manager):
-    space, lead, item = create_item(manager)
+    space, _lead, item = create_item(manager)
     worker = Actor(id="sam", role=Role.WORKER)
     manager.team_store.transition(space, worker, item["id"], "in_progress")
     manager.team_store.transition(space, worker, item["id"], "review", comment="Tests passed", refs=["test_billing.py"])
@@ -192,7 +192,7 @@ def test_resolved_approval_does_not_wake_or_cancel_sleep(manager):
 
 
 def test_status_only_does_not_cancel_sleep(manager):
-    space, lead, item = create_item(manager)
+    space, _lead, item = create_item(manager)
     worker = Actor(id="sam", role=Role.WORKER)
     manager.team_store.transition(space, worker, item["id"], "in_progress")
     manager.team_store.set_status(space, worker, item["id"], "Checking tests")

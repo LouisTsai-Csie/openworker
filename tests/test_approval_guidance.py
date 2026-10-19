@@ -91,7 +91,7 @@ def test_guidance_registry_roundtrip(tmp_path):
 
 
 def test_missing_owner_does_not_create_a_replacement_session(manager, monkeypatch):
-    lead, _ = lead_for_review(manager, monkeypatch)
+    _lead, _ = lead_for_review(manager, monkeypatch)
     worker = manager.get_engine("worker", agent="swe-worker")
     original = manager.session_store.load
     monkeypatch.setattr(manager.session_store, "load", lambda sid: None if sid == "lead" else original(sid))

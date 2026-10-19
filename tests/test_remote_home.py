@@ -252,7 +252,7 @@ async def _wait_connected(base: str, expect: int = 1, timeout: float = 5.0):
 
 async def test_join_enrolls_and_proxies(tmp_path):
     async with _Server(_controller(tmp_path)) as server:
-        task, state = await _join_box(tmp_path, server.base)
+        task, _state = await _join_box(tmp_path, server.base)
         try:
             machines = await _wait_connected(server.base)
             mid = machines[0]["id"]

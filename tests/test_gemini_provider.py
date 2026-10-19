@@ -564,7 +564,7 @@ def test_stream_accumulates_signatures_across_chunks():
 
 
 def test_convert_reattaches_signatures_to_parts():
-    system, contents = convert_messages(
+    _system, contents = convert_messages(
         [
             {"role": "user", "content": "do it"},
             {

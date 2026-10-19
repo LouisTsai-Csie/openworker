@@ -130,7 +130,7 @@ def test_shadow_records_but_human_still_decides(tmp_path):
 
 def test_shadow_off_records_nothing(tmp_path):
     rv = _RecordingReviewer("allow")
-    engine, rows, approvals = _engine(tmp_path, mode=Mode.INTERACTIVE, shadow=False, reviewer=rv)
+    engine, rows, _approvals = _engine(tmp_path, mode=Mode.INTERACTIVE, shadow=False, reviewer=rv)
     _run(engine)
     assert rv.calls == 0
     assert [r for r in rows if r.get("stage") == "reviewer_shadow"] == []

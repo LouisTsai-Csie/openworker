@@ -249,7 +249,7 @@ def test_bypass_plus_auto_runs_ordinary_calls_but_still_refuses_the_floors(tmp_p
         _tool_turn("run_shell", {"command": "sh s.sh"}, "c2"),
         _text(),
     ]
-    engine, rows, cards = _engine(tmp_path, turns, mode=Mode.BYPASS_APPROVALS)
+    engine, _rows, cards = _engine(tmp_path, turns, mode=Mode.BYPASS_APPROVALS)
     events = _run(engine)
     finished = [e for e in events if e.type is EventType.TOOL_FINISHED]
     assert [e.data["status"] for e in finished] == ["ok", "denied"]
@@ -276,7 +276,7 @@ def test_auto_approve_plus_auto_lets_the_reviewer_decide_and_refuses_escalations
     assert engine.reviewer.asked == ["run_shell"] and cards == []
     assert [e.data["status"] for e in events if e.type is EventType.TOOL_FINISHED] == ["ok"]
 
-    engine, rows, cards = _engine(tmp_path, list(turns), mode=Mode.AUTO_APPROVE)
+    engine, _rows, cards = _engine(tmp_path, list(turns), mode=Mode.AUTO_APPROVE)
     engine.is_attended = lambda: False
     engine.reviewer = _FakeReviewer("unsure")
     events = _run(engine)

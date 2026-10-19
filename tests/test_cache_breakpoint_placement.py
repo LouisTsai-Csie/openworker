@@ -53,7 +53,7 @@ def test_chat_block_stays_on_the_newest_user_message():
 
 
 def test_content_parts_keep_the_block_as_the_trailing_text_block():
-    system, conv = convert_messages(
+    _system, conv = convert_messages(
         [
             {
                 "role": "user",

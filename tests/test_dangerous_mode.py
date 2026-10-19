@@ -181,7 +181,7 @@ _FETCH_THEN_RUN = [
 
 
 def test_bypass_still_raises_the_downloaded_file_card(tmp_path):
-    engine, rows, cards = _engine(tmp_path, list(_FETCH_THEN_RUN), mode=Mode.BYPASS_APPROVALS)
+    engine, _rows, cards = _engine(tmp_path, list(_FETCH_THEN_RUN), mode=Mode.BYPASS_APPROVALS)
     events = _run(engine)
     assert any(e.type is EventType.PERMISSION_REQUIRED for e in events)
     assert cards == ["run_shell"]

@@ -178,7 +178,7 @@ def test_a_run_that_stops_early_exits_3_and_says_why(tmp_path: Path) -> None:
 )
 def test_a_command_line_that_cannot_run_stops_with_exit_code_2(tmp_path: Path, extra: list[str], said: str) -> None:
     extra = [str(tmp_path / "out") if x == "OUT" else x for x in extra]
-    proc, ws, machine = _run(tmp_path, WRITE_THEN_DONE, *extra)
+    proc, _ws, machine = _run(tmp_path, WRITE_THEN_DONE, *extra)
     assert proc.returncode == 2
     assert said in proc.stderr and proc.stdout == ""
     assert not (machine / "sessions").exists()  # nothing was started, nothing is left behind

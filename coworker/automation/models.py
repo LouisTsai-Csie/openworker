@@ -83,7 +83,7 @@ class Schedule:
         parts = (self.cron or "").split()
         if len(parts) != 5:
             return self.cron or "?"
-        minute, hour, dom, month, dow = parts
+        minute, hour, dom, _month, dow = parts
         try:
             t = _human_time(int(hour), int(minute))
         except ValueError:
