@@ -134,9 +134,11 @@ def bound_tool_result(
             path = spill(f"{step:04d}-{safe_tool}-{_SAFE_NAME.sub('_', key)[:30]}.txt", original)
             # JSON escaping (newlines, quotes) grows the serialised size; tighten to fit.
             out[key] = _fit(
-                lambda keep: head_tail(original, keep, spill_path=path, total_bytes=_nbytes(original)),
+                lambda keep, original=original, path=path: head_tail(
+                    original, keep, spill_path=path, total_bytes=_nbytes(original)
+                ),
                 budget,
-                lambda b: _nbytes(serialize_result({**out, key: b})) - max_bytes,
+                lambda b, key=key: _nbytes(serialize_result({**out, key: b})) - max_bytes,
             )
             if _nbytes(serialize_result(out)) <= max_bytes:
                 break

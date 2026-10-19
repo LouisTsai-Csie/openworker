@@ -1124,7 +1124,7 @@ def mount_acceptor(
                     current = _int((doc or {}).get("version")) if isinstance(doc, dict) else 0
                     if isinstance(doc, dict) and (current > reported or (current == 0 and reported == 0)):
 
-                        async def _send_newer(doc=doc, current=current):
+                        async def _send_newer(doc=doc, current=current, reported=reported):
                             try:
                                 status, body, _ = await rpc.request_frame(
                                     {"type": "policy", "policy": doc}

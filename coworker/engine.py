@@ -650,14 +650,6 @@ class TurnEngine:
             streamed: list[str] = []
             streamed_reasoning: list[str] = []
 
-            def _partial_turn() -> AssistantTurn:
-                # What the user watched arrive — text and thinking, NO tool calls (any
-                # half-formed calls would either orphan or execute against the stop).
-                return AssistantTurn(
-                    text="".join(streamed) or None,
-                    reasoning="".join(streamed_reasoning) or None,
-                )
-
             model_started, model_clock = time.time(), time.monotonic()
             try:
                 async for chunk in self._astream():
@@ -691,7 +683,9 @@ class TurnEngine:
                 # Same contract as the stop path below: the partial the user watched
                 # arrive survives the failure.
                 if streamed or streamed_reasoning:
-                    self.messages.append(_assistant_message(_partial_turn()))
+                    self.messages.append(
+                        _assistant_message(_partial_turn(streamed, streamed_reasoning))
+                    )
                 friendly = friendly_model_error(self.model, exc)
                 payload = {
                     "error": friendly or str(exc),
@@ -705,7 +699,9 @@ class TurnEngine:
             if self._cancel.is_set() and turn is None:
                 # Stopped mid-stream: persist exactly what the user watched arrive.
                 if streamed or streamed_reasoning:
-                    self.messages.append(_assistant_message(_partial_turn()))
+                    self.messages.append(
+                        _assistant_message(_partial_turn(streamed, streamed_reasoning))
+                    )
                 self._append_notice("interrupted")
                 yield Event(EventType.INTERRUPTED, {"iterations": iterations})
                 return
@@ -2883,6 +2879,15 @@ def _effort_record(turn: AssistantTurn, setting: str | None) -> dict[str, Any] |
             "note": "provider did not report an effort parameter (no knob on this path)",
         }
     return None
+
+
+def _partial_turn(streamed: list[str], streamed_reasoning: list[str]) -> AssistantTurn:
+    """What the user watched arrive — text and thinking, NO tool calls (any
+    half-formed calls would either orphan or execute against the stop)."""
+    return AssistantTurn(
+        text="".join(streamed) or None,
+        reasoning="".join(streamed_reasoning) or None,
+    )
 
 
 def _assistant_message(
