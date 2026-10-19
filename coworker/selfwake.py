@@ -141,9 +141,7 @@ class WakeStore:
                 w.kind == KIND_TIMER
                 and w.fire_at
                 and datetime.fromisoformat(w.fire_at) <= now
-            ):
-                out.append(w)
-            elif w.kind in (KIND_COMPLETION, KIND_EVENT) and w.state == STATE_DUE:
+            ) or w.kind in (KIND_COMPLETION, KIND_EVENT) and w.state == STATE_DUE:
                 out.append(w)
         return out
 

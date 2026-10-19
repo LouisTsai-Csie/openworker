@@ -182,7 +182,7 @@ class SeatbeltProvider:
                 SANDBOX_EXEC, "-p", self.profile_text(),
                 *runner_command(self._runner),
                 "serve", "--socket", self.socket_path, "--cwd", self.cwd, "--exit-with-parent",
-            ],  # fmt: skip
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=log,  # a file, not a pipe: nobody reads a pipe while the daemon lives

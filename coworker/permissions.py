@@ -69,9 +69,7 @@ def _is_prefix_eligible(argv: list[str]) -> bool:
         return False
     if program in _INTERPRETERS and any(a in _INLINE_CODE_FLAGS for a in argv[1:]):
         return False
-    if any(a.lower() in _DANGEROUS_FLAGS for a in argv[1:]):
-        return False
-    return True
+    return not any(a.lower() in _DANGEROUS_FLAGS for a in argv[1:])
 
 
 # Tools granting authority that OUTLIVES this session: instructions the agent will follow
@@ -946,10 +944,7 @@ class PermissionEngine:
         allowed = {d for d in (_host_of(x) for x in self.allowed_domains) if d}
         if include_session:
             allowed |= self.session_allow_domains
-        for dom in allowed:
-            if host == dom or host.endswith("." + dom):
-                return True
-        return False
+        return any(host == dom or host.endswith("." + dom) for dom in allowed)
 
     def _command_allowed(self, command: str) -> bool:
         """True only when EVERY part of a (possibly compound) command is independently
