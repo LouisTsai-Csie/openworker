@@ -123,7 +123,18 @@ desktop app uses an in-memory launch token instead and never writes it to disk.
 
 To run the full desktop app instead of the browser UI, replace step 3 with `npm run tauri dev` (from `surfaces/gui/`) - the Tauri shell launches the window and supervises the server itself.
 
-Tests: `.venv/bin/pytest` (server), `npm test` and `npm run e2e` in `surfaces/gui` (GUI unit + hermetic end-to-end). Desktop bundles are built with `packaging/build_dmg.sh` / `packaging/build_windows.ps1`.
+Checks, all three of which CI gates on:
+
+```shell
+uv run ruff check .                        # lint
+uv run mypy                                # types
+uv run pytest tests                        # 3151 tests, ~9 min
+```
+
+Plus `npm test` and `npm run e2e` in `surfaces/gui` (GUI unit + hermetic end-to-end). Desktop bundles are built with `packaging/build_dmg.sh` / `packaging/build_windows.ps1`.
+
+`uv sync` is the only install step - it creates `.venv` and installs the dev group
+(pytest, ruff, mypy) from `uv.lock`, so your checks match CI exactly.
 
 ## Repository layout
 

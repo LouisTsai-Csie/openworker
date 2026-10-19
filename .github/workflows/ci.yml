@@ -1,11 +1,28 @@
-# App CI — the coworker Python suite, the GUI unit tests, and the hermetic
+# App CI — the coworker lint/type/test gates, the GUI unit tests, and the hermetic
 # Playwright e2e suite (mocked /v1 + WS; no model or network needed).
+#
+# Python toolchain is uv: `uv sync --locked` installs exactly what uv.lock pins, so a
+# green run here reproduces on any machine with `uv sync`.
 
 name: CI
 
 on: [push, pull_request]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked --extra messaging --extra bedrock
+      - name: Ruff
+        run: uv run ruff check .
+      - name: mypy
+        run: uv run mypy
+
   pytest:
     runs-on: ubuntu-latest
     steps:
