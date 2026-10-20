@@ -8,7 +8,7 @@ reproduces the import-graph figures in §3 and §4; the rest are one-line `grep`
 beside the claim. If a number has drifted, the script is the source of truth, not this
 file.
 
-Measured 2026-10-20: `coworker/` is 231 modules / 77,814 lines, `tests/` 218 files /
+Measured 2026-10-20: `coworker/` is 232 modules / 77,865 lines, `tests/` 218 files /
 56,708 lines, `surfaces/gui` 51,263 lines of TS/TSX.
 
 ---
@@ -68,7 +68,7 @@ from a layer above it.** That is the whole rule.
   L2  domain        conversations · sessions · inbox · projects ·
                     interactions · compaction · model_config · …         20
   L1  governance    permissions · risk · audit · provenance · …            8
-  L0  foundation    config · secrets · basedir · clock · events · …       11
+  L0  foundation    config · secrets · basedir · atomicio · events · …     12
 ```
 
 The layering is defined as data in `scripts/import_graph.py` (`LAYERS`), so it can be
@@ -85,7 +85,7 @@ whether a human is watching.
 Run `python scripts/import_graph.py` (`--verbose` for every edge). As of 2026-10-20:
 
 ```
-modules 231   module-level edges 471   late edges 294
+modules 232   module-level edges 472   late edges 294
 
 cycles (module-level only) : 1 (2 modules)
 cycles (incl. late imports): 5 (23 modules)
@@ -169,7 +169,7 @@ Ordered by what it costs to leave alone, not by size.
 
 | # | Debt | Measured | Cost of leaving it |
 |---|---|---|---|
-| D1 | Non-atomic JSON writes | 53 modules write JSON, 2 writes atomic; `_atomic_private_write` (`secrets.py:99`) is correct but has no `fsync` before `os.replace` | **Data loss.** A crash or power cut mid-write leaves a truncated settings/secrets file. |
+| D1 | Non-atomic JSON writes | `coworker/atomicio.py` now does this correctly (temp + `fsync` + rename + directory `fsync`); 51 modules still call `json.dump` straight at the target | **Data loss.** A crash or power cut mid-write leaves a truncated file. Shrinking as call sites move over. |
 | D2 | `SessionManager` god object | 347 methods / 8,357 lines in one class; `__init__` wires 20+ subsystems | Nothing in the server can be tested or changed in isolation. |
 | D3 | No typed API contract | 231 routes, **0** Pydantic models, bodies are raw `dict` | Front end mirrors 217 paths by hand; a shape change breaks it silently. |
 | D4 | Domain failures return HTTP 200 | 229 `{"ok": False}` sites | Clients cannot distinguish "worked" from "refused" by status. |

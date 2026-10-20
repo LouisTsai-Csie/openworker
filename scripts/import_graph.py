@@ -40,7 +40,7 @@ PKG = ROOT / "coworker"
 # root-level modules.
 LAYERS: dict[str, int] = {
     # L0 foundation -- no coworker dependencies beyond each other.
-    "config": 0, "secrets": 0, "basedir": 0, "clock": 0, "events": 0,
+    "config": 0, "secrets": 0, "basedir": 0, "clock": 0, "events": 0, "atomicio": 0,
     "statelock": 0, "attachments": 0, "pdf_support": 0, "environment": 0,
     "toolchain": 0, "runtime_context": 0,
     # L1 governance -- decides what is allowed; depends only on foundation.
@@ -302,6 +302,9 @@ def main() -> int:
         failed = True
     for src, dst in sorted(fixed_violations):
         print(f"FAIL {src} -> {dst} is fixed — drop it from KNOWN_VIOLATIONS")
+        failed = True
+    for module in unassigned:
+        print(f"FAIL {module} has no layer — add it to LAYERS in this file")
         failed = True
     if failed:
         return 1

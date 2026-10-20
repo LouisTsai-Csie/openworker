@@ -15,13 +15,19 @@ import json
 import logging
 import os
 import re
-import subprocess
-import tempfile
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import Any
+
+from coworker.atomicio import atomic_write_private_text, restrict_to_user
+
+# The OS-protection and atomic-write primitives moved to `atomicio` so every module
+# that persists state can reach them, not just this one. Kept under the old private
+# names because this module's own call sites and a test reference them.
+_restrict_to_user = restrict_to_user
+_atomic_private_write = atomic_write_private_text
 
 _REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _IS_WINDOWS = sys.platform == "win32"
@@ -64,80 +70,9 @@ def _load_dotenv(path: Path) -> dict[str, str]:
     return env
 
 
-def _restrict_to_user(path: Path, *, is_dir: bool) -> None:
-    """Restrict a path so only the current user can access it.
-
-    POSIX expresses this with mode bits (0700 dir / 0600 file). Windows has no such bits —
-    `os.chmod` there only toggles the read-only flag, so a 0600 chmod is a silent no-op and
-    the file inherits broad ACLs (SYSTEM, Administrators, …). Use an ACL instead: strip
-    inherited entries and grant the current user alone. Best-effort on Windows so a transient
-    icacls failure never blocks saving a key."""
-    if _IS_WINDOWS:
-        user = os.environ.get("USERNAME")
-        if not user:
-            return
-        domain = os.environ.get("USERDOMAIN")
-        account = f"{domain}\\{user}" if domain else user
-        # A directory grant MUST be inheritable — (OI) object-inherit for files, (CI)
-        # container-inherit for subdirs — so everything created inside (the SQLite stores,
-        # conversations, …) inherits the user's access. Without these flags, /inheritance:r
-        # leaves the directory with a non-inheritable ACE and any child file ends up with an
-        # empty DACL → sqlite3 "unable to open database file", crashing the server on launch.
-        grant = f"{account}:(OI)(CI)F" if is_dir else f"{account}:F"
-        try:
-            subprocess.run(
-                ["icacls", str(path), "/inheritance:r", "/grant:r", grant],
-                capture_output=True,
-                check=False,
-            )
-        except OSError:
-            pass
-        return
-    os.chmod(path, 0o700 if is_dir else 0o600)
-
-
-def _atomic_private_write(target: Path, content: str) -> Path:
-    """Write `content` to `target` atomically, never exposing it through a readable temp.
-
-    The temp file used to be created by `Path.write_text` and only chmod-ed afterwards, so
-    the plaintext sat on disk at the umask default (0644 on a normal box) for the length of
-    the write — readable by every local process and by anything backing the directory up.
-    That is issue #143; the same pattern was in both writers here.
-
-    `tempfile.mkstemp` creates with 0600 and O_EXCL before a byte is written, which also
-    removes the fixed `<name>.tmp` filename. That name was predictable, so a local attacker
-    could pre-create it as a symlink and have the write land wherever the link pointed.
-
-    Windows gets no mode bits from mkstemp, so the ACL is applied to the still-empty file
-    before the content goes in.
-    """
-    target.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        _restrict_to_user(target.parent, is_dir=True)
-    except OSError:
-        pass
-
-    fd, tmp_name = tempfile.mkstemp(
-        dir=str(target.parent), prefix=f".{target.name}.", suffix=".tmp"
-    )
-    tmp = Path(tmp_name)
-    try:
-        _restrict_to_user(tmp, is_dir=False)
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(content)
-        os.replace(tmp, target)
-    except BaseException:
-        try:
-            tmp.unlink()
-        except OSError:
-            pass
-        raise
-    return target
-
-
 def write_private_text(path: str | Path, content: str) -> Path:
     """Atomically write a user-only text file using the SecretStore's OS protections."""
-    return _atomic_private_write(Path(path).expanduser(), content)
+    return atomic_write_private_text(Path(path).expanduser(), content)
 
 
 class _StoreLock:
