@@ -15,6 +15,7 @@ import os
 import re
 import sqlite3
 import threading
+from collections.abc import Mapping
 from pathlib import Path
 
 from coworker.sessions import SessionRecord
@@ -53,7 +54,7 @@ def _load_grants(raw: str | None) -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def _display_title(row: sqlite3.Row) -> str | None:
+def _display_title(row: Mapping[str, object]) -> str | None:
     """Title precedence for every read path: a manual rename (renamed=1) always wins,
     then the generated auto_title, then the first-line snapshot `save()` wrote."""
     if row["renamed"]:
@@ -396,35 +397,38 @@ class ConversationStore:
         # An interrupted turn can persist a user message between an assistant
         # tool_calls block and its tool result, which providers reject (400).
         messages = self._repair_tool_pairing(messages)
+        # sqlite3.Row has no `.get`, and `in` on it tests the VALUES, not the column
+        # names — so the columns later migrations added are read from a plain dict.
+        fields = dict(row)
         return SessionRecord(
             session_id=session_id,
-            workspace=row["workspace"],
-            model=row["model"],
-            mode=row["mode"],
+            workspace=fields["workspace"],
+            model=fields["model"],
+            mode=fields["mode"],
             messages=messages,
-            title=_display_title(row),
-            agent=row["agent"] or "code",
+            title=_display_title(fields),
+            agent=fields["agent"] or "code",
             message_count=len(messages),
-            updated_at=row["updated_at"],
+            updated_at=fields["updated_at"],
             extra_roots=_load_roots(
-                row.get("extra_roots", None)
+                fields.get("extra_roots")
             ),
-            grants=_load_grants(row.get("grants", None)),
+            grants=_load_grants(fields.get("grants")),
             # Auto-compaction state (OPE-27) — same defensive parse as grants.
             compaction=_load_grants(
-                row.get("compaction", None)
+                fields.get("compaction")
             ),
-            pinned=bool(row["pinned"]),
-            archived=bool(row["archived"]),
-            origin=row["origin"],
-            origin_label=row["origin_label"],
-            actor=(row.get("actor", None)) or "",
-            team=_load_grants(row.get("team", None)),
+            pinned=bool(fields["pinned"]),
+            archived=bool(fields["archived"]),
+            origin=fields["origin"],
+            origin_label=fields["origin_label"],
+            actor=(fields.get("actor")) or "",
+            team=_load_grants(fields.get("team")),
             bindings=_load_grants(
-                row.get("bindings", None)
+                fields.get("bindings")
             ),
-            usage=_load_grants(row.get("usage", None)),
-            spawn=_load_grants(row.get("spawn", None)),
+            usage=_load_grants(fields.get("usage")),
+            spawn=_load_grants(fields.get("spawn")),
         )
 
     def set_spawn(self, session_id: str, spawn: dict) -> None:
@@ -509,7 +513,8 @@ class ConversationStore:
                 usage=_load_grants(r.get("usage", None)),
                 spawn=_load_grants(r.get("spawn", None)),
             )
-            for r in rows
+            # Same reason as `load`: a plain mapping per row, not a sqlite3.Row.
+            for r in (dict(raw) for raw in rows)
         ]
 
     def touch_workspace(self, path: str) -> None:
