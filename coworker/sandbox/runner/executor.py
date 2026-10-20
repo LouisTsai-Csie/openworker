@@ -281,6 +281,7 @@ class LocalExecutor(Executor):
         interrupted = False
         timed_out = False
         aborted = False
+        shell_died = False
         exit_code: int | None = None
         lines: list[str] = []
 
@@ -318,6 +319,7 @@ class LocalExecutor(Executor):
             except queue.Empty:
                 continue
             if item is None:
+                shell_died = True
                 break  # shell died
             if self._marker in item:
                 exit_code = _parse_exit_code(item, self._marker)
@@ -343,7 +345,16 @@ class LocalExecutor(Executor):
             output,
             timed_out=timed_out,
             truncated=truncated,
-            error="interrupted by user" if aborted else None,
+            # A missing marker means the outcome is unknown. Saying nothing here would
+            # hand back a result shaped exactly like a command that ran and printed
+            # nothing, which neither the caller nor the model can tell apart.
+            error=(
+                "interrupted by user"
+                if aborted
+                else "the shell exited before the command finished"
+                if shell_died and exit_code is None
+                else None
+            ),
         )
 
     def interrupt_now(self) -> None:
@@ -468,6 +479,18 @@ class LocalExecutor(Executor):
             self._proc.terminate()
         except (ProcessLookupError, OSError):
             pass
+        # Reap, for the same reason as the Windows branch above: the next run() decides
+        # whether to respawn by reading poll(), and a terminated-but-unreaped shell still
+        # reports None. The command then goes to a dying shell and comes back as a silent
+        # empty result (seen as a flaky `assert '' == 'work'` once the suite went parallel).
+        try:
+            self._proc.wait(timeout=5)
+        except (subprocess.TimeoutExpired, OSError):
+            try:
+                self._proc.kill()
+                self._proc.wait(timeout=5)
+            except (OSError, subprocess.SubprocessError):
+                pass
 
     def _result(
         self, command, exit_code, output, *, timed_out, truncated=False, error=None

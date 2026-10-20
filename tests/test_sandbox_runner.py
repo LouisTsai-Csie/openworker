@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox import client as client_mod
 from coworker.sandbox.client import RunnerClient
 from coworker.sandbox.executor import RunnerExecutor
 from coworker.sandbox.providers.runner_local import RunnerLocalProvider
@@ -35,6 +36,44 @@ posix_only = pytest.mark.skipif(_WIN, reason="bash syntax")
 def _sleep(seconds: float) -> str:
     # `Start-Sleep 0.4` would sleep 0 s: its `-Seconds` is an integer in PowerShell 5.
     return f"Start-Sleep -Milliseconds {int(seconds * 1000)}" if _WIN else f"sleep {seconds}"
+
+
+def _marker(path: Path) -> str:
+    """A command that announces itself, to be chained in front of a long one."""
+    return f"New-Item -ItemType File -Path '{path}'" if _WIN else f"touch {path}"
+
+
+def _await_started(path: Path, timeout: float = 30.0) -> None:
+    """Block until the shell has actually begun the command that writes `path`.
+
+    A fixed `time.sleep` here is a race, not a wait. Under `-n auto` the machine is busy
+    and the restart/kill/second command below can land before the shell has started,
+    after which the test fails on a missing dict key instead of saying what went wrong
+    (CI, 2026-10-20).
+    """
+    deadline = time.monotonic() + timeout
+    while not path.exists() and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert path.exists(), f"the command never started (no {path.name} after {timeout}s)"
+
+
+def _when_started(path: Path, action, timeout: float = 30.0) -> threading.Thread:
+    """Run `action` as soon as the command that writes `path` is actually going.
+
+    The counterpart to `_await_started` for the cases where the main thread is the one
+    blocked in `run()`. A `threading.Timer` with a fixed delay was a guess at when the
+    shell would be ready, and under `-n auto` the guess fires too early.
+    """
+
+    def wait_then_act() -> None:
+        deadline = time.monotonic() + timeout
+        while not path.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        action()
+
+    thread = threading.Thread(target=wait_then_act, daemon=True)
+    thread.start()
+    return thread
 
 
 def _cd_and_set(folder: str, name: str, value: str) -> str:
@@ -164,21 +203,25 @@ def test_a_slow_shell_does_not_block_another(runner, tmp_path):
     _, client = runner
     slow = RunnerExecutor(client, cwd=str(tmp_path), shell="slow")
     fast = RunnerExecutor(client, cwd=str(tmp_path), shell="fast")
-    worker = threading.Thread(target=lambda: slow.run(_sleep(2)))
+    marker = tmp_path / "started"
+    worker = threading.Thread(target=lambda: slow.run(f"{_marker(marker)}; {_sleep(2)}"))
     worker.start()
-    time.sleep(0.3)
+    _await_started(marker)
     started = time.monotonic()
     assert fast.run("echo quick")["exit_code"] == 0
-    assert time.monotonic() - started < 1.0
+    # The slow shell is mid-command; the fast one must not be queued behind it. Measured
+    # after the marker, so this is the fast shell's latency alone.
+    assert time.monotonic() - started < 2.0
     worker.join()
 
 
 def test_one_shell_runs_one_command_at_a_time(runner, tmp_path):
     _, client = runner
     ex = RunnerExecutor(client, cwd=str(tmp_path))
-    worker = threading.Thread(target=lambda: ex.run(_sleep(1.5)))
+    started = tmp_path / "started"
+    worker = threading.Thread(target=lambda: ex.run(f"{_marker(started)}; {_sleep(1.5)}"))
     worker.start()
-    time.sleep(0.3)
+    _await_started(started)
     second = ex.run("echo too-soon")
     worker.join()
     assert "running another command" in second["error"] and second["exit_code"] is None
@@ -205,10 +248,13 @@ def test_user_stop_ends_the_command_and_the_session_carries_on(runner, tmp_path)
     (tmp_path / "work").mkdir()
     ex = RunnerExecutor(client, cwd=str(tmp_path))
     ex.run("cd work")
-    threading.Timer(0.5, ex.interrupt_now).start()
+    marker = tmp_path / "started"
+    _when_started(marker, ex.interrupt_now)
     started = time.monotonic()
-    stopped = ex.run(_sleep(20), timeout=30)
-    assert time.monotonic() - started < 10
+    stopped = ex.run(f"{_marker(marker)}; {_sleep(20)}", timeout=30)
+    # Generous against the 20 s sleep: the point is that the stop ended it early, and the
+    # window now also covers however long the loaded machine took to start the shell.
+    assert time.monotonic() - started < 15
     assert stopped["error"] == "interrupted by user"
     assert ex.run(LEAF)["output"].strip() == "work"
 
@@ -223,9 +269,14 @@ def test_a_cut_stream_resumes_and_no_result_is_lost(runner, tmp_path):
     ex.run(_cd_and_set("away", "KEEP", "yes"))
     instance = client.instance_id
     box: dict = {}
-    worker = threading.Thread(target=lambda: box.update(ex.run(f"{_sleep(1.5)}; echo finished-while-away")))
+    started = tmp_path / "started"
+    worker = threading.Thread(
+        target=lambda: box.update(
+            ex.run(f"{_marker(started)}; {_sleep(1.5)}; echo finished-while-away")
+        )
+    )
     worker.start()
-    time.sleep(0.4)
+    _await_started(started)
     client._transport.proc.kill()  # the stream is cut while the command runs
     worker.join(timeout=20)
     assert "finished-while-away" in box.get("output", "")  # delivered after the resume
@@ -247,17 +298,32 @@ def test_the_same_request_id_runs_once(runner, tmp_path):
     assert target.read_text() == "x\n"
 
 
-def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_folder(runner, tmp_path):
+def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_folder(
+    runner, tmp_path, monkeypatch
+):
+    # A reconnect attempt waits `_HELLO_TIMEOUT` (60 s in production, sized for a cold VM
+    # whose disk is still warming up) before it gives up and retries. A restart reliably
+    # loses the first attempt or two -- the old workspace is closing, and the new daemon is
+    # not listening yet -- so with the real budget one restart can take minutes, which is
+    # how this test failed in CI with a 30 s join. What is under test is WHICH error the
+    # in-flight command is given, not how patient the client is, so shrink the budget.
+    monkeypatch.setattr(client_mod, "_HELLO_TIMEOUT", 5.0)
     provider, client = runner
     (tmp_path / "work").mkdir()
     ex = RunnerExecutor(client, cwd=str(tmp_path))
     ex.run(_cd_and_set("work", "GONE", "soon"))
     box: dict = {}
-    worker = threading.Thread(target=lambda: box.update(ex.run(_sleep(30), timeout=60)))
+    started = tmp_path / "started"
+    worker = threading.Thread(
+        target=lambda: box.update(ex.run(f"{_marker(started)}; {_sleep(30)}", timeout=60))
+    )
     worker.start()
-    time.sleep(0.4)
+    _await_started(started)
     provider.restart_daemon()  # a new runner instance, as after a sandbox restart
-    worker.join(timeout=30)
+    # 5 attempts x 5 s plus backoff is ~32 s worst case; past that the client has given up
+    # and the assertion below will say so.
+    worker.join(timeout=60)
+    assert not worker.is_alive(), "the restarted command never returned"
     assert "outcome of this command is unknown" in box["error"]  # never re-sent by the client
     assert client.restarts == 1
     after = ex.run(f'echo "[$env:GONE] $({LEAF})"' if _WIN else "echo [$GONE] $(basename $PWD)")
