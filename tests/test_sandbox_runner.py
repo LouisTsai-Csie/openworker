@@ -37,6 +37,25 @@ def _sleep(seconds: float) -> str:
     return f"Start-Sleep -Milliseconds {int(seconds * 1000)}" if _WIN else f"sleep {seconds}"
 
 
+def _marker(path: Path) -> str:
+    """A command that announces itself, to be chained in front of a long one."""
+    return f"New-Item -ItemType File -Path '{path}'" if _WIN else f"touch {path}"
+
+
+def _await_started(path: Path, timeout: float = 30.0) -> None:
+    """Block until the shell has actually begun the command that writes `path`.
+
+    A fixed `time.sleep` here is a race, not a wait. Under `-n auto` the machine is busy
+    and the restart/kill/second command below can land before the shell has started,
+    after which the test fails on a missing dict key instead of saying what went wrong
+    (CI, 2026-10-20).
+    """
+    deadline = time.monotonic() + timeout
+    while not path.exists() and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert path.exists(), f"the command never started (no {path.name} after {timeout}s)"
+
+
 def _cd_and_set(folder: str, name: str, value: str) -> str:
     return f"cd {folder}; $env:{name}='{value}'" if _WIN else f"cd {folder} && export {name}={value}"
 
@@ -176,9 +195,10 @@ def test_a_slow_shell_does_not_block_another(runner, tmp_path):
 def test_one_shell_runs_one_command_at_a_time(runner, tmp_path):
     _, client = runner
     ex = RunnerExecutor(client, cwd=str(tmp_path))
-    worker = threading.Thread(target=lambda: ex.run(_sleep(1.5)))
+    started = tmp_path / "started"
+    worker = threading.Thread(target=lambda: ex.run(f"{_marker(started)}; {_sleep(1.5)}"))
     worker.start()
-    time.sleep(0.3)
+    _await_started(started)
     second = ex.run("echo too-soon")
     worker.join()
     assert "running another command" in second["error"] and second["exit_code"] is None
@@ -223,9 +243,14 @@ def test_a_cut_stream_resumes_and_no_result_is_lost(runner, tmp_path):
     ex.run(_cd_and_set("away", "KEEP", "yes"))
     instance = client.instance_id
     box: dict = {}
-    worker = threading.Thread(target=lambda: box.update(ex.run(f"{_sleep(1.5)}; echo finished-while-away")))
+    started = tmp_path / "started"
+    worker = threading.Thread(
+        target=lambda: box.update(
+            ex.run(f"{_marker(started)}; {_sleep(1.5)}; echo finished-while-away")
+        )
+    )
     worker.start()
-    time.sleep(0.4)
+    _await_started(started)
     client._transport.proc.kill()  # the stream is cut while the command runs
     worker.join(timeout=20)
     assert "finished-while-away" in box.get("output", "")  # delivered after the resume
@@ -253,11 +278,15 @@ def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_f
     ex = RunnerExecutor(client, cwd=str(tmp_path))
     ex.run(_cd_and_set("work", "GONE", "soon"))
     box: dict = {}
-    worker = threading.Thread(target=lambda: box.update(ex.run(_sleep(30), timeout=60)))
+    started = tmp_path / "started"
+    worker = threading.Thread(
+        target=lambda: box.update(ex.run(f"{_marker(started)}; {_sleep(30)}", timeout=60))
+    )
     worker.start()
-    time.sleep(0.4)
+    _await_started(started)
     provider.restart_daemon()  # a new runner instance, as after a sandbox restart
     worker.join(timeout=30)
+    assert not worker.is_alive(), "the restarted command never returned"
     assert "outcome of this command is unknown" in box["error"]  # never re-sent by the client
     assert client.restarts == 1
     after = ex.run(f'echo "[$env:GONE] $({LEAF})"' if _WIN else "echo [$GONE] $(basename $PWD)")
