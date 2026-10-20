@@ -628,11 +628,10 @@ def test_ws_rejects_foreign_origin(tmp_path):
     from starlette.websockets import WebSocketDisconnect as WSD
 
     client = _client(tmp_path, [_text("hi")])
-    with pytest.raises(WSD) as e:
-        with client.websocket_connect(
-            "/ws/session/x", headers={"Origin": "https://evil.example"}
-        ) as ws:
-            ws.receive_json()
+    with pytest.raises(WSD) as e, client.websocket_connect(
+        "/ws/session/x", headers={"Origin": "https://evil.example"}
+    ) as ws:
+        ws.receive_json()
     assert e.value.code == 1008
 
 

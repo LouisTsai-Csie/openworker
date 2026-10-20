@@ -407,24 +407,24 @@ class ConversationStore:
             message_count=len(messages),
             updated_at=row["updated_at"],
             extra_roots=_load_roots(
-                row["extra_roots"] if "extra_roots" in row else None
+                row.get("extra_roots", None)
             ),
-            grants=_load_grants(row["grants"] if "grants" in row else None),
+            grants=_load_grants(row.get("grants", None)),
             # Auto-compaction state (OPE-27) — same defensive parse as grants.
             compaction=_load_grants(
-                row["compaction"] if "compaction" in row else None
+                row.get("compaction", None)
             ),
             pinned=bool(row["pinned"]),
             archived=bool(row["archived"]),
             origin=row["origin"],
             origin_label=row["origin_label"],
-            actor=(row["actor"] if "actor" in row else None) or "",
-            team=_load_grants(row["team"] if "team" in row else None),
+            actor=(row.get("actor", None)) or "",
+            team=_load_grants(row.get("team", None)),
             bindings=_load_grants(
-                row["bindings"] if "bindings" in row else None
+                row.get("bindings", None)
             ),
-            usage=_load_grants(row["usage"] if "usage" in row else None),
-            spawn=_load_grants(row["spawn"] if "spawn" in row else None),
+            usage=_load_grants(row.get("usage", None)),
+            spawn=_load_grants(row.get("spawn", None)),
         )
 
     def set_spawn(self, session_id: str, spawn: dict) -> None:
@@ -504,10 +504,10 @@ class ConversationStore:
                 archived=bool(r["archived"]),
                 origin=r["origin"],
                 origin_label=r["origin_label"],
-                actor=(r["actor"] if "actor" in r else None) or "",
-                team=_load_grants(r["team"] if "team" in r else None),
-                usage=_load_grants(r["usage"] if "usage" in r else None),
-                spawn=_load_grants(r["spawn"] if "spawn" in r else None),
+                actor=(r.get("actor", None)) or "",
+                team=_load_grants(r.get("team", None)),
+                usage=_load_grants(r.get("usage", None)),
+                spawn=_load_grants(r.get("spawn", None)),
             )
             for r in rows
         ]
