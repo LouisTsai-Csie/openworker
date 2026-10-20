@@ -70,6 +70,26 @@ LAYER_NAMES = {
 # Not part of the layering: the package itself, and test doubles.
 UNLAYERED = {"", "testing"}
 
+# --- The ratchet -------------------------------------------------------------------
+#
+# Debt that exists today, grandfathered so this can run as a CI gate. It only ever
+# shrinks: a new violation fails the build, and so does an entry here that has been
+# fixed, which forces the list to be pruned instead of quietly outliving the problem.
+# ARCHITECTURE.md §4 explains each one and what the fix is.
+KNOWN_CYCLES: frozenset[tuple[str, ...]] = frozenset({
+    # Plugin loading: descriptors.py ends by importing experimental, which imports
+    # ConnectorDescriptor back. Fix by inverting to a register_descriptor() call.
+    ("coworker.connectors.descriptors", "coworker.connectors.experimental"),
+})
+KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset({
+    ("coworker.agents.code", "coworker.catalog"),
+    ("coworker.agents.cowork", "coworker.catalog"),
+    ("coworker.audit", "coworker.connectors"),
+    ("coworker.interactions", "coworker.tools.ask"),
+    ("coworker.model_config", "coworker.providers.recommended"),
+    ("coworker.tools.subagent", "coworker.engine"),
+})
+
 
 def module_name(path: Path) -> str:
     rel = path.relative_to(ROOT).with_suffix("")
@@ -261,7 +281,33 @@ def main() -> int:
         for src, dst, a, b in v_late:
             print(f"  L{a} {src}  ->  L{b} {dst}")
 
-    return 1 if (import_time or v_top) else 0
+    # -- the ratchet -----------------------------------------------------------------
+    seen_cycles = {tuple(c) for c in import_time}
+    seen_violations = {(src, dst) for src, dst, _, _ in v_top}
+    new_cycles = seen_cycles - KNOWN_CYCLES
+    new_violations = seen_violations - KNOWN_VIOLATIONS
+    fixed_cycles = KNOWN_CYCLES - seen_cycles
+    fixed_violations = KNOWN_VIOLATIONS - seen_violations
+
+    print()
+    failed = False
+    for cycle in sorted(new_cycles):
+        print(f"FAIL new import-time cycle: {' <-> '.join(cycle)}")
+        failed = True
+    for src, dst in sorted(new_violations):
+        print(f"FAIL new layer violation: {src} -> {dst}")
+        failed = True
+    for cycle in sorted(fixed_cycles):
+        print(f"FAIL {' <-> '.join(cycle)} is fixed — drop it from KNOWN_CYCLES")
+        failed = True
+    for src, dst in sorted(fixed_violations):
+        print(f"FAIL {src} -> {dst} is fixed — drop it from KNOWN_VIOLATIONS")
+        failed = True
+    if failed:
+        return 1
+    print(f"ok — {len(KNOWN_CYCLES)} known cycle(s), {len(KNOWN_VIOLATIONS)} known "
+          f"violation(s), nothing new")
+    return 0
 
 
 if __name__ == "__main__":
