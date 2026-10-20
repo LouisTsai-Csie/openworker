@@ -64,6 +64,9 @@ dev = [
     "pytest>=8",
     "pytest-asyncio",
     "pytest-cov>=5",
+    # A test that blocks for ever otherwise runs the whole job into the six-hour
+    # ceiling; see the `timeout` setting under [tool.pytest.ini_options].
+    "pytest-timeout>=2.3",
     "httpx",
     "httpx2",
     # Upper-bounded on purpose: both of these ARE the CI gate, and both add rules
@@ -97,6 +100,12 @@ testpaths = ["tests"]
 # console script (CI) does not put the root on sys.path the way `python -m pytest` does.
 pythonpath = ["."]
 asyncio_mode = "auto"
+# Per-test ceiling. On 2026-10-20 a CI run finished 41% of the suite in three
+# minutes and then sat for forty more on one unbounded `ws.receive_json()` loop,
+# because a dead turn never sent the frame the test was waiting for. The slowest
+# test here takes about ten seconds, so this fails that one test with a stack
+# trace instead of letting it take the job down.
+timeout = 120
 
 [tool.coverage.run]
 source = ["coworker"]
