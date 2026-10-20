@@ -47,6 +47,7 @@ import traceback
 import uuid
 from pathlib import Path
 from typing import Any
+from coworker.atomicio import atomic_write_text
 
 # How tool calls are approved (--approval-mode). `ask` is the app's "Ask for approval";
 # the engine stores it as "interactive".
@@ -1426,11 +1427,11 @@ def _write_records(
     (out / "messages.json").write_text(
         json.dumps(engine.messages, indent=1, default=str), encoding="utf-8"
     )
-    (out / "answers.json").write_text(
+    atomic_write_text(
+        out / "answers.json",
         json.dumps({"counts": answers.counts(), "rows": answers.rows}, indent=1),
-        encoding="utf-8",
     )
-    (out / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
+    atomic_write_text(out / "summary.json", json.dumps(summary, indent=1))
 
     trajectory = build_trajectory(
         engine.messages,

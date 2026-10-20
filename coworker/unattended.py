@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
+from coworker.atomicio import atomic_write_text
 
 ATTENDED = "attended"
 INBOX = "inbox"
@@ -75,7 +76,7 @@ class UnattendedRegistry:
         if not self.path:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(self._values, indent=2), encoding="utf-8")
+        atomic_write_text(self.path, json.dumps(self._values, indent=2))
 
     def attendance(self, session_id: str) -> str:
         return self._values.get(session_id, ATTENDED)

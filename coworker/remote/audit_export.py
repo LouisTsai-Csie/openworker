@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from collections.abc import Awaitable, Callable
+from coworker.atomicio import atomic_write_private_text
 
 _OCSF_VERSION = "1.1.0"
 _CLASS_API_ACTIVITY = 6003  # OCSF Application Activity › API Activity
@@ -97,11 +98,9 @@ def save_policy(state: Path, policy: dict[str, Any]) -> None:
     what governs it even while offline (visible-governance rule)."""
     path = Path(state) / POLICY_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({**policy, "received_at": time.time()}, indent=2))
-    try:
-        path.chmod(0o600)
-    except OSError:
-        pass
+    atomic_write_private_text(
+        path, json.dumps({**policy, "received_at": time.time()}, indent=2)
+    )
 
 
 # -- OCSF -----------------------------------------------------------------------

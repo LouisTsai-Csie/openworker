@@ -144,9 +144,11 @@ really a `basedir` concern and sits in the wrong module today).
   own tables. 26 `CREATE TABLE` sites, 25 ad-hoc `ALTER TABLE` migrations, and
   `PRAGMA user_version` is never set. There is no schema version and no migration
   framework.
-- **JSON files** — settings, secrets, personas, skills, team boards. 53 modules call
-  `json.dump`; exactly two writes are atomic (`os.replace`, in `secrets.py` and
-  `sandbox/bundle.py`).
+- **JSON files** — settings, secrets, personas, skills, team boards, machine policy.
+  All eleven writes go through `coworker/atomicio.py`: a temp file in the same directory,
+  `fsync`, rename, then `fsync` of the directory. Three of them used to do their own
+  temp-and-rename with a predictable `.tmp` name and no `fsync`; the other eight wrote
+  straight at the target, which truncates it first.
 - **JSONL** — conversation transcripts, appended per message.
 
 ## 6. Cross-cutting conventions
@@ -167,9 +169,11 @@ really a `basedir` concern and sits in the wrong module today).
 
 Ordered by what it costs to leave alone, not by size.
 
+D1 (non-atomic JSON writes) is cleared — see §5. Numbering is left as it was so the
+other entries keep their identifiers.
+
 | # | Debt | Measured | Cost of leaving it |
 |---|---|---|---|
-| D1 | Non-atomic JSON writes | `coworker/atomicio.py` now does this correctly (temp + `fsync` + rename + directory `fsync`); 51 modules still call `json.dump` straight at the target | **Data loss.** A crash or power cut mid-write leaves a truncated file. Shrinking as call sites move over. |
 | D2 | `SessionManager` god object | 347 methods / 8,357 lines in one class; `__init__` wires 20+ subsystems | Nothing in the server can be tested or changed in isolation. |
 | D3 | No typed API contract | 231 routes, **0** Pydantic models, bodies are raw `dict` | Front end mirrors 217 paths by hand; a shape change breaks it silently. |
 | D4 | Domain failures return HTTP 200 | 229 `{"ok": False}` sites | Clients cannot distinguish "worked" from "refused" by status. |

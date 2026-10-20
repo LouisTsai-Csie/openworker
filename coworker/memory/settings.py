@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
+from coworker.atomicio import atomic_write_text
 
 # User Rules is a bounded settings field, not a document store: big enough for any
 # real rule list, small enough that a paste-accident (or a hostile client) can't
@@ -36,7 +37,7 @@ class MemorySettingsStore:
 
     def _save(self, data: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        atomic_write_text(self.path, json.dumps(data, indent=2))
 
     @property
     def enabled(self) -> bool:

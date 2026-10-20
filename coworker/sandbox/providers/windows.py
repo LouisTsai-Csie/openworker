@@ -47,6 +47,7 @@ from coworker.sandbox.launch import runner_command, serve_arguments, spawn_kwarg
 from coworker.sandbox.runner import winpipe
 from coworker.sandbox.transport import PipeTransport, Transport
 from coworker.sandbox.providers import windows_setup
+from coworker.atomicio import atomic_write_text
 
 FULL = "full"
 _FULL_REASON = (
@@ -174,7 +175,7 @@ class WindowsProvider:
         import json
 
         env_file = os.path.join(self._dir, "env.json")
-        Path(env_file).write_text(json.dumps(self._environment()), encoding="utf-8")
+        atomic_write_text(Path(env_file), json.dumps(self._environment()))
         serve = serve_arguments(self.socket_path, self._dir, also_sids=[sid])
         argv = [*runner_command(self._runner_inside), "serve", *serve, "--env-file", env_file, "--cwd", self.cwd, "--exit-with-parent"]
         self._daemon = winsec.spawn_as_account(argv, account=name, password=password, desktop=self._desktop, cwd=self.cwd, stderr_path=log)

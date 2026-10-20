@@ -78,6 +78,7 @@ from coworker.mcp import (
 )
 from coworker.memory import MemorySettingsStore, MemoryStore, Scope, SQLiteMemoryStore
 from coworker.permissions import Mode
+from coworker.atomicio import atomic_write_text
 from coworker.agents import list_agents as _list_agents
 from coworker.providers import (
     ProviderClient,
@@ -5717,7 +5718,7 @@ class SessionManager:
         if self._people.get(key) != name:
             self._people[key] = name
             try:
-                self._people_path.write_text(json.dumps(self._people))
+                atomic_write_text(self._people_path, json.dumps(self._people))
             except OSError:
                 pass
 
