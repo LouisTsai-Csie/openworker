@@ -178,7 +178,7 @@ Ordered by what it costs to leave alone, not by size.
 | D7 | No schema versioning | 26 `CREATE TABLE`, 25 `ALTER TABLE`, 0 `user_version` | Migrations are guesswork; a downgrade corrupts. |
 | D8 | 25 Store classes, no common base | — | Connection, transaction and locking policy is re-decided 25 times. |
 | D9 | Type debt in the core | 70 modules under mypy `ignore_errors` | The least-checked modules are the most central ones. |
-| D10 | Tests bound to internals | 90 of 218 test files call a private `_method` | The safety net blocks the refactor it should enable. |
+| D10 | Tests bound to internals | 89 of 216 test files reach 102 private names. `scripts/private_api_usage.py` splits them: **64** are reachable from an existing public entry point (convert the call), **14** are not (needs a design decision), **24** are module-level helpers (a rename) | The safety net blocks the refactor it should enable. The hard part is 14 names, not 102. |
 | D11 | Flat package root | 43 root modules; L0 `secrets.py` and L5 `agent.py` are siblings; `project.py`/`projects.py`, `sessions.py`/`session_facts.py` | Nothing about the file tree tells you the layering. |
 
 ## 8. Keeping this true
