@@ -67,6 +67,9 @@ dev = [
     # A test that blocks for ever otherwise runs the whole job into the six-hour
     # ceiling; see the `timeout` setting under [tool.pytest.ini_options].
     "pytest-timeout>=2.3",
+    # The suite is ~3150 tests and CPU-bound; CI runs it with `-n auto`, which on a
+    # four-core runner is the difference between eight minutes and under three.
+    "pytest-xdist>=3.6",
     "httpx",
     "httpx2",
     # Upper-bounded on purpose: both of these ARE the CI gate, and both add rules
