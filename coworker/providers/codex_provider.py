@@ -16,19 +16,19 @@ Differences from the API-key path:
 from __future__ import annotations
 
 import uuid
-from typing import Any, Optional
+from typing import Any
 
-from .base import AssistantTurn
-from .codex_auth import (
+from coworker.providers.base import AssistantTurn
+from coworker.providers.codex_auth import (
     CODEX_BASE_URL,
     PLAN_LIMIT_ERROR,
     CodexTokenStore,
     backend_headers,
 )
-from .openai_responses import OpenAIResponsesProvider
+from coworker.providers.openai_responses import OpenAIResponsesProvider
 
 
-def _status_code(exc: Exception) -> Optional[int]:
+def _status_code(exc: Exception) -> int | None:
     status = getattr(exc, "status_code", None)
     if isinstance(status, int):
         return status
@@ -56,7 +56,7 @@ class CodexProvider(OpenAIResponsesProvider):
         # client per provider); a uuid per instance satisfies the per-conversation
         # session header without threading conversation ids through ProviderClient.
         self._session_id = str(uuid.uuid4())
-        self._client_token: Optional[str] = None
+        self._client_token: str | None = None
         self._injected = client is not None
 
     def _ensure_client(self) -> Any:
@@ -81,7 +81,7 @@ class CodexProvider(OpenAIResponsesProvider):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]],
+        tools: list[dict[str, Any]] | None,
         settings: dict[str, Any],
     ) -> dict[str, Any]:
         kwargs = super()._request_kwargs(
@@ -124,11 +124,11 @@ class CodexProvider(OpenAIResponsesProvider):
         *,
         model: str,
         messages: list[dict[str, Any]],
-        tools: Optional[list[dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ) -> AssistantTurn:
         # The backend only serves streamed responses — aggregate the stream.
-        turn: Optional[AssistantTurn] = None
+        turn: AssistantTurn | None = None
         for chunk in self.stream(model=model, messages=messages, tools=tools, **settings):
             if chunk.turn is not None:
                 turn = chunk.turn

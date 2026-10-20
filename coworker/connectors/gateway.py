@@ -11,11 +11,11 @@ from __future__ import annotations
 import logging
 from asyncio import to_thread
 from collections import OrderedDict
-from typing import Callable, Optional
+from collections.abc import Callable
 from urllib.parse import urlparse
 
-from ..secrets import SecretStore
-from .base import (
+from coworker.secrets import SecretStore
+from coworker.connectors.base import (
     BasePlatformAdapter,
     InteractionEvent,
     MessageEvent,
@@ -24,7 +24,7 @@ from .base import (
     SessionSource,
     parse_target,
 )
-from .config import ConnectorSettings, is_authorized, load_settings
+from coworker.connectors.config import ConnectorSettings, is_authorized, load_settings
 
 logger = logging.getLogger("coworker.connectors")
 
@@ -40,12 +40,12 @@ class Gateway:
     def __init__(
         self,
         *,
-        secrets: Optional[SecretStore] = None,
-        settings: Optional[dict[str, ConnectorSettings]] = None,
-        handler: Optional[MessageHandler] = None,
-        reply_resolver: Optional[Callable[[MessageEvent], bool]] = None,
-        interaction_handler: Optional[Callable] = None,
-        on_unauthorized: Optional[Callable] = None,
+        secrets: SecretStore | None = None,
+        settings: dict[str, ConnectorSettings] | None = None,
+        handler: MessageHandler | None = None,
+        reply_resolver: Callable[[MessageEvent], bool] | None = None,
+        interaction_handler: Callable | None = None,
+        on_unauthorized: Callable | None = None,
     ) -> None:
         self.secrets = secrets or SecretStore()
         self.settings = (
@@ -62,13 +62,13 @@ class Gateway:
         self._on_unauthorized = on_unauthorized
         self._adapters: dict[str, BasePlatformAdapter] = {}
         # In-memory recent senders for chat-ID auto-capture (identity only, never persisted).
-        self._recent: "OrderedDict[tuple[str, str, str], dict]" = OrderedDict()
+        self._recent: OrderedDict[tuple[str, str, str], dict] = OrderedDict()
 
     def set_handler(self, handler: MessageHandler) -> None:
         self._handler = handler
 
     def set_reply_resolver(
-        self, resolver: Optional[Callable[[MessageEvent], bool]]
+        self, resolver: Callable[[MessageEvent], bool] | None
     ) -> None:
         self._reply_resolver = resolver
 
@@ -166,7 +166,7 @@ class Gateway:
         while len(self._recent) > _RECENT_CAP:
             self._recent.popitem(last=False)
 
-    def recent_senders(self, platform: Optional[str] = None) -> list[dict]:
+    def recent_senders(self, platform: str | None = None) -> list[dict]:
         """Most-recent-first list of who has messaged (for the allowlist UI)."""
         items = list(self._recent.values())[::-1]
         return [e for e in items if platform is None or e["platform"] == platform]

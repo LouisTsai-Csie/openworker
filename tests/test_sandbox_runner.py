@@ -217,7 +217,7 @@ def test_user_stop_ends_the_command_and_the_session_carries_on(runner, tmp_path)
 
 
 def test_a_cut_stream_resumes_and_no_result_is_lost(runner, tmp_path):
-    provider, client = runner
+    _provider, client = runner
     (tmp_path / "away").mkdir()
     ex = RunnerExecutor(client, cwd=str(tmp_path))
     ex.run(_cd_and_set("away", "KEEP", "yes"))

@@ -127,7 +127,7 @@ async def test_event_tells_the_truth_about_installability(tmp_path, monkeypatch)
         return {"installed": False, "reason": "declined"}
 
     events = await _run(_engine(tmp_path, requester, tool="gitleaks"))
-    data = [e for e in events if e.type is EventType.TOOL_REQUESTED][0].data
+    data = next(e for e in events if e.type is EventType.TOOL_REQUESTED).data
     assert data["installable"] is True
     assert data["version"] == toolchain.MANAGED["gitleaks"].version
     assert data["summary"]

@@ -17,9 +17,9 @@ import sys
 import threading
 import time
 from collections import deque
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
-from . import network_profiles
+from coworker.sandbox import network_profiles
 
 # On Windows the proxy listens inside a FIXED range, because the closed sandbox account's
 # loopback filters (windows_wfp.py) are written once at setup and name this range: every
@@ -102,7 +102,7 @@ class AllowListProxy:
             threading.Thread(target=self._serve, args=(client,), daemon=True).start()
 
     def _serve(self, client: socket.socket) -> None:
-        upstream: Optional[socket.socket] = None
+        upstream: socket.socket | None = None
         try:
             client.settimeout(_CONNECT_SECONDS)
             head = b""
@@ -227,6 +227,6 @@ def environment(proxy: AllowListProxy) -> dict[str, str]:
     """What a sandboxed process needs in its environment to find the proxy. Programs that
     ignore these variables get no network at all, which is the safe way to fail."""
     names = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy")
-    env = {name: proxy.url for name in names}
+    env = dict.fromkeys(names, proxy.url)
     env.update({"NO_PROXY": "", "no_proxy": "", "NODE_USE_ENV_PROXY": "1"})
     return env

@@ -32,10 +32,10 @@ import tempfile
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from collections.abc import Iterable
 from urllib.parse import urlparse
 
-from .secrets import state_dir
+from coworker.secrets import state_dir
 
 # Dirs that hold user-installed CLIs but never appear in launchd's PATH. Mirrors
 # KNOWN_TOOL_DIRS in the desktop shell (src-tauri/src/lib.rs) — keep the two in step.
@@ -78,7 +78,7 @@ class Download:
     url: str
     sha256: str
     # Path of the binary inside the archive; None when the asset IS the binary.
-    member: Optional[str] = None
+    member: str | None = None
 
 
 @dataclass(frozen=True)
@@ -182,7 +182,7 @@ def _managed_path(tool: ManagedTool) -> Path:
     return managed_dir() / tool.name / tool.version / exe
 
 
-def resolve(name: str) -> Optional[str]:
+def resolve(name: str) -> str | None:
     """Absolute path to `name`, or None. PATH first (the user's choice wins), then the
     dirs a GUI launch can't see, then anything we installed ourselves."""
     found = shutil.which(name)
@@ -217,7 +217,7 @@ def installable(name: str) -> bool:
     return bool(tool and _platform_key() in tool.downloads)
 
 
-def describe(name: str) -> Optional[dict[str, str]]:
+def describe(name: str) -> dict[str, str] | None:
     """What to show the user when asking permission to install (OPE-85)."""
     tool = MANAGED.get(name)
     if not tool:
@@ -264,7 +264,7 @@ def install(name: str, *, timeout: int = 120) -> str:
     if target.is_file() and os.access(target, os.X_OK):
         return str(target)
 
-    with urllib.request.urlopen(dl.url, timeout=timeout) as resp:  # noqa: S310 - pinned URL
+    with urllib.request.urlopen(dl.url, timeout=timeout) as resp:  # pinned URL
         blob = resp.read()
     _verify(blob, dl.sha256)
 

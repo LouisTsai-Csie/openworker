@@ -13,6 +13,6 @@ loader in descriptors.py regardless of what the descriptor sets.
 
 from __future__ import annotations
 
-from ..descriptors import ConnectorDescriptor
+from coworker.connectors.descriptors import ConnectorDescriptor
 
 EXPERIMENTAL_DESCRIPTORS: list[ConnectorDescriptor] = []

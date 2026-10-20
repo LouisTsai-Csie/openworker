@@ -10,14 +10,18 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV="$ROOT/.venv"
 
-python3 -m venv "$VENV"
-# The coworker package (server, engine, connectors) + inbound-messaging extras.
-# aisuite comes in as a regular dependency (git-pinned in pyproject.toml until
-# the next PyPI release).
-"$VENV/bin/pip" install --quiet --upgrade pip
-# Keep the extras in step with CI (.github/workflows/ci.yml) — the bedrock test
-# suite imports boto3 directly, so skipping that extra leaves a fresh env red.
-"$VENV/bin/pip" install --quiet -e "$ROOT[messaging,dev,bedrock]"
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv not found. Install it: https://docs.astral.sh/uv/getting-started/installation/" >&2
+  exit 1
+fi
+
+# uv creates and populates $ROOT/.venv itself — the same path every from-source flow
+# expects. --locked installs exactly what uv.lock pins, so this matches CI byte for byte.
+# Keep the extras in step with CI (.github/workflows/ci.yml) — the bedrock test suite
+# imports boto3 directly, so skipping that extra leaves a fresh env red. The dev group
+# (pytest, ruff, mypy) is installed by default; pass --no-dev to skip it.
+cd "$ROOT"
+uv sync --locked --extra messaging --extra bedrock
 
 "$VENV/bin/python" -c 'import aisuite, coworker' # fail loudly if the wiring broke
 echo "Ready: $VENV"

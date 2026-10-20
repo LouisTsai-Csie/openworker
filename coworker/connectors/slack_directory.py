@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Optional
+from typing import Any
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 _TTL = 900.0  # 15 min — rosters drift slowly; a Refresh affordance can force it
 # users.list: Slack recommends ≤200/page. conversations.list allows 1000 — use it:
@@ -188,7 +188,7 @@ def list_channels(
     return {"ok": True, "channels": _rank(rows, query, "name", limit)}
 
 
-def clear_cache(team_id: Optional[str] = None) -> None:
+def clear_cache(team_id: str | None = None) -> None:
     """Drop cached rosters (all teams, or one) — disconnect/reconnect hygiene."""
     if team_id is None:
         _CACHE.clear()

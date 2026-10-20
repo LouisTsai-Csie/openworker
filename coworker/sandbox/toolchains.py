@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Optional, Sequence
+from typing import Any
+from collections.abc import Sequence
 
 # name, title, path under the home folder (forward slashes on every platform)
 _MAC: list[tuple[str, str, str]] = [
@@ -56,7 +57,7 @@ def defaults(platform: str = sys.platform) -> list[dict[str, Any]]:
     return [{"name": n, "title": t, "path": p, "enabled": False} for n, t, p in rows]
 
 
-def entries(configured: Optional[Sequence[dict[str, Any]]], platform: str = sys.platform) -> list[dict[str, Any]]:
+def entries(configured: Sequence[dict[str, Any]] | None, platform: str = sys.platform) -> list[dict[str, Any]]:
     """The machine's list: the shipped entries with the user's edits and additions applied
     by name."""
     by_name = {e["name"]: dict(e) for e in defaults(platform)}
@@ -79,7 +80,7 @@ def _real(path: str, home: str) -> str:
 
 
 def granted(
-    configured: Optional[Sequence[dict[str, Any]]], *, home: Optional[str] = None, platform: str = sys.platform
+    configured: Sequence[dict[str, Any]] | None, *, home: str | None = None, platform: str = sys.platform
 ) -> list[str]:
     """Real paths of the entries that are switched on AND exist under this home folder.
     Never the home folder itself, never something outside it."""
@@ -96,7 +97,7 @@ def granted(
     return out
 
 
-def for_display(configured: Optional[Sequence[dict[str, Any]]], *, home: Optional[str] = None, platform: str = sys.platform) -> list[dict[str, Any]]:
+def for_display(configured: Sequence[dict[str, Any]] | None, *, home: str | None = None, platform: str = sys.platform) -> list[dict[str, Any]]:
     """The entries with `exists` (on this machine) and `shipped` (in the default list). A
     shipped folder this machine does not have is left out: there is nothing to show."""
     home = os.path.realpath(home or os.path.expanduser("~"))

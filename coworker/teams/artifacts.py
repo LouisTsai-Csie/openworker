@@ -10,14 +10,14 @@ from __future__ import annotations
 import json
 import uuid
 
-from .attachments import read_attachment_file, stored_name, _TEXT_TYPES, MAX_ATTACHMENT_BYTES
-from .model import BoardError, BoardNotFoundError
-from .store import ITEM_COMMENTED, text_page, validate_text_page
-from ..toolresult import PagedToolResult
+from coworker.teams.attachments import read_attachment_file, stored_name, _TEXT_TYPES, MAX_ATTACHMENT_BYTES
+from coworker.teams.model import BoardError, BoardNotFoundError
+from coworker.teams.store import ITEM_COMMENTED, text_page, validate_text_page
+from coworker.toolresult import PagedToolResult
 
 
 def artifact_tools(store, attachments, *, space, actor, roots, team_identity, taint):
-    from .tools import _wrap
+    from coworker.teams.tools import _wrap
 
     def identity():
         team_id = team_identity()

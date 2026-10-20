@@ -25,7 +25,7 @@ def test_console_programs_run_without_a_window_on_windows(monkeypatch):
 
 def test_no_window_flag_only_on_windows():
     expected = {"creationflags": 0x08000000} if sys.platform == "win32" else {}
-    assert local_machine._NO_WINDOW == expected
+    assert local_machine._NO_WINDOW == expected  # noqa: SIM300 - actual == expected; SIM300 reads the ALL-CAPS name as the constant
 
 
 def test_windows_processor_name_comes_from_the_registry(monkeypatch):

@@ -22,7 +22,8 @@ import stat
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any
+from collections.abc import Sequence
 
 CREDENTIAL = "credential"
 CONFIGURATION = "configuration"
@@ -160,7 +161,7 @@ class CopiedCredentials:
         return [{"name": g.name, "title": g.title, "path": g.path, "does": g.does} for g in self.grants]
 
 
-def listed(configured: Optional[Sequence[dict[str, Any]]]) -> list[dict[str, Any]]:
+def listed(configured: Sequence[dict[str, Any]] | None) -> list[dict[str, Any]]:
     """The entries the user added (UX-053 v5): those named in the machine's config, in
     that order, whether switched on or not. A shipped entry nobody added is a preset only."""
     names = []
@@ -172,7 +173,7 @@ def listed(configured: Optional[Sequence[dict[str, Any]]]) -> list[dict[str, Any
     return [by_name[n] for n in names if n in by_name]
 
 
-def entries(configured: Optional[Sequence[dict[str, Any]]]) -> list[dict[str, Any]]:
+def entries(configured: Sequence[dict[str, Any]] | None) -> list[dict[str, Any]]:
     """The machine's list: the shipped entries, with the user's edits and additions applied
     by name. Unknown keys in a user entry are kept, missing ones default."""
     by_name = {e["name"]: dict(e) for e in DEFAULT_ENTRIES}
@@ -189,7 +190,7 @@ def entries(configured: Optional[Sequence[dict[str, Any]]]) -> list[dict[str, An
     return list(by_name.values())
 
 
-def kind_of(path: str, *, home: Optional[str] = None) -> str:
+def kind_of(path: str, *, home: str | None = None) -> str:
     """"file", "folder", or "" when the path does not exist on this machine."""
     if not path:
         return ""
@@ -208,7 +209,7 @@ def _real(path: str, home: str) -> str:
     return os.path.realpath(os.path.expanduser(text))
 
 
-def granted(configured: Optional[Sequence[dict[str, Any]]], *, home: Optional[str] = None) -> list[Grant]:
+def granted(configured: Sequence[dict[str, Any]] | None, *, home: str | None = None) -> list[Grant]:
     """The entries that are switched on AND exist on this machine. An enabled entry whose
     file is missing is skipped, not an error: the user has no such credential here."""
     home = home or os.path.expanduser("~")
@@ -275,11 +276,11 @@ def copy_in(
     grants: Sequence[Grant],
     runtime_dir: str,
     *,
-    home: Optional[str] = None,
-    proxy_port: Optional[int] = None,
-    ssh_proxy_command: Optional[str] = None,
-    inside_home: Optional[str] = None,
-    windows: Optional[bool] = None,
+    home: str | None = None,
+    proxy_port: int | None = None,
+    ssh_proxy_command: str | None = None,
+    inside_home: str | None = None,
+    windows: bool | None = None,
 ) -> CopiedCredentials:
     """Make the sandbox's private home under `runtime_dir` with the granted files inside.
     Returns the environment the sandbox needs so each tool finds its copy. With no grants
@@ -294,7 +295,7 @@ def copy_in(
     """
     home = os.path.realpath(home or os.path.expanduser("~"))
     sandbox_home = os.path.join(os.path.realpath(runtime_dir), "home")
-    if sandbox_home == home or sandbox_home.startswith(home + os.sep) and os.path.realpath(runtime_dir) == home:
+    if sandbox_home == home or (sandbox_home.startswith(home + os.sep) and os.path.realpath(runtime_dir) == home):
         raise ValueError("the sandbox's runtime folder cannot be the home folder itself")
     seen = sandbox_home if inside_home is None else inside_home
     on_windows = (sys.platform == "win32") if windows is None else windows
@@ -338,7 +339,7 @@ def copy_in(
 _WINDOWS_SSH = r"C:\Windows\System32\OpenSSH\ssh.exe"
 
 
-def _prepare_ssh(ssh_dir: str, bin_dir: str, proxy_command: Optional[str], *, inside_dir: Optional[str] = None, windows: bool = False) -> dict[str, str]:
+def _prepare_ssh(ssh_dir: str, bin_dir: str, proxy_command: str | None, *, inside_dir: str | None = None, windows: bool = False) -> dict[str, str]:
     """Make the copied `.ssh` usable from inside the sandbox.
 
     ssh reads its config and expands `~` from the ACCOUNT's home folder, not from `$HOME`,
@@ -395,7 +396,7 @@ def windows_ssh_proxy_command(python: str, runner: str, port: int) -> str:
     return f'"{python}" -S "{runner}" connect 127.0.0.1 {int(port)} %h %p'
 
 
-def context_lines(copied: Optional[CopiedCredentials]) -> str:
+def context_lines(copied: CopiedCredentials | None) -> str:
     """What the agent is told about the credentials it was given (ruling 21: the agent knows
     its environment). Empty when nothing was granted."""
     if copied is None or not copied.grants:

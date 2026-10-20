@@ -31,7 +31,8 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Iterator, Optional, Sequence
+from typing import Any
+from collections.abc import Callable, Iterator, Sequence
 
 from . import fsops, protocol as P, toolcalls, winpipe
 from .executor import LocalExecutor
@@ -99,10 +100,10 @@ class Daemon:
     def __init__(
         self,
         socket_path: str,
-        default_cwd: Optional[str] = None,
+        default_cwd: str | None = None,
         exit_with_parent: bool = False,
         *,
-        runtime_dir: Optional[str] = None,
+        runtime_dir: str | None = None,
         allow_sids: Sequence[str] = (),
     ) -> None:
         """`socket_path` is a Unix socket file, or on Windows a `\\\\.\\pipe\\` name.
@@ -121,10 +122,10 @@ class Daemon:
         self._shells_lock = threading.Lock()
         self._seq = 0
         self._out_lock = threading.Lock()  # guards seq, the result log and the active conn
-        self._results: "collections.deque[tuple[int, bytes]]" = collections.deque(maxlen=_RESULT_LOG_MAX)
+        self._results: collections.deque[tuple[int, bytes]] = collections.deque(maxlen=_RESULT_LOG_MAX)
         self._gap = False  # a result fell off the log before it was acknowledged
-        self._requests: "collections.OrderedDict[str, Optional[bytes]]" = collections.OrderedDict()
-        self._conn: Optional[_Conn] = None
+        self._requests: collections.OrderedDict[str, bytes | None] = collections.OrderedDict()
+        self._conn: _Conn | None = None
         self._cleanup: list[str] = []
         self._stop = threading.Event()
 
@@ -155,14 +156,14 @@ class Daemon:
     def _reply(self, req_id: str, value: dict[str, Any]) -> None:
         self._emit(P.result(req_id, value), record=True)
 
-    def _fail(self, req_id: Optional[str], code: int, message: str, data: Optional[dict] = None) -> None:
+    def _fail(self, req_id: str | None, code: int, message: str, data: dict | None = None) -> None:
         self._emit(P.error(req_id, code, message, data), record=req_id is not None)
 
     def _notify(self, method: str, params: dict[str, Any]) -> None:
         self._emit(P.notification(method, params), record=False)
 
     # -- shells -----------------------------------------------------------------------
-    def _shell(self, name: str, *, cwd: Optional[str] = None, create: bool = True) -> Optional[_Shell]:
+    def _shell(self, name: str, *, cwd: str | None = None, create: bool = True) -> _Shell | None:
         with self._shells_lock:
             shell = self._shells.get(name)
             if shell is None and create:
@@ -479,7 +480,7 @@ class Daemon:
             return winpipe.process_is_gone(self._parent)
         return os.getppid() != self._parent
 
-    def _listen(self) -> Callable[[float], Optional[Any]]:
+    def _listen(self) -> Callable[[float], Any | None]:
         """Start listening; the result takes a timeout and gives the next client's stream,
         or None when nobody came in time. Closing is `self._close_listener`."""
         path = self.socket_path
@@ -501,11 +502,11 @@ class Daemon:
         server.listen(16)
         self._close_listener = server.close
 
-        def accept(timeout: float) -> Optional[_SocketStream]:
+        def accept(timeout: float) -> _SocketStream | None:
             server.settimeout(timeout)
             try:
                 sock, _ = server.accept()
-            except socket.timeout:
+            except TimeoutError:
                 return None
             return _SocketStream(sock)
 

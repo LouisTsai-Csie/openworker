@@ -15,7 +15,6 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -47,7 +46,7 @@ class Team:
 
 
 class TeamRegistry:
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else None
         self._lock = threading.Lock()
         self._teams: dict[str, Team] = {}
@@ -98,16 +97,16 @@ class TeamRegistry:
     def all(self) -> list[Team]:
         return list(self._teams.values())
 
-    def get(self, team_id: str) -> Optional[Team]:
+    def get(self, team_id: str) -> Team | None:
         return self._teams.get(team_id)
 
-    def for_lead_session(self, session_id: str) -> Optional[Team]:
+    def for_lead_session(self, session_id: str) -> Team | None:
         for team in self._teams.values():
             if team.lead_session == session_id:
                 return team
         return None
 
-    def for_worker_session(self, session_id: str) -> Optional[tuple[Team, TeamWorker]]:
+    def for_worker_session(self, session_id: str) -> tuple[Team, TeamWorker] | None:
         for team in self._teams.values():
             for worker in team.workers:
                 if worker.session_id == session_id:

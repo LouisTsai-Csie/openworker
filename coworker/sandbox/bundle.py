@@ -13,9 +13,8 @@ import hashlib
 import os
 import zipfile
 from pathlib import Path
-from typing import Optional
 
-from ..secrets import state_dir
+from coworker.secrets import state_dir
 
 _PACKAGE = "owrunner"  # the name the runner package has inside the zipapp
 _MAIN = f"from {_PACKAGE}.__main__ import main\nraise SystemExit(main())\n"
@@ -71,7 +70,7 @@ def runner_dir() -> Path:
     return state_dir() / "sandbox" / "runner"
 
 
-def build_runner_zipapp(dest_dir: Optional[Path] = None) -> Path:
+def build_runner_zipapp(dest_dir: Path | None = None) -> Path:
     """Build (or reuse) the runner zipapp and return its path. The name carries a hash of
     the sources, so an upgraded or edited runner never reuses a stale file."""
     sources = _sources()

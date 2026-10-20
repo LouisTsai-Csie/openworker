@@ -6,6 +6,7 @@ __pycache__/
 build/
 dist/
 .coverage
+coverage.xml
 
 # Local secrets (live-smoke BYO keys) — never committed
 .env

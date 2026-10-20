@@ -14,15 +14,15 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 
 def send_github_comment(secrets: SecretStore, chat_id: str, text: str) -> dict[str, Any]:
     """POST a comment on `owner/repo#N`. Returns the send_message result shape."""
     import httpx
 
-    from .github_relay import split_thread
-    from .integration_tools import _github_auth
+    from coworker.connectors.github_relay import split_thread
+    from coworker.connectors.integration_tools import _github_auth
 
     owner_repo, number = split_thread(chat_id)
     if number is None:

@@ -17,9 +17,8 @@ native username override.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 _TIMEOUT = 10.0
 
@@ -28,7 +27,7 @@ def _api_base() -> str:
     return os.environ.get("SLACK_API_URL", "https://slack.com/api/")
 
 
-def _fetch_display_name(token: str, user_id: str) -> Optional[str]:
+def _fetch_display_name(token: str, user_id: str) -> str | None:
     """users.info → the human's name (display name, else real name). None on any failure."""
     import httpx
 
@@ -52,7 +51,7 @@ def _fetch_display_name(token: str, user_id: str) -> Optional[str]:
 
 def sender_prefix(secrets: SecretStore, chat_id: str) -> str:
     """'[Rohit] ' for a Slack chat_id whose workspace install knows its human, else ''."""
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     team, channel = split(chat_id)
     if channel.startswith("D"):  # DM with the bot — nothing to disambiguate

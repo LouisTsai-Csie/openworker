@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import shutil  # noqa: F401  (tests patch search.shutil / search.subprocess)
 import subprocess  # noqa: F401
-from typing import Any, Optional
+from typing import Any
 
 import aisuite as ai
 
-from ..sandbox.runner import tools_grep as _impl
-from ..sandbox.runner.tools_grep import (  # noqa: F401  (re-exported: the logic moved)
+from coworker.sandbox.runner import tools_grep as _impl
+from coworker.sandbox.runner.tools_grep import (  # noqa: F401  (re-exported: the logic moved)
     _IGNORE_DIRS,
     OS_DATA_DIRS,
     _parse_rg,
@@ -60,7 +60,7 @@ def search_tools(workspace: str) -> list:
     def grep(
         pattern: str,
         path: str = ".",
-        glob: Optional[str] = None,
+        glob: str | None = None,
         max_results: int = 100,
     ) -> dict[str, Any]:
         return _impl.grep(workspace, pattern, path, glob, max_results)

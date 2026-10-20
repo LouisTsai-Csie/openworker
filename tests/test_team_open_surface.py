@@ -190,7 +190,7 @@ def test_board_api_requires_a_token(api):
 
 
 def test_status_over_http_is_owned_and_never_kicks_a_wake(api, monkeypatch):
-    client, manager, app = api
+    client, manager, _app = api
     item = manager.team_store.create_item("proj", LEAD, title="Invoice PDF", criteria="verified")
     manager.team_store.assign("proj", LEAD, item["id"], "sam")
     sam = manager.board_tokens.mint("sam", "worker")
@@ -216,7 +216,7 @@ def test_board_api_rejects_the_sidecar_token_as_a_board_token(api):
 
 
 def test_token_binds_identity_and_store_enforces_authority(api):
-    client, manager, app = api
+    client, manager, _app = api
     lead_token = _tokens(manager).mint("lead-1", "lead")
     nia_token = _tokens(manager).mint("nia", "worker")
     lead = {"Authorization": f"Bearer {lead_token}"}
@@ -427,7 +427,7 @@ def test_board_item_create_hides_missing_and_foreign_parents(api):
 
 
 def test_remote_dialect_round_trip(api):
-    client, manager, app = api
+    _client, manager, app = api
     lead_token = _tokens(manager).mint("lead-1", "lead")
     nia_token = _tokens(manager).mint("nia", "worker")
     from fastapi.testclient import TestClient
@@ -481,7 +481,7 @@ def test_remote_dialect_round_trip(api):
 
 
 def test_pending_and_consume_over_the_wire(api):
-    client, manager, app = api
+    _client, manager, app = api
     lead_token = _tokens(manager).mint("lead-1", "lead")
     nia_token = _tokens(manager).mint("nia", "worker")
     from fastapi.testclient import TestClient
@@ -539,7 +539,7 @@ def test_attachment_store_validates(tmp_path):
 
 
 def test_attach_over_the_wire_and_fetch(api):
-    client, manager, app = api
+    _client, manager, app = api
     from fastapi.testclient import TestClient
 
     lead_token = _tokens(manager).mint("lead-1", "lead")
@@ -878,7 +878,7 @@ def test_local_attachment_read_allows_a_directly_linked_item(tmp_path):
 
 
 def test_attach_rejects_bad_payloads_over_the_wire(api):
-    client, manager, app = api
+    client, manager, _app = api
     lead_token = _tokens(manager).mint("lead-1", "lead")
     headers = {"Authorization": f"Bearer {lead_token}"}
     client.post(

@@ -13,13 +13,13 @@ import sqlite3
 import subprocess
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 NAME_KINDS = ("memory", "board")
 MAX_NAME_CHARS = 60
 
 
-def _git_common_dir(workspace: Path) -> Optional[Path]:
+def _git_common_dir(workspace: Path) -> Path | None:
     try:
         out = subprocess.run(
             ["git", "-C", str(workspace), "rev-parse", "--git-common-dir"],
@@ -59,7 +59,7 @@ def project_key(workspace: str | Path) -> str:
     return str(ws)
 
 
-def project_label(key: str, *, home: Optional[str] = None) -> dict[str, Any]:
+def project_label(key: str, *, home: str | None = None) -> dict[str, Any]:
     """Display info for a derived key. kind 'git' when the key currently looks
     like a repo (has a .git); label rules per UX-044: git = repo folder name,
     folder = ~-collapsed path (the GUI trims to the last 3 segments)."""
@@ -112,7 +112,7 @@ class ProjectNames:
             self._conn.commit()
         return {"kind": kind, "name": name, "key": key}
 
-    def resolve(self, kind: str, name: str) -> Optional[str]:
+    def resolve(self, kind: str, name: str) -> str | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT key FROM project_names WHERE kind = ? AND name = ?",
@@ -130,7 +130,7 @@ class ProjectNames:
             )
             self._conn.commit()
 
-    def list(self, kind: str, *, limit: Optional[int] = None) -> list[dict[str, Any]]:
+    def list(self, kind: str, *, limit: int | None = None) -> list[dict[str, Any]]:
         q = (
             "SELECT name, key, last_used_at FROM project_names "
             "WHERE kind = ? ORDER BY last_used_at DESC, name"
@@ -153,12 +153,12 @@ class ProjectNames:
 
 
 def resolve_memory_key(
-    workspace: Optional[str],
+    workspace: str | None,
     *,
-    binding: Optional[str] = None,
-    names: Optional["ProjectNames"] = None,
+    binding: str | None = None,
+    names: ProjectNames | None = None,
     memory_store: Any = None,
-) -> Optional[str]:
+) -> str | None:
     """The identity ladder for memory: explicit binding > git > path. Applies the
     one-time path→git re-key as a read-path side effect (idempotent: once moved,
     the path key has no rows left to move)."""
@@ -182,12 +182,12 @@ def resolve_memory_key(
 
 
 def resolve_board_space(
-    workspace: Optional[str],
+    workspace: str | None,
     *,
-    binding: Optional[str] = None,
-    names: Optional["ProjectNames"] = None,
+    binding: str | None = None,
+    names: ProjectNames | None = None,
     team_store: Any = None,
-) -> Optional[str]:
+) -> str | None:
     """The identity ladder for the board space — same ladder, board collision
     rule: when both a path-keyed and a git-keyed space have events, the git key
     wins and the path space stays dormant (rekey_space refuses; nothing merges)."""

@@ -12,7 +12,6 @@ from __future__ import annotations
 import threading
 import time
 
-import pytest
 from fastapi.testclient import TestClient
 
 from coworker.sandbox import setup_cmd, setup_job

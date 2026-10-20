@@ -7,12 +7,12 @@ public bot identity captured at connect time.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from ..secrets import SecretStore
-from .catalog_copy import about_for, access_for
-from .descriptors import get_descriptor, list_descriptors
-from .tool_defs import patch_tool_settings, tool_dicts
+from coworker.secrets import SecretStore
+from coworker.connectors.catalog_copy import about_for, access_for
+from coworker.connectors.descriptors import get_descriptor, list_descriptors
+from coworker.connectors.tool_defs import patch_tool_settings, tool_dicts
 
 _EXPERIMENTAL_KEY = "experimental:settings"
 
@@ -46,7 +46,7 @@ def _profile_connected(descriptor, profile: dict[str, Any]) -> bool:
 def _mcp_tokens_present(secrets: SecretStore, name: str) -> bool:
     # Lazy import: the mcp package pulls in the MCP SDK, which connector listing
     # shouldn't pay for unless an MCP-backed profile actually exists.
-    from ..mcp.oauth import has_tokens
+    from coworker.mcp.oauth import has_tokens
 
     return has_tokens(name, secrets)
 
@@ -117,7 +117,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
         if d.name == "gmail":
             # Multi-account: each `gmail:account:*` profile is one mailbox; the
             # :default profile is just the default pointer + privacy filters.
-            from . import gmail_accounts
+            from coworker.connectors import gmail_accounts
 
             accounts = _gmail_account_list(secrets)
             default_email = gmail_accounts.default_account(secrets)
@@ -132,7 +132,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
         if d.name == "google_calendar":
             # Multi-account, same shape as gmail: each `google_calendar:account:*`
             # profile is one Google account; :default is just the default pointer.
-            from . import gcal_accounts
+            from coworker.connectors import gcal_accounts
 
             accounts = _gcal_account_list(secrets)
             default_email = gcal_accounts.default_account(secrets)
@@ -154,7 +154,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
         if d.account_field:
             # Generic multi-account (batch-2 connectors): each
             # `<name>:account:*` profile is one account; :default is pointer-only.
-            from . import accounts as _accounts
+            from coworker.connectors import accounts as _accounts
 
             rows = _accounts.account_rows(secrets, d.name)
             default_id = _accounts.default_account(secrets, d.name)
@@ -167,7 +167,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
         if d.name == "hubspot":
             # Multi-portal: each `hubspot:portal:*` profile is one portal; the
             # :default profile is the default pointer + hidden-fields policy.
-            from . import hubspot_portals
+            from coworker.connectors import hubspot_portals
 
             portals = _hubspot_portal_list(secrets)
             default_hub = hubspot_portals.default_portal(secrets)
@@ -183,7 +183,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
 
 
 def _slack_workspaces(secrets: SecretStore) -> list[dict[str, Any]]:
-    from .config import _slack_team_profiles
+    from coworker.connectors.config import _slack_team_profiles
 
     return [
         {
@@ -209,7 +209,7 @@ def _slack_workspaces(secrets: SecretStore) -> list[dict[str, Any]]:
 
 
 def _github_installations(secrets: SecretStore) -> list[dict[str, Any]]:
-    from .github_installs import list_installs
+    from coworker.connectors.github_installs import list_installs
 
     return [
         {
@@ -228,7 +228,7 @@ def _github_installations(secrets: SecretStore) -> list[dict[str, Any]]:
 def _gmail_account_list(secrets: SecretStore) -> list[dict[str, Any]]:
     from time import time
 
-    from . import gmail_accounts
+    from coworker.connectors import gmail_accounts
 
     default = gmail_accounts.default_account(secrets)
     out = []
@@ -252,7 +252,7 @@ def _gmail_account_list(secrets: SecretStore) -> list[dict[str, Any]]:
 def _gcal_account_list(secrets: SecretStore) -> list[dict[str, Any]]:
     from time import time
 
-    from . import gcal_accounts
+    from coworker.connectors import gcal_accounts
 
     default = gcal_accounts.default_account(secrets)
     out = []
@@ -274,7 +274,7 @@ def _gcal_account_list(secrets: SecretStore) -> list[dict[str, Any]]:
 
 
 def _hubspot_portal_list(secrets: SecretStore) -> list[dict[str, Any]]:
-    from . import hubspot_portals
+    from coworker.connectors import hubspot_portals
 
     default = hubspot_portals.default_portal(secrets)
     out = []
@@ -374,7 +374,7 @@ def connect_connector(
     if d.account_field:
         # Account-patterned connector: connecting ADDS an account (a second
         # submit with different creds is a second account, not an overwrite).
-        from . import accounts as _accounts
+        from coworker.connectors import accounts as _accounts
 
         account_id = _accounts.derive_account_id(d, profile)
         result = _accounts.add_account(secrets, name, account_id, profile)
@@ -400,7 +400,7 @@ def managed_connect_connector(
     if not d.managed:
         return {"ok": False, "error": f"{name} does not support managed connect"}
     if d.account_field:
-        from . import accounts as _accounts
+        from coworker.connectors import accounts as _accounts
 
         account_id = _accounts.derive_account_id(d, profile)
         result = _accounts.add_account(secrets, name, account_id, profile)
@@ -429,15 +429,15 @@ def store_managed_grant(
     drift. Slack (relay install) and GitHub (cloud runtime) have their own
     branches in the callback and never come through here."""
     if connector == "gmail":
-        from . import gmail_accounts
+        from coworker.connectors import gmail_accounts
 
         return gmail_accounts.managed_connect_account(secrets, profile)
     if connector == "google_calendar":
-        from . import gcal_accounts
+        from coworker.connectors import gcal_accounts
 
         return gcal_accounts.managed_connect_account(secrets, profile)
     if connector == "hubspot" and form.get("hub_id"):
-        from . import hubspot_portals
+        from coworker.connectors import hubspot_portals
 
         profile = {**profile, "hub_id": form.get("hub_id", "")}
         if form.get("sandbox"):
@@ -450,7 +450,7 @@ def store_managed_grant_bundle(
     secrets: SecretStore,
     connector: str,
     form: dict[str, Any],
-    grant: Optional[dict[str, Any]] = None,
+    grant: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Turn a broker OAuth callback (`form` = the callback's fields) into this
     connector's profile records in `secrets`, stamped with the delegation
@@ -465,8 +465,8 @@ def store_managed_grant_bundle(
       or generic)."""
     import json as _json
 
-    from .. import cloud
-    from .github_installs import managed_connect_install
+    from coworker import cloud
+    from coworker.connectors.github_installs import managed_connect_install
 
     form = {k: str(v) for k, v in (form or {}).items()}
     grant = grant or {}
@@ -586,7 +586,7 @@ def managed_connect_slack_install(
 
 def disconnect_connector(secrets: SecretStore, name: str) -> dict[str, Any]:
     dropped_accounts = False
-    from . import accounts as _accounts
+    from coworker.connectors import accounts as _accounts
 
     if _accounts.is_account_connector(name):
         for account_id, _profile in _accounts.list_accounts(secrets, name):
@@ -596,28 +596,28 @@ def disconnect_connector(secrets: SecretStore, name: str) -> dict[str, Any]:
     if name == "gmail":
         # Whole-connector disconnect drops every mailbox (per-account removal
         # lives on the Gmail page); filters go too — an explicit full reset.
-        from . import gmail_accounts
+        from coworker.connectors import gmail_accounts
 
         for email, _profile in gmail_accounts.list_accounts(secrets):
             dropped_accounts = (
                 secrets.delete(gmail_accounts.PREFIX + email) or dropped_accounts
             )
     if name == "google_calendar":
-        from . import gcal_accounts
+        from coworker.connectors import gcal_accounts
 
         for email, _profile in gcal_accounts.list_accounts(secrets):
             dropped_accounts = (
                 secrets.delete(gcal_accounts.PREFIX + email) or dropped_accounts
             )
     if name == "hubspot":
-        from . import hubspot_portals
+        from coworker.connectors import hubspot_portals
 
         for hub_id, _profile in hubspot_portals.list_portals(secrets):
             dropped_accounts = (
                 secrets.delete(hubspot_portals.PREFIX + hub_id) or dropped_accounts
             )
     if name == "github":
-        from . import github_installs
+        from coworker.connectors import github_installs
 
         for installation_id, _profile in github_installs.list_installs(secrets):
             dropped_accounts = (
@@ -628,8 +628,8 @@ def disconnect_connector(secrets: SecretStore, name: str) -> dict[str, Any]:
     if profile.get("mode") == "mcp":
         # MCP-backed connect: forget the OAuth tokens + DCR registration and remove
         # the seeded server entry, so a reconnect runs a fresh flow.
-        from ..mcp import config as mcp_config
-        from ..mcp import oauth as mcp_oauth
+        from coworker.mcp import config as mcp_config
+        from coworker.mcp import oauth as mcp_oauth
 
         dropped_accounts = mcp_oauth.sign_out(name, secrets) or dropped_accounts
         mcp_config.delete_global_server(name)
@@ -640,7 +640,7 @@ def connector_profile_keys(secrets: SecretStore, name: str) -> list[str]:
     """Every stored profile key belonging to one connector — the unit a grant
     handoff moves to a machine. Mirrors disconnect_connector's enumeration."""
     keys: list[str] = []
-    from . import accounts as _accounts
+    from coworker.connectors import accounts as _accounts
 
     if _accounts.is_account_connector(name):
         keys += [
@@ -648,21 +648,21 @@ def connector_profile_keys(secrets: SecretStore, name: str) -> list[str]:
             for account_id, _profile in _accounts.list_accounts(secrets, name)
         ]
     if name == "gmail":
-        from . import gmail_accounts
+        from coworker.connectors import gmail_accounts
 
         keys += [
             gmail_accounts.PREFIX + email
             for email, _profile in gmail_accounts.list_accounts(secrets)
         ]
     if name == "google_calendar":
-        from . import gcal_accounts
+        from coworker.connectors import gcal_accounts
 
         keys += [
             gcal_accounts.PREFIX + email
             for email, _profile in gcal_accounts.list_accounts(secrets)
         ]
     if name == "hubspot":
-        from . import hubspot_portals
+        from coworker.connectors import hubspot_portals
 
         keys += [
             hubspot_portals.PREFIX + hub_id

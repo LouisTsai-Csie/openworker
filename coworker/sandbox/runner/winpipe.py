@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import ctypes
 import sys
-from typing import Any, Iterator, Optional, Sequence
+from typing import Any
+from collections.abc import Iterator, Sequence
 
 PIPE_PREFIX = "\\\\.\\pipe\\"
 _BUFSIZE = 65536
@@ -85,7 +86,7 @@ class Listener:
         self._winapi = _winapi
         self.address = address
         self._security = _SecurityAttributes(allow_sids) if allow_sids else None
-        self._pending: Optional[tuple[int, Any]] = None  # (handle, overlapped connect)
+        self._pending: tuple[int, Any] | None = None  # (handle, overlapped connect)
         self._closed = False
         self._new_instance(first=True)
 
@@ -106,7 +107,7 @@ class Listener:
         )
         self._pending = (handle, w.ConnectNamedPipe(handle, overlapped=True))
 
-    def accept(self, timeout: float) -> Optional[PipeStream]:
+    def accept(self, timeout: float) -> PipeStream | None:
         from multiprocessing.connection import PipeConnection
 
         w = self._winapi

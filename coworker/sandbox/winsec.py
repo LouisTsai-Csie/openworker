@@ -27,7 +27,7 @@ import os
 import random
 import sys
 from functools import lru_cache
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 if sys.platform == "win32":
     from ctypes import wintypes
@@ -229,7 +229,7 @@ class Desktop:
         sddl = f"D:(A;;GA;;;{current_user_sid()})(A;;GA;;;{session})(A;;GA;;;{logon_sid()})"
         self._descriptor = _descriptor(sddl)
         attributes = SECURITY_ATTRIBUTES(ctypes.sizeof(SECURITY_ATTRIBUTES), self._descriptor, False)
-        self.station_name = "owsb-%08x" % random.SystemRandom().getrandbits(32)
+        self.station_name = f"owsb-{random.SystemRandom().getrandbits(32):08x}"
         self.station = _u32.CreateWindowStationW(self.station_name, 0, _WINSTA_ALL_ACCESS, ctypes.byref(attributes))
         if not self.station:
             raise _fail("CreateWindowStation")
@@ -256,21 +256,21 @@ class Desktop:
 class Process:
     """A process started by `spawn`, with the calls a provider uses on a Popen."""
 
-    def __init__(self, info: "PROCESS_INFORMATION", job: int) -> None:
+    def __init__(self, info: PROCESS_INFORMATION, job: int) -> None:
         self._handle = info.hProcess
         self._job = job
         self.pid = int(info.dwProcessId)
-        self.returncode: Optional[int] = None
+        self.returncode: int | None = None
         _k32.CloseHandle(info.hThread)
 
-    def poll(self) -> Optional[int]:
+    def poll(self) -> int | None:
         if self.returncode is None and _k32.WaitForSingleObject(self._handle, 0) == _WAIT_OBJECT_0:
             code = wintypes.DWORD()
             _k32.GetExitCodeProcess(self._handle, ctypes.byref(code))
             self.returncode = int(code.value)
         return self.returncode
 
-    def wait(self, timeout: Optional[float] = None) -> int:
+    def wait(self, timeout: float | None = None) -> int:
         ms = _INFINITE if timeout is None else int(timeout * 1000)
         if _k32.WaitForSingleObject(self._handle, ms) != _WAIT_OBJECT_0:
             import subprocess
@@ -303,7 +303,7 @@ def spawn_as_account(
     password: str,
     desktop: Desktop,
     cwd: str,
-    stderr_path: Optional[str] = None,
+    stderr_path: str | None = None,
 ) -> Process:
     """Start `argv` logged on as another local account (CreateProcessWithLogonW, which is
     the secondary logon service: no privilege needed), on our desktop, in a job that ends
@@ -343,7 +343,7 @@ def spawn_as_account(
     return Process(info, job)
 
 
-def _explicit(sid: _Sid, mode: int, permissions: int = 0, inherit: bool = True) -> "EXPLICIT_ACCESS_W":
+def _explicit(sid: _Sid, mode: int, permissions: int = 0, inherit: bool = True) -> EXPLICIT_ACCESS_W:
     entry = EXPLICIT_ACCESS_W()
     entry.grfAccessPermissions = permissions or _FILE_GENERIC_MODIFY
     entry.grfAccessMode = mode

@@ -27,17 +27,17 @@ import os
 import secrets as _secrets
 import time
 import urllib.parse
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
-from .config import Config
-from .secrets import SecretStore
+from coworker.config import Config
+from coworker.secrets import SecretStore
 
 CLOUD_AUTH_PROFILE = "cloud:auth"
 LOGIN_SCOPES = "openid profile email offline_access"
 
-from . import __version__ as APP_VERSION  # noqa: E402
+from coworker import __version__ as APP_VERSION
 
 # connector id (canonical, = descriptor name) -> broker provider key
 PROVIDER_FOR_CONNECTOR = {
@@ -176,7 +176,7 @@ def sync_connections(secrets: SecretStore, config: Config) -> dict[str, Any]:
     if resp.status_code != 200:
         return {"ok": False, "error": f"connections fetch failed ({resp.status_code})"}
 
-    from .connectors.github_installs import managed_connect_install
+    from coworker.connectors.github_installs import managed_connect_install
 
     restored: list[str] = []
     for row in resp.json().get("connections", []):
@@ -226,7 +226,7 @@ def logout(secrets: SecretStore) -> dict[str, Any]:
     return {"ok": True, "signed_in": False}
 
 
-def fresh_access_token(secrets: SecretStore, config: Config) -> Optional[str]:
+def fresh_access_token(secrets: SecretStore, config: Config) -> str | None:
     """Valid cloud session token, silently refreshed near expiry; None when
     signed out or the session can't be renewed (GUI shows "sign in again")."""
     profile = secrets.get(CLOUD_AUTH_PROFILE) or {}
@@ -260,7 +260,7 @@ def fresh_access_token(secrets: SecretStore, config: Config) -> Optional[str]:
         return (secrets.get(CLOUD_AUTH_PROFILE) or {}).get("access_token")
 
 
-def fetch_me(secrets: SecretStore, config: Config) -> Optional[dict]:
+def fetch_me(secrets: SecretStore, config: Config) -> dict | None:
     token = fresh_access_token(secrets, config)
     if not token:
         return None
@@ -411,7 +411,7 @@ def begin_managed_connect(
     }
 
 
-def consume_managed_state(state: str) -> Optional[dict[str, Any]]:
+def consume_managed_state(state: str) -> dict[str, Any] | None:
     """Consume one recent managed-OAuth callback state exactly once.
 
     Returns the pending record ({"machine_id": …, "machine_name": …}) so the
@@ -459,7 +459,7 @@ def delegate_connection(
     *,
     seal_pubkey: str = "",
     machine_id: str = "",
-) -> Optional[dict[str, str]]:
+) -> dict[str, str] | None:
     """Handoff step (machines spec §Remote OAuth): mark a managed connection
     machine-held at the broker, so the machine can renew it by possession.
 
@@ -507,8 +507,8 @@ def refresh_managed_token(
     config: Config,
     connector: str,
     *,
-    profile_key: Optional[str] = None,
-) -> Optional[dict[str, Any]]:
+    profile_key: str | None = None,
+) -> dict[str, Any] | None:
     """Renew a managed connector token through the broker. Returns the updated
     profile, or None if this profile can't be (or doesn't need to be) renewed
     that way. Manual profiles are never touched. `profile_key` targets an
@@ -534,7 +534,7 @@ def refresh_managed_token(
 
 def _renew_managed_token(
     secrets: SecretStore, config: Config, connector: str, key: str, profile: dict[str, Any]
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     provider = profile.get("provider") or PROVIDER_FOR_CONNECTOR.get(connector)
     if not provider:
         return None
@@ -587,7 +587,7 @@ def ensure_fresh_connector_token(
     config: Config,
     connector: str,
     *,
-    profile_key: Optional[str] = None,
+    profile_key: str | None = None,
     leeway: int = 120,
 ) -> None:
     """Refresh-on-expiry hook for connector tools: if this is a managed profile
@@ -649,7 +649,7 @@ def cloud_disconnect(
     config: Config,
     connector: str,
     *,
-    profile_key: Optional[str] = None,
+    profile_key: str | None = None,
 ) -> None:
     """Best-effort: tell the cloud a managed connection is gone so its metadata
     flips to disconnected. Local deletion always proceeds regardless."""
@@ -788,7 +788,7 @@ def slack_disconnect_workspace(
 # --- persona gallery -----------------------------------------------------------
 
 
-def _gallery_get(secrets: SecretStore, config: Config, path: str) -> Optional[dict]:
+def _gallery_get(secrets: SecretStore, config: Config, path: str) -> dict | None:
     token = fresh_access_token(secrets, config)
     if not token:
         return None
@@ -803,13 +803,13 @@ def _gallery_get(secrets: SecretStore, config: Config, path: str) -> Optional[di
     return resp.json() if resp.status_code == 200 else None
 
 
-def gallery_list(secrets: SecretStore, config: Config) -> Optional[dict]:
+def gallery_list(secrets: SecretStore, config: Config) -> dict | None:
     """Curated persona cards visible to this user's tenant; None when signed
     out or the cloud is unreachable (gallery requires sign-in by design)."""
     return _gallery_get(secrets, config, "/v1/personas/gallery")
 
 
-def gallery_manifest(secrets: SecretStore, config: Config, slug: str) -> Optional[dict]:
+def gallery_manifest(secrets: SecretStore, config: Config, slug: str) -> dict | None:
     return _gallery_get(secrets, config, f"/v1/personas/gallery/{slug}/manifest")
 
 
@@ -830,7 +830,7 @@ def gallery_install_event(secrets: SecretStore, config: Config, slug: str) -> No
         pass
 
 
-def gallery_detail(secrets: SecretStore, config: Config, slug: str) -> Optional[dict]:
+def gallery_detail(secrets: SecretStore, config: Config, slug: str) -> dict | None:
     """Solo-page payload: the cloud card + publisher pitch, with capability
     facts derived LOCALLY from the manifest via the desktop's own strict
     parser — the pitch can never advertise what install-time consent wouldn't
@@ -840,8 +840,8 @@ def gallery_detail(secrets: SecretStore, config: Config, slug: str) -> Optional[
     if card is None or manifest is None:
         return None
     try:
-        from .personas.loading import consent_summary
-        from .personas.manifest import parse_manifest
+        from coworker.personas.loading import consent_summary
+        from coworker.personas.manifest import parse_manifest
 
         m = parse_manifest(manifest.get("manifest_markdown", ""), fallback_id=slug)
         capabilities = consent_summary(m)
@@ -864,7 +864,7 @@ def broker_request(
     config: Config,
     method: str,
     path: str,
-    body: Optional[dict[str, Any]] = None,
+    body: dict[str, Any] | None = None,
 ) -> tuple[int, Any]:
     """One user-authed call to the broker for the desktop GUI's cloud views
     (UX-049 4c). Returns (status, json); (401, …) when signed out; (0, …)

@@ -12,7 +12,8 @@ to its aisuite metadata (``requires_approval`` → external) or is treated as re
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 
 class RiskClass(str, Enum):
@@ -54,9 +55,9 @@ EGRESS_TOOLS = {
 } | _ENRICHMENT_TOOLS
 
 _BASE: dict[str, RiskClass] = {
-    **{name: RiskClass.WRITE_LOCAL for name in WRITE_TOOLS},
+    **dict.fromkeys(WRITE_TOOLS, RiskClass.WRITE_LOCAL),
     SHELL_TOOL: RiskClass.EXEC,
-    **{name: RiskClass.EGRESS for name in EGRESS_TOOLS},
+    **dict.fromkeys(EGRESS_TOOLS, RiskClass.EGRESS),
 }
 
 # How much attention each class demands, for the override-tightening rule below. Higher =
@@ -73,21 +74,21 @@ _STRICTNESS: dict[RiskClass, int] = {
 RiskOverrides = Callable[[str], Optional["RiskClass"]]
 
 
-def _catalog_floor(tool_name: str) -> Optional[RiskClass]:
+def _catalog_floor(tool_name: str) -> RiskClass | None:
     """The floor a connector-catalog tool must not be relaxed below. Catalog writes are
     EXTERNAL by construction (`approval_for_tool` → `requires_approval=True`), and letting
     an override drop one to READ would switch off approval, the Auto-Approve reviewer, and
     read-only mode in a single step (OPE-111). Lazy import: risk.py must stay importable
     without the connectors package."""
     try:
-        from .connectors.tool_defs import _KIND_BY_NAME
+        from coworker.connectors.tool_defs import _KIND_BY_NAME
     except ImportError:  # pragma: no cover - connectors always ship, but fail open to base
         return None
     kind = _KIND_BY_NAME.get(tool_name)
     return RiskClass.EXTERNAL if kind is not None and kind != "read" else None
 
 
-def _mcp_floor(tool_name: str, metadata: Any) -> Optional[RiskClass]:
+def _mcp_floor(tool_name: str, metadata: Any) -> RiskClass | None:
     """The floor for third-party MCP tools (OPE-136): EXTERNAL, always.
 
     An MCP tool's effects are a stranger's claim — we cannot tell its reads from a write
@@ -115,7 +116,7 @@ def _mcp_floor(tool_name: str, metadata: Any) -> Optional[RiskClass]:
 
 
 def classify(
-    tool_name: str, metadata: Any = None, overrides: Optional[RiskOverrides] = None
+    tool_name: str, metadata: Any = None, overrides: RiskOverrides | None = None
 ) -> RiskClass:
     """Effective risk of a tool call. A user override may *relax* a metadata tool (the
     intended use — quieting an over-cautious plug-in), but may only ever **tighten** a

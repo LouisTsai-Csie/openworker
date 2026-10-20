@@ -8,8 +8,8 @@ in favour of durable sessions + DM routing. The name is personal — `name=` let
 
 from __future__ import annotations
 
-from .base import Agent
-from .cowork import cowork_tool_factory
+from coworker.agents.base import Agent
+from coworker.agents.cowork import cowork_tool_factory
 
 DEFAULT_HELPER_NAME = "MyHelper"
 

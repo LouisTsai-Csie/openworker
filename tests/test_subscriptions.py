@@ -3,7 +3,6 @@
 import asyncio
 import json
 
-import pytest
 
 from coworker.connectors.base import MessageEvent, SessionSource
 from coworker.subscriptions import (

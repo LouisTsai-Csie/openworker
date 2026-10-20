@@ -16,7 +16,8 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any
+from collections.abc import Iterable
 from urllib.parse import urlsplit
 
 # Tool categories whose results carry content from outside this machine. Keyed on the
@@ -119,7 +120,7 @@ def capture(
     *,
     roots: Iterable[Any] | None = None,
     allowed_domains: Iterable[str] | None = None,
-    workspace: Optional[Path] = None,
+    workspace: Path | None = None,
 ) -> KnownWorld:
     """Take the snapshot. Called once, at session start, before the agent has acted."""
     root_list = list(roots or [])

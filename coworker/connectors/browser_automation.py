@@ -13,11 +13,12 @@ import time
 import base64
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
 import aisuite as ai
 
-from ..web.guard import check_url
+from coworker.web.guard import check_url
 
 
 def _guard_route(route: Any) -> None:
@@ -54,7 +55,7 @@ def _guard_route(route: Any) -> None:
 
 
 def _meta(
-    name: str, *, approval: bool = False, capabilities: Optional[list[str]] = None
+    name: str, *, approval: bool = False, capabilities: list[str] | None = None
 ):
     return ai.ToolMetadata(
         name=name,
@@ -83,7 +84,7 @@ def _schema(
 
 
 def _attach(fn: Callable[..., Any], schema: dict[str, Any], *, approval: bool = True):
-    from .tool_defs import approval_for_tool
+    from coworker.connectors.tool_defs import approval_for_tool
 
     name = schema["function"]["name"]
     # §36: the tool registry's read/write kind wins for registered tools — reads never gate.
@@ -101,7 +102,7 @@ class _BrowserController:
         self._browser = None
         self._context = None
         self._page = None
-        self._error: Optional[str] = None
+        self._error: str | None = None
         self._executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="coworker-browser"
         )
@@ -362,7 +363,7 @@ def _snapshot(page, max_chars: int) -> dict[str, Any]:
     }
 
 
-def redirect_refusal(requested: str, final: str) -> Optional[str]:
+def redirect_refusal(requested: str, final: str) -> str | None:
     """A refusal reason if navigation LANDED somewhere the address guard would refuse.
 
     `check_url` vets the URL the model supplied; Playwright then follows redirects, and the
@@ -380,7 +381,7 @@ def redirect_refusal(requested: str, final: str) -> Optional[str]:
 
 
 def make_browser_automation_tools(
-    *, roots: Optional[list[Any]] = None
+    *, roots: list[Any] | None = None
 ) -> list[Callable[..., Any]]:
     tools: list[Callable[..., Any]] = []
 

@@ -15,8 +15,8 @@ import pytest
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="the Windows sandbox exists only on Windows")
 
-from coworker.sandbox.bundle import build_runner_zipapp  # noqa: E402
-from coworker.sandbox.workspace import RunnerWorkspace  # noqa: E402
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.workspace import RunnerWorkspace
 
 
 def _has_setup() -> bool:
@@ -308,7 +308,7 @@ def test_a_stale_private_folder_is_reaped_when_the_next_sandbox_starts(tmp_path)
     stale = windows_setup.SANDBOXES / "owr-stale0000"
     stale.mkdir(parents=True, exist_ok=True)
     (stale / "daemon.log").write_text("left behind\n")
-    ws, provider, project = _open(tmp_path)
+    ws, provider, _project = _open(tmp_path)
     try:
         assert not stale.exists()  # gone: no daemon listens on its pipe
         assert os.path.isdir(provider._dir)  # the live one stays
@@ -345,7 +345,7 @@ def test_full_mode_reads_the_toolchain_folders_it_is_given(tmp_path):
 
 @full
 def test_the_open_profile_runs_as_the_open_account_with_the_network_open(tmp_path):
-    ws, provider, project = _open(tmp_path, network=True, profile="open")
+    ws, provider, _project = _open(tmp_path, network=True, profile="open")
     ws.executor.default_timeout = 90
     try:
         assert provider.kind == "open" and provider._proxy is None

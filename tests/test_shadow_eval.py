@@ -8,6 +8,11 @@ provider, so the ship-gate maths stays covered without a live model.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from coworker.session_facts import KnownWorld
+
 import asyncio
 import json
 import pathlib
@@ -125,7 +130,7 @@ def test_shadow_records_but_human_still_decides(tmp_path):
 
 def test_shadow_off_records_nothing(tmp_path):
     rv = _RecordingReviewer("allow")
-    engine, rows, approvals = _engine(tmp_path, mode=Mode.INTERACTIVE, shadow=False, reviewer=rv)
+    engine, rows, _approvals = _engine(tmp_path, mode=Mode.INTERACTIVE, shadow=False, reviewer=rv)
     _run(engine)
     assert rv.calls == 0
     assert [r for r in rows if r.get("stage") == "reviewer_shadow"] == []
@@ -160,7 +165,7 @@ def test_shadow_reviewer_error_never_surfaces(tmp_path):
             raise RuntimeError("boom")
 
     engine, rows, approvals = _engine(tmp_path, mode=Mode.INTERACTIVE, shadow=True, reviewer=_Boom())
-    events = _run(engine)  # must not raise
+    _run(engine)  # must not raise
     assert approvals == ["write_file"]
     assert [r for r in rows if r.get("stage") == "reviewer_shadow"] == []
 
@@ -224,7 +229,7 @@ def test_known_world_render_shows_folders_and_remotes_not_hosts():
     assert "python.org" not in text  # hostnames are never rendered (§2.4)
 
 
-def _engine_world(setup: dict) -> "KnownWorld":
+def _engine_world(setup: dict) -> KnownWorld:
     """The engine-side KnownWorld a live session would hold for this corpus setup."""
     from coworker.session_facts import KnownWorld
 

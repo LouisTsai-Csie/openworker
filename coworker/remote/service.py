@@ -26,9 +26,9 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from .acceptor import mount_acceptor
-from .audit import AuditLog
-from .registry import MachinesRegistry
+from coworker.remote.acceptor import mount_acceptor
+from coworker.remote.audit import AuditLog
+from coworker.remote.registry import MachinesRegistry
 
 # The SPA's boot path touches a handful of desktop endpoints before it learns
 # the mode. Answer the harmless ones with honest emptiness (a cloud has no

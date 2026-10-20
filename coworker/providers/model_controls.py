@@ -25,9 +25,9 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ..config import EFFORT_LEVELS
+from coworker.config import EFFORT_LEVELS
 
 _TABLE = Path(__file__).with_name("model_controls.json")
 
@@ -53,7 +53,7 @@ assert tuple(e.value for e in EffortLevel) == tuple(EFFORT_LEVELS)
 @dataclass(frozen=True)
 class ThinkingControl:
     support: Support = Support.NOT_SUPPORTED
-    default: Optional[bool] = None
+    default: bool | None = None
 
     def as_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {"support": self.support.value}
@@ -66,7 +66,7 @@ class ThinkingControl:
 class ReasoningControl:
     support: Support = Support.NOT_SUPPORTED
     levels: tuple[EffortLevel, ...] = ()
-    default: Optional[EffortLevel] = None
+    default: EffortLevel | None = None
 
     def as_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {"support": self.support.value}
@@ -122,7 +122,7 @@ def _rows() -> tuple[_Row, ...]:
     return tuple(_parse_row(r) for r in raw.get("models") or ())
 
 
-def table_row(provider: str, bare_model: str) -> Optional[ModelControls]:
+def table_row(provider: str, bare_model: str) -> ModelControls | None:
     """The JSON row for a model, or None. `bare_model` has no provider prefix."""
     name = bare_model.lower()
     for row in _rows():
@@ -138,9 +138,9 @@ def controls_for(
     bare_model: str,
     *,
     local: bool = False,
-    server_thinking: Optional[bool] = None,
-    recommended_thinking: Optional[tuple[bool, bool]] = None,
-    saved: Optional[dict[str, Any]] = None,
+    server_thinking: bool | None = None,
+    recommended_thinking: tuple[bool, bool] | None = None,
+    saved: dict[str, Any] | None = None,
 ) -> ModelControls:
     """The controls a model has, with its defaults.
 

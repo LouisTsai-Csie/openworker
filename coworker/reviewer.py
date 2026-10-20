@@ -25,8 +25,8 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any
 
 # The §8.3 instructions, verbatim. Stable for the whole session — they sit at the top of
 # every reviewer request so the provider's prompt cache does the heavy lifting (§1.7).

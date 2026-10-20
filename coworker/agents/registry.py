@@ -8,21 +8,21 @@ Imports of the persona registry are lazy to avoid an import cycle (personas → 
 
 from __future__ import annotations
 
-from .base import Agent
-from .myhelper import myhelper_agent
+from coworker.agents.base import Agent
+from coworker.agents.myhelper import myhelper_agent
 
 
 def get_agent(name: str) -> Agent:
     name = name or "code"
     if name == "myhelper":
         return myhelper_agent()
-    from ..personas.registry import get_registry
+    from coworker.personas.registry import get_registry
 
     return get_registry().agent(name)
 
 
 def list_agents() -> list[dict]:
     # Session surfaces shown in the new-session picker (enabled + surfaced personas).
-    from ..personas.registry import get_registry
+    from coworker.personas.registry import get_registry
 
     return get_registry().sidebar()

@@ -97,15 +97,14 @@ OpenWorker is local-first. Everything lives on your machine: the agent loop, you
 
 ## Run from source
 
-Prerequisites: Python 3.10+, Node 20+, and (for the desktop shell) the Rust toolchain via [rustup](https://rustup.rs/).
+Prerequisites: [uv](https://docs.astral.sh/uv/getting-started/installation/), Node 20+, and (for the desktop shell) the Rust toolchain via [rustup](https://rustup.rs/). uv fetches the Python it needs (3.12, per `.python-version`); no system Python required.
 
 ```shell
 git clone https://github.com/andrewyng/openworker
 cd openworker
 
-# 1. One-time bootstrap - creates the Python venv at .venv
-#    (on Windows, run from Git Bash or WSL)
-bash packaging/setup_dev_env.sh
+# 1. One-time bootstrap - creates .venv and installs from uv.lock
+uv sync --extra messaging --extra bedrock
 
 # 2. Start the local agent server
 .venv/bin/python -m coworker.server.run --cwd ~/some/project --port 8765
@@ -124,7 +123,18 @@ desktop app uses an in-memory launch token instead and never writes it to disk.
 
 To run the full desktop app instead of the browser UI, replace step 3 with `npm run tauri dev` (from `surfaces/gui/`) - the Tauri shell launches the window and supervises the server itself.
 
-Tests: `.venv/bin/pytest` (server), `npm test` and `npm run e2e` in `surfaces/gui` (GUI unit + hermetic end-to-end). Desktop bundles are built with `packaging/build_dmg.sh` / `packaging/build_windows.ps1`.
+Checks, all three of which CI gates on:
+
+```shell
+uv run ruff check .                        # lint
+uv run mypy                                # types
+uv run pytest tests                        # 3151 tests, ~9 min
+```
+
+Plus `npm test` and `npm run e2e` in `surfaces/gui` (GUI unit + hermetic end-to-end). Desktop bundles are built with `packaging/build_dmg.sh` / `packaging/build_windows.ps1`.
+
+`uv sync` is the only install step - it creates `.venv` and installs the dev group
+(pytest, ruff, mypy) from `uv.lock`, so your checks match CI exactly.
 
 ## Repository layout
 

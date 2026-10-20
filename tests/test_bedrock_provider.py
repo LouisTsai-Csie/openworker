@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -96,7 +96,7 @@ def test_convert_tools_shape_and_empty():
 
 
 class _FakeConverse:
-    def __init__(self, response: Optional[dict] = None, stream: Optional[list] = None):
+    def __init__(self, response: dict | None = None, stream: list | None = None):
         self.response = response
         self.stream_events = stream or []
         self.calls: list[tuple[str, dict]] = []
@@ -452,7 +452,7 @@ def test_single_key_providers_keep_api_key_configured_semantics(monkeypatch):
 
 
 class _FakeBedrockControl:
-    def __init__(self, exc: Optional[Exception] = None):
+    def __init__(self, exc: Exception | None = None):
         self.exc = exc
 
     def list_foundation_models(self):

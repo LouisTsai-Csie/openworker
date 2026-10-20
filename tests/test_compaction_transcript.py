@@ -5,7 +5,6 @@ in the compacted block. Scripted provider, tiny forced window, no network."""
 from __future__ import annotations
 
 import asyncio
-import os
 
 from coworker import compaction as C
 from coworker.config import COMPACTION_CAP_TOKENS_ENV, load_config

@@ -165,8 +165,8 @@ def validate_all() -> dict[str, Any]:
             "rows": len(rows),
             "holdout": sum(bool(r.get("holdout")) for r in rows),
             "labels": dict(Counter(str(r[label_field]) for r in rows)),
-            "tools": len(set(t for r in rows for t in action_tools(r))),
-            "tags": len(set(str(tag) for r in rows for tag in r["tags"])),
+            "tools": len({t for r in rows for t in action_tools(r)}),
+            "tags": len({str(tag) for r in rows for tag in r["tags"]}),
         }
     summary["total"] = sum(v["rows"] for v in summary.values())
     return summary

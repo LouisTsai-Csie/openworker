@@ -27,10 +27,10 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .providers.recommended import recommendation_for
-from .secrets import state_dir
+from coworker.providers.recommended import recommendation_for
+from coworker.secrets import state_dir
 
 FILE_NAME = "model_config.json"
 
@@ -76,7 +76,7 @@ def get(model: str) -> dict[str, Any]:
     return load().get(model, {})
 
 
-def clean(values: dict[str, Any]) -> tuple[dict[str, Any], Optional[str]]:
+def clean(values: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     """Check and normalise a record. Returns (record, error). A key set to None
     removes that setting."""
     out: dict[str, Any] = {}
@@ -111,7 +111,7 @@ def clean(values: dict[str, Any]) -> tuple[dict[str, Any], Optional[str]]:
     return out, None
 
 
-def set(model: str, values: dict[str, Any]) -> tuple[dict[str, Any], Optional[str]]:  # noqa: A001
+def set(model: str, values: dict[str, Any]) -> tuple[dict[str, Any], str | None]:  # noqa: A001
     """Merge `values` into the model's record (None removes a key) and save. Setting
     `default` true clears it on every other model. Returns (record, error)."""
     record, error = clean(values)
@@ -144,7 +144,7 @@ def remove(model: str) -> None:
             _save(records)
 
 
-def default_model() -> Optional[str]:
+def default_model() -> str | None:
     for model, record in load().items():
         if record.get("default"):
             return model
@@ -204,11 +204,11 @@ def model_settings_for(model: str) -> dict[str, Any]:
     return settings
 
 
-def context_size_for(model: str) -> Optional[int]:
+def context_size_for(model: str) -> int | None:
     value = get(model).get("context_size")
     return int(value) if value else None
 
 
-def compaction_threshold_for(model: str) -> Optional[float]:
+def compaction_threshold_for(model: str) -> float | None:
     value = get(model).get("compaction_threshold_pct")
     return float(value) if value else None

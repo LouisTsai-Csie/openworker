@@ -12,11 +12,11 @@ tests inject fakes — no network.
 from __future__ import annotations
 
 import os
-from typing import Callable, Optional
+from collections.abc import Callable
 
-from .base import SendResult
+from coworker.connectors.base import SendResult
 
-Sender = Callable[[str, str, str, Optional[str]], SendResult]
+Sender = Callable[[str, str, str, str | None], SendResult]
 
 _TIMEOUT = 30.0
 
@@ -28,7 +28,7 @@ def _slack_api_base() -> str:
 
 
 def _send_telegram(
-    token: str, chat_id: str, text: str, thread_id: Optional[str] = None
+    token: str, chat_id: str, text: str, thread_id: str | None = None
 ) -> SendResult:
     import httpx
 
@@ -56,11 +56,11 @@ def _send_telegram(
 
 
 def _send_slack(
-    token: str, chat_id: str, text: str, thread_id: Optional[str] = None
+    token: str, chat_id: str, text: str, thread_id: str | None = None
 ) -> SendResult:
     import httpx
 
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     # A managed-relay chat_id is team-qualified ("T…/C…"); Slack's API wants the
     # bare channel. The per-team token is selected by the caller (send_message).
@@ -109,11 +109,11 @@ def _slack_blocks(text: str, buttons) -> list[dict]:
 
 
 def _send_slack_interactive(
-    token: str, chat_id: str, text: str, buttons, thread_id: Optional[str] = None
+    token: str, chat_id: str, text: str, buttons, thread_id: str | None = None
 ) -> SendResult:
     import httpx
 
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     _team, chat_id = split(chat_id)
     payload: dict = {
@@ -147,18 +147,18 @@ DEFAULT_SENDERS: dict[str, Sender] = {
 # -- file upload (§34 / UX-016) --------------------------------------------------------
 # A FileSender is (token, chat_id, thread_id, filename, data, title, comment) -> SendResult.
 FileSender = Callable[
-    [str, str, Optional[str], str, bytes, Optional[str], Optional[str]], SendResult
+    [str, str, str | None, str, bytes, str | None, str | None], SendResult
 ]
 
 
 def _send_slack_file(
     token: str,
     chat_id: str,
-    thread_id: Optional[str],
+    thread_id: str | None,
     filename: str,
     data: bytes,
-    title: Optional[str] = None,
-    comment: Optional[str] = None,
+    title: str | None = None,
+    comment: str | None = None,
 ) -> SendResult:
     """files_upload_v2 (the only non-deprecated path): reserve an upload URL, PUT the
     bytes, then complete into the channel/thread. Slack renders its own previews for
@@ -166,7 +166,7 @@ def _send_slack_file(
     """
     import httpx
 
-    from .slack_addr import split
+    from coworker.connectors.slack_addr import split
 
     _team, chat_id = split(chat_id)
     headers = {"Authorization": f"Bearer {token}"}

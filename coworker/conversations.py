@@ -15,10 +15,10 @@ import os
 import re
 import sqlite3
 import threading
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Optional
 
-from .sessions import SessionRecord
+from coworker.sessions import SessionRecord
 
 # A session id becomes a filename (`<id>.jsonl`) and a scratch dir name, so it must be a
 # single, benign path component. Every legitimate id is hex or a `__run__`/`__task__`-
@@ -34,7 +34,7 @@ def is_safe_session_id(sid: str) -> bool:
     return bool(isinstance(sid, str) and _SAFE_SESSION_ID.match(sid))
 
 
-def _load_roots(raw: Optional[str]) -> list[dict]:
+def _load_roots(raw: str | None) -> list[dict]:
     if not raw:
         return []
     try:
@@ -44,7 +44,7 @@ def _load_roots(raw: Optional[str]) -> list[dict]:
     return value if isinstance(value, list) else []
 
 
-def _load_grants(raw: Optional[str]) -> dict:
+def _load_grants(raw: str | None) -> dict:
     if not raw:
         return {}
     try:
@@ -54,7 +54,7 @@ def _load_grants(raw: Optional[str]) -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def _display_title(row: sqlite3.Row) -> Optional[str]:
+def _display_title(row: Mapping[str, object]) -> str | None:
     """Title precedence for every read path: a manual rename (renamed=1) always wins,
     then the generated auto_title, then the first-line snapshot `save()` wrote."""
     if row["renamed"]:
@@ -63,7 +63,7 @@ def _display_title(row: sqlite3.Row) -> Optional[str]:
 
 
 def title_from(messages: list[dict]) -> str:
-    from .attachments import content_to_text
+    from coworker.attachments import content_to_text
 
     for m in messages:
         if m.get("role") == "user":
@@ -135,7 +135,7 @@ class ConversationStore:
             raise ValueError(f"unsafe session id: {sid!r}")
         return path
 
-    def _read_jsonl(self, sid: str) -> Optional[list[dict]]:
+    def _read_jsonl(self, sid: str) -> list[dict] | None:
         path = self._file(sid)
         if not path.exists():
             return None
@@ -380,7 +380,7 @@ class ConversationStore:
         if touch:
             self.touch_workspace(record.workspace)
 
-    def load(self, session_id: str) -> Optional[SessionRecord]:
+    def load(self, session_id: str) -> SessionRecord | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
@@ -397,35 +397,38 @@ class ConversationStore:
         # An interrupted turn can persist a user message between an assistant
         # tool_calls block and its tool result, which providers reject (400).
         messages = self._repair_tool_pairing(messages)
+        # sqlite3.Row has no `.get`, and `in` on it tests the VALUES, not the column
+        # names — so the columns later migrations added are read from a plain dict.
+        fields = dict(row)
         return SessionRecord(
             session_id=session_id,
-            workspace=row["workspace"],
-            model=row["model"],
-            mode=row["mode"],
+            workspace=fields["workspace"],
+            model=fields["model"],
+            mode=fields["mode"],
             messages=messages,
-            title=_display_title(row),
-            agent=row["agent"] or "code",
+            title=_display_title(fields),
+            agent=fields["agent"] or "code",
             message_count=len(messages),
-            updated_at=row["updated_at"],
+            updated_at=fields["updated_at"],
             extra_roots=_load_roots(
-                row["extra_roots"] if "extra_roots" in row.keys() else None
+                fields.get("extra_roots")
             ),
-            grants=_load_grants(row["grants"] if "grants" in row.keys() else None),
+            grants=_load_grants(fields.get("grants")),
             # Auto-compaction state (OPE-27) — same defensive parse as grants.
             compaction=_load_grants(
-                row["compaction"] if "compaction" in row.keys() else None
+                fields.get("compaction")
             ),
-            pinned=bool(row["pinned"]),
-            archived=bool(row["archived"]),
-            origin=row["origin"],
-            origin_label=row["origin_label"],
-            actor=(row["actor"] if "actor" in row.keys() else None) or "",
-            team=_load_grants(row["team"] if "team" in row.keys() else None),
+            pinned=bool(fields["pinned"]),
+            archived=bool(fields["archived"]),
+            origin=fields["origin"],
+            origin_label=fields["origin_label"],
+            actor=(fields.get("actor")) or "",
+            team=_load_grants(fields.get("team")),
             bindings=_load_grants(
-                row["bindings"] if "bindings" in row.keys() else None
+                fields.get("bindings")
             ),
-            usage=_load_grants(row["usage"] if "usage" in row.keys() else None),
-            spawn=_load_grants(row["spawn"] if "spawn" in row.keys() else None),
+            usage=_load_grants(fields.get("usage")),
+            spawn=_load_grants(fields.get("spawn")),
         )
 
     def set_spawn(self, session_id: str, spawn: dict) -> None:
@@ -452,7 +455,7 @@ class ConversationStore:
 
     def names(self):
         """The project-names alias table, riding this store's connection."""
-        from .projects import ProjectNames
+        from coworker.projects import ProjectNames
 
         if not hasattr(self, "_names"):
             self._names = ProjectNames(self._conn, self._lock)
@@ -479,7 +482,7 @@ class ConversationStore:
             )
             self._conn.commit()
 
-    def list(self, *, workspace: Optional[str] = None) -> list[SessionRecord]:
+    def list(self, *, workspace: str | None = None) -> list[SessionRecord]:
         with self._lock:
             if workspace is None:
                 rows = self._conn.execute(
@@ -505,12 +508,13 @@ class ConversationStore:
                 archived=bool(r["archived"]),
                 origin=r["origin"],
                 origin_label=r["origin_label"],
-                actor=(r["actor"] if "actor" in r.keys() else None) or "",
-                team=_load_grants(r["team"] if "team" in r.keys() else None),
-                usage=_load_grants(r["usage"] if "usage" in r.keys() else None),
-                spawn=_load_grants(r["spawn"] if "spawn" in r.keys() else None),
+                actor=(r.get("actor", None)) or "",
+                team=_load_grants(r.get("team", None)),
+                usage=_load_grants(r.get("usage", None)),
+                spawn=_load_grants(r.get("spawn", None)),
             )
-            for r in rows
+            # Same reason as `load`: a plain mapping per row, not a sqlite3.Row.
+            for r in (dict(raw) for raw in rows)
         ]
 
     def touch_workspace(self, path: str) -> None:
@@ -595,7 +599,7 @@ class ConversationStore:
             self._conn.commit()
         return cur.rowcount > 0
 
-    def title_state(self, session_id: str) -> Optional[dict]:
+    def title_state(self, session_id: str) -> dict | None:
         """The auto-title guard inputs: whether the user renamed and whether a generated
         title already exists. None when the session has no row yet."""
         with self._lock:
@@ -611,8 +615,8 @@ class ConversationStore:
         self,
         session_id: str,
         *,
-        pinned: Optional[bool] = None,
-        archived: Optional[bool] = None,
+        pinned: bool | None = None,
+        archived: bool | None = None,
     ) -> bool:
         """Update pin/archive flags without touching updated_at (so pinning doesn't reorder)."""
         sets, params = [], []

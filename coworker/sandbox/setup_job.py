@@ -12,24 +12,25 @@ from __future__ import annotations
 import sys
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
-from . import setup_cmd
+from coworker.sandbox import setup_cmd
 
 
 class SetupJob:
     # Step states, in the words the page shows.
     PENDING, FIXING, FIXED, OK, NEEDS_YOU, FAILED = "pending", "fixing", "fixed", "ok", "needs_you", "failed"
 
-    def __init__(self, steps: Optional[Callable[[], list[setup_cmd.Step]]] = None) -> None:
+    def __init__(self, steps: Callable[[], list[setup_cmd.Step]] | None = None) -> None:
         # Resolved at call time, not bound at import: tests swap `setup_cmd.steps` out.
         self._steps_fn = steps or (lambda: setup_cmd.steps())
         self._lock = threading.Lock()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._cancel = threading.Event()
         self.status = "idle"  # idle | running | done | needs_you | failed | cancelled
         self.rows: list[dict[str, Any]] = []
-        self.progress: Optional[dict[str, Any]] = None
+        self.progress: dict[str, Any] | None = None
         self.error = ""
         self.started_at = 0.0
         self.finished_at = 0.0
@@ -135,7 +136,7 @@ class SetupJob:
         with self._lock:
             self.progress = {"layers_total": 0, "layers_done": 0, "last_line": line, "elapsed_s": int(time.time() - self.started_at), **more}
 
-    def _fix(self, step: setup_cmd.Step) -> Optional[str]:
+    def _fix(self, step: setup_cmd.Step) -> str | None:
         if step.key == "bind_mounts":
             return setup_cmd.apply_bind_mounts()
         if step.key == "config":
@@ -152,7 +153,7 @@ class SetupJob:
         return f"no automatic fix for {step.key}"
 
 
-_job: Optional[SetupJob] = None
+_job: SetupJob | None = None
 _job_lock = threading.Lock()
 
 

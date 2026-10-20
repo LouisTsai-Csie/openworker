@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import math
 from datetime import datetime
+from itertools import pairwise
 from statistics import median
 
-from .store import ITEM_STATUS, WORKER_WAITING
+from coworker.teams.store import ITEM_STATUS, WORKER_WAITING
 
 KINDS = ("input", "cache_read", "output", "cache_write")
 
@@ -108,8 +109,8 @@ def breakdown(intervals, start, end):
     edges = sorted(
         {start, end, *(a for a, _, _ in clipped), *(b for _, b, _ in clipped)}
     )
-    out = dict(model_ms=0, tool_ms=0, waited_ms=0, queued_ms=0)
-    for a, b in zip(edges, edges[1:]):
+    out = {"model_ms": 0, "tool_ms": 0, "waited_ms": 0, "queued_ms": 0}
+    for a, b in pairwise(edges):
         active = {kind for x, y, kind in clipped if x < b and y > a}
         kind = next(
             (k for k in ("waited_ms", "tool_ms", "model_ms") if k in active),
@@ -394,7 +395,7 @@ def make_summary(manager, team, now):
                                 ),
                             }
                         )
-                        for x, y in zip(cuts, cuts[1:]):
+                        for x, y in pairwise(cuts):
                             if x < y and not any(
                                 ox < y and oy > x for ox, oy in overlaps
                             ):

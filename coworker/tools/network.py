@@ -17,7 +17,7 @@ from typing import Any
 
 from aisuite.agents import ToolMetadata, tool
 
-from ..permissions import NETWORK_ACCESS_TOOL, PermissionEngine, network_request_hosts
+from coworker.permissions import NETWORK_ACCESS_TOOL, PermissionEngine, network_request_hosts
 
 
 def _name(entry: str) -> str:

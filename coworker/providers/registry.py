@@ -19,15 +19,16 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
-from .anthropic_provider import AnthropicProvider
-from .base import ProviderClient
-from .bedrock_provider import BedrockProvider
-from .gemini_provider import GeminiProvider
-from .openai_provider import OpenAIProvider
-from .openai_responses import OpenAIResponsesProvider
-from .vertex_provider import VertexProvider
+from coworker.providers.anthropic_provider import AnthropicProvider
+from coworker.providers.base import ProviderClient
+from coworker.providers.bedrock_provider import BedrockProvider
+from coworker.providers.gemini_provider import GeminiProvider
+from coworker.providers.openai_provider import OpenAIProvider
+from coworker.providers.openai_responses import OpenAIResponsesProvider
+from coworker.providers.vertex_provider import VertexProvider
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
@@ -53,7 +54,7 @@ class ProviderField:
     choices: tuple = ()
     # {"other_field_key": "value"} → the field only renders while that other field holds
     # that value. Drives auth-method switching (Bedrock) without a per-provider form.
-    show_when: Optional[dict] = None
+    show_when: dict | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -78,10 +79,10 @@ class ProviderDescriptor:
     needs_key: bool
     fields: list[ProviderField]
     build: Callable[[dict[str, Any], Any], ProviderClient] = field(repr=False)
-    recommended_model: Optional[str] = (
+    recommended_model: str | None = (
         None  # pre-filled in the UI; auto-added on configure
     )
-    env_key: Optional[str] = (
+    env_key: str | None = (
         None  # env var that can supply the API key (e.g. ANTHROPIC_API_KEY)
     )
     # One-line note under the provider title (e.g. "Connects through X's OpenAI-compatible API").
@@ -89,7 +90,7 @@ class ProviderDescriptor:
     # "oauth" → no key form at all: the provider is configured by a browser sign-in
     # (tokens in its `provider:<name>` profile) and the GUI renders connect/sign-out
     # instead of fields. None → the usual key/field form.
-    auth: Optional[str] = None
+    auth: str | None = None
     # How the GUI groups it: "local" (a server on the user's own hardware), "subscription"
     # (a plan signed into), or "api_key" (everything else).
     kind: str = "api_key"
@@ -107,7 +108,7 @@ class ProviderDescriptor:
         }
 
 
-def _normalize_ollama_url(url: Optional[str]) -> str:
+def _normalize_ollama_url(url: str | None) -> str:
     """Accept `http://host:11434` or `.../v1` and return an OpenAI-compatible base URL.
 
     Ollama serves its OpenAI-compatible API under `/v1`; the native API lives at the root, so we
@@ -136,7 +137,7 @@ def _build_openai(profile: dict[str, Any], secrets: Any) -> ProviderClient:
 def _build_codex(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     # Credentials come from the OAuth token set in the provider's own profile,
     # resolved (and refreshed) at call time by the token store — never a key.
-    from .codex_provider import CodexProvider
+    from coworker.providers.codex_provider import CodexProvider
 
     return CodexProvider(secrets=secrets)
 
@@ -146,7 +147,7 @@ def _build_anthropic(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     # deferred to first call so the provider can be built before a key exists.
     # thinking_budget: hidden profile override — absent/invalid → the default (ON),
     # explicit 0 → off (see DEFAULT_THINKING_BUDGET).
-    from .anthropic_provider import DEFAULT_THINKING_BUDGET
+    from coworker.providers.anthropic_provider import DEFAULT_THINKING_BUDGET
 
     api_key = ((profile or {}).get("api_key") or "").strip() or None
     try:
@@ -169,7 +170,7 @@ def _build_bedrock(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     # named profile → ambient chain (env / ~/.aws default / instance role).
     p = profile or {}
 
-    def get(key: str) -> Optional[str]:
+    def get(key: str) -> str | None:
         return (p.get(key) or "").strip() or None
 
     return BedrockProvider(
@@ -186,7 +187,7 @@ def _build_bedrock(profile: dict[str, Any], secrets: Any) -> ProviderClient:
 def _build_vertex(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     p = profile or {}
 
-    def get(key: str) -> Optional[str]:
+    def get(key: str) -> str | None:
         return (p.get(key) or "").strip() or None
 
     return VertexProvider(
@@ -203,7 +204,7 @@ def _build_ollama(profile: dict[str, Any], secrets: Any) -> ProviderClient:
     # string, so we pass a placeholder. `base_url` comes from the stored profile (or the default).
     # Chat calls are rewritten onto the native API so we can set num_ctx — the /v1 handler
     # cannot, and its 4,096-token default drops the Cowork prompt (see ollama_context.py).
-    from .ollama_context import ollama_http_client
+    from coworker.providers.ollama_context import ollama_http_client
 
     base_url = _normalize_ollama_url((profile or {}).get("base_url"))
     return OpenAIProvider(api_key="ollama", base_url=base_url, http_client=ollama_http_client())
@@ -213,7 +214,7 @@ def _local_server(name: str):
     """Builder for llama.cpp and vLLM (providers/local_server.py): the user's own server,
     reached through its `/v1`, with an optional key. Without a key the server takes any
     value, so a placeholder goes out."""
-    from .local_server import PLACEHOLDER_KEY, remember_server, thinking_as_template_kwargs, v1_base
+    from coworker.providers.local_server import PLACEHOLDER_KEY, remember_server, thinking_as_template_kwargs, v1_base
 
     class _LocalServerProvider(OpenAIProvider):
         # The thinking switch, in the form these servers read.
@@ -244,7 +245,7 @@ def _build_openrouter_account(profile: dict[str, Any], secrets: Any) -> Provider
     return OpenAIProvider(api_key=api_key, base_url=OPENROUTER_BASE_URL)
 
 
-def _openai_compat(vendor: str, default_base_url: str, env_key: Optional[str] = None):
+def _openai_compat(vendor: str, default_base_url: str, env_key: str | None = None):
     """Builder factory for vendors reached through their OpenAI-compatible API (Z AI, DeepSeek,
     Kimi, MiniMax, Qwen, xAI, Mistral). The key is resolved from the vendor's OWN profile (or its
     env var) — deliberately NOT from the OpenAI env/SecretStore fallback, so a configured OpenAI
@@ -269,7 +270,7 @@ def _openai_compat(vendor: str, default_base_url: str, env_key: Optional[str] = 
 def _openai_responses_compat(
     vendor: str,
     default_base_url: str,
-    env_key: Optional[str] = None,
+    env_key: str | None = None,
     *,
     reasoning_summary: bool = True,
 ):
@@ -810,7 +811,7 @@ def provider_names() -> list[str]:
     return [d.name for d in DESCRIPTORS]
 
 
-def get_descriptor(name: str) -> Optional[ProviderDescriptor]:
+def get_descriptor(name: str) -> ProviderDescriptor | None:
     return _BY_NAME.get(name)
 
 
@@ -841,7 +842,7 @@ def descriptor_configured(d: ProviderDescriptor, profile: dict[str, Any]) -> boo
     return all(profile.get(f.key) for f in d.fields if f.required)
 
 
-def detect_provider(api_key: str) -> Optional[str]:
+def detect_provider(api_key: str) -> str | None:
     """Best-effort provider guess from an API key's shape, for the onboarding auto-detect.
     Returns a known provider name or None. Mirrors the GUI's client-side detection so both agree.
     """
@@ -862,9 +863,9 @@ def detect_provider(api_key: str) -> Optional[str]:
 def _verify_bedrock(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
     """One cheap read-only Bedrock call (list models) with the same explicit → profile →
     ambient credential resolution the provider itself uses."""
-    from .bedrock_provider import _session_kwargs
+    from coworker.providers.bedrock_provider import _session_kwargs
 
-    def get(key: str) -> Optional[str]:
+    def get(key: str) -> str | None:
         return (fields.get(key) or "").strip() or None
 
     # Exactly one auth method is exercised — the one the form has selected. Per-method
@@ -962,7 +963,7 @@ def _verify_vertex(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
     service-account bearer, or the express API key header."""
     import httpx
 
-    from .vertex_provider import load_credentials
+    from coworker.providers.vertex_provider import load_credentials
 
     project = (fields.get("project") or "").strip()
     location = (fields.get("location") or "").strip()
@@ -1018,7 +1019,7 @@ def _verify_vertex(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
         if kind in ("RefreshError", "MalformedError", "JSONDecodeError", "ValueError"):
             return {"ok": False, "error": "Google rejected the credentials."}
         return {"ok": False, "error": f"Couldn't load Google credentials ({kind})."}
-    from .vertex_provider import _regional_host
+    from coworker.providers.vertex_provider import _regional_host
 
     try:
         resp = httpx.post(
@@ -1080,9 +1081,9 @@ def _describe_transport_error(exc: Exception) -> str:
 def verify_provider_key(
     name: str,
     *,
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
-    fields: Optional[dict[str, Any]] = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    fields: dict[str, Any] | None = None,
     timeout: float = 10.0,
 ) -> dict[str, Any]:
     """Validate a provider's credentials with one cheap call — usually list models.
@@ -1121,7 +1122,7 @@ def verify_provider_key(
             base = _normalize_ollama_url(base_url)
             resp = httpx.get(base.rstrip("/") + "/models", timeout=timeout)
         elif name in ("llamacpp", "vllm"):
-            from .local_server import v1_base
+            from coworker.providers.local_server import v1_base
 
             headers = {"Authorization": f"Bearer {key}"} if key else {}
             resp = httpx.get(v1_base(name, base_url) + "/models", headers=headers, timeout=timeout)

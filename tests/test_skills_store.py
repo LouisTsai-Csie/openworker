@@ -9,7 +9,6 @@ never a marker committed with a project folder).
 from __future__ import annotations
 
 import io
-import json
 import os
 import zipfile
 from pathlib import Path
@@ -223,7 +222,7 @@ def test_upload_zip_at_root_and_nested(store):
 
 
 def test_upload_without_skill_md_rejected(store):
-    with pytest.raises(ValueError, match="SKILL.md"):
+    with pytest.raises(ValueError, match=r"SKILL\.md"):
         store.stage_upload(_zip_bytes({"readme.txt": "not a skill"}))
     # A broken file that CLAIMS to be an archive fails as an archive, not as markdown.
     with pytest.raises(ValueError, match="zip"):
@@ -315,7 +314,7 @@ def test_corrupt_settings_json_treated_as_empty(store):
 # -- save_skill tool (SKILLS-SPEC §5.2 — the worker-authors door) -------------------
 
 
-from coworker.skills import save_skill_tool  # noqa: E402
+from coworker.skills import save_skill_tool
 
 
 @pytest.fixture()
@@ -388,7 +387,7 @@ def test_save_skill_validation_errors(store, session_dir):
     result = tool(name="x", description="d", instructions="i", files=["SKILL.md"])
     assert result["ok"] and result["files"] == []
     skill_md = (store.global_dir / "x" / "SKILL.md").read_text(encoding="utf-8")
-    assert "i" in skill_md and "x" != skill_md  # instructions won, draft file ignored
+    assert "i" in skill_md and skill_md != "x"  # instructions won, draft file ignored
 
 
 def test_save_skill_requires_approval_metadata(store):

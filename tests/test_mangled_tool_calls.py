@@ -94,7 +94,7 @@ async def test_raw_junk_is_shrunk_before_it_enters_history(tmp_path):
     engine = _engine(tmp_path, MangledProvider("length", raw="y" * 5000))
     await _run(engine)
 
-    assistant = [m for m in engine.messages if m.get("role") == "assistant" and m.get("tool_calls")][0]
+    assistant = next(m for m in engine.messages if m.get("role") == "assistant" and m.get("tool_calls"))
     stored = json.loads(assistant["tool_calls"][0]["function"]["arguments"])
     assert len(stored["_raw"]) < _MANGLED_PREVIEW_CHARS + 100
     assert "truncated in history" in stored["_raw"]
@@ -105,6 +105,6 @@ async def test_short_raw_args_are_kept_verbatim(tmp_path):
     """Below the preview cap there is nothing to shrink — storage stays faithful."""
     engine = _engine(tmp_path, MangledProvider("stop", raw='{"path": "repo'))
     await _run(engine)
-    assistant = [m for m in engine.messages if m.get("role") == "assistant" and m.get("tool_calls")][0]
+    assistant = next(m for m in engine.messages if m.get("role") == "assistant" and m.get("tool_calls"))
     stored = json.loads(assistant["tool_calls"][0]["function"]["arguments"])
     assert stored == {"_raw": '{"path": "repo'}

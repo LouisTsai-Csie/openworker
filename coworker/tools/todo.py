@@ -54,7 +54,7 @@ class TodoList:
 
 
 def todo_tools(todo: TodoList) -> list:
-    def todo_write(todos: list = None, items: list = None) -> dict:
+    def todo_write(todos: list | None = None, items: list | None = None) -> dict:
         """Replace the task list. Each todo is an object with `content` and a `status`
         of pending, in_progress, or done."""
         # `items` stays accepted (models that free-style the old name; queued replays).

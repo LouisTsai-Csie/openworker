@@ -11,6 +11,7 @@ import time
 
 import aisuite as ai
 from fastapi.testclient import TestClient
+from conftest import ws_until
 
 from coworker.engine import TurnEngine
 from coworker.permissions import PermissionEngine
@@ -145,8 +146,7 @@ def test_messages_endpoint_returns_ts(tmp_path):
     with client.websocket_connect("/ws/session/ts1") as ws:
         assert ws.receive_json()["type"] == "ready"
         ws.send_json({"type": "user_message", "text": "hello world"})
-        while ws.receive_json()["type"] != "turn_done":
-            pass
+        ws_until(ws, "turn_done")
     msgs = client.get("/v1/sessions/ts1/messages").json()["messages"]
     stamped = [m for m in msgs if m.get("role") in ("user", "assistant")]
     assert stamped and all(isinstance(m.get("ts"), float) for m in stamped)

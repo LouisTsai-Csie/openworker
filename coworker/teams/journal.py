@@ -27,9 +27,9 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .model import (
+from coworker.teams.model import (
     JOURNAL_BODY_LIMIT,
     JOURNAL_KINDS,
     Actor,
@@ -38,7 +38,7 @@ from .model import (
     ChainError,
     Role,
 )
-from .store import GENESIS, _canonical, _hash
+from coworker.teams.store import GENESIS, _canonical, _hash
 
 _HASHED_FIELDS = (
     "ts",
@@ -109,10 +109,10 @@ class JournalStore:
         body: str,
         *,
         kind: str = "note",
-        space: Optional[str] = None,
-        item: Optional[int] = None,
-        entities: Optional[list[str]] = None,
-        refs: Optional[list[str]] = None,
+        space: str | None = None,
+        item: int | None = None,
+        entities: list[str] | None = None,
+        refs: list[str] | None = None,
         taint: bool = False,
     ) -> dict[str, Any]:
         if not (case or "").strip():
@@ -200,10 +200,10 @@ class JournalStore:
         actor: Actor,
         case: str,
         *,
-        item: Optional[int] = None,
-        author: Optional[str] = None,
-        kind: Optional[str] = None,
-        entity: Optional[str] = None,
+        item: int | None = None,
+        author: str | None = None,
+        kind: str | None = None,
+        entity: str | None = None,
         since_seq: int = 0,
         include_raw: bool = False,
         limit: int = 100,
@@ -396,7 +396,7 @@ class JournalStore:
         *,
         source: str,
         space: str = "",
-        item_id: Optional[int] = None,
+        item_id: int | None = None,
     ) -> None:
         self._conn.execute(
             "INSERT OR IGNORE INTO journal_grants"

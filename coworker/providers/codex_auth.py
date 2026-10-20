@@ -30,7 +30,7 @@ import logging
 import secrets as pysecrets
 import time
 import uuid
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 logger = logging.getLogger(__name__)
@@ -194,7 +194,7 @@ class CodexTokenStore:
     def signed_in(self) -> bool:
         return bool(self._data().get("tokens"))
 
-    def account_label(self) -> Optional[str]:
+    def account_label(self) -> str | None:
         data = self._data()
         return data.get("account_email") or data.get("account_id") or None
 
@@ -296,8 +296,8 @@ class CodexTokenStore:
 
 # The last authorize URL, surfaced over REST so the GUI can offer "reopen sign-in
 # page" if the popup was lost (same affordance as mcp/oauth.py).
-last_authorize_url: Optional[str] = None
-_active_server: Optional[asyncio.AbstractServer] = None
+last_authorize_url: str | None = None
+_active_server: asyncio.AbstractServer | None = None
 
 _PAGE = """<!doctype html><meta charset="utf-8"><title>OpenWorker</title>
 <body style="font-family: system-ui; margin: 4rem auto; max-width: 28rem; text-align: center;">
@@ -315,7 +315,7 @@ def _http_response(status: str, title: str, body: str) -> bytes:
 
 async def _start_callback_server(
     expected_state: str,
-) -> tuple[asyncio.AbstractServer, "asyncio.Future[str]"]:
+) -> tuple[asyncio.AbstractServer, asyncio.Future[str]]:
     """Bind the fixed loopback port and resolve the future with the auth code when
     the redirect (carrying the matching `state`) lands."""
     loop = asyncio.get_running_loop()
@@ -415,11 +415,11 @@ async def sign_in(
             await asyncio.get_running_loop().run_in_executor(None, webbrowser.open, url)
         try:
             code = await asyncio.wait_for(code_future, timeout)
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             raise CodexAuthError(
                 "Sign-in timed out — the browser window was not completed in "
                 f"{int(timeout) // 60} minutes."
-            )
+            ) from exc
     finally:
         server.close()
         await server.wait_closed()

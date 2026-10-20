@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Awaitable, Callable, Optional
+from collections.abc import Awaitable, Callable
 
-from .models import ScheduledTask, TaskRun
-from .store import TaskStore
+from coworker.automation.models import ScheduledTask, TaskRun
+from coworker.automation.store import TaskStore
 
 logger = logging.getLogger("coworker.automation")
 
@@ -27,14 +27,14 @@ class Scheduler:
         runner: Runner,
         *,
         tick_seconds: float = 30.0,
-        extra_tick: Optional[Callable[[], Awaitable[None]]] = None,
+        extra_tick: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.store = store
         self.runner = runner
         self.tick_seconds = tick_seconds
         # An extra per-tick coroutine (self-wake resumption: resume sessions whose wakes are due).
         self.extra_tick = extra_tick
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
         self._running_ids: set[str] = set()  # overlap guard
         self._spawned: set[asyncio.Task] = set()  # keep spawned runs referenced
 
@@ -100,14 +100,14 @@ class Scheduler:
         self._running_ids.add(task_id)
         return True
 
-    async def run_task(self, task: ScheduledTask, *, trigger: str) -> Optional[TaskRun]:
+    async def run_task(self, task: ScheduledTask, *, trigger: str) -> TaskRun | None:
         if not self._claim(task.id):
             return None
         return await self._run_claimed(task, trigger=trigger)
 
     async def _run_claimed(
         self, task: ScheduledTask, *, trigger: str
-    ) -> Optional[TaskRun]:
+    ) -> TaskRun | None:
         try:
             run = await self.runner(task, trigger)
         except Exception as exc:

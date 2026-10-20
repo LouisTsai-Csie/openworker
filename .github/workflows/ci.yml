@@ -1,24 +1,41 @@
-# App CI — the coworker Python suite, the GUI unit tests, and the hermetic
+# App CI — the coworker lint/type/test gates, the GUI unit tests, and the hermetic
 # Playwright e2e suite (mocked /v1 + WS; no model or network needed).
+#
+# Python toolchain is uv: `uv sync --locked` installs exactly what uv.lock pins, so a
+# green run here reproduces on any machine with `uv sync`.
 
 name: CI
 
 on: [push, pull_request]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked --extra messaging --extra bedrock
+      - name: Ruff
+        run: uv run ruff check .
+      - name: mypy
+        run: uv run mypy
+
   pytest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[messaging,dev,bedrock]"
+        run: uv sync --locked --extra messaging --extra bedrock
       - name: Test with coverage
-        run: pytest tests -q --cov=coworker --cov-report=term-missing --cov-report=xml
+        # -n auto: one worker per core. pytest-cov collects per worker and combines,
+        # so the coverage number is the same as a serial run.
+        run: uv run pytest tests -q -n auto --cov=coworker --cov-report=term-missing --cov-report=xml
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4

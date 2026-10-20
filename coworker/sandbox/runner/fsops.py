@@ -13,7 +13,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .protocol import MAX_READ_BYTES
 
@@ -29,10 +29,10 @@ def _sha256(data: bytes) -> str:
 def read(
     path: str,
     *,
-    offset_line: Optional[int] = None,
-    limit_lines: Optional[int] = None,
-    offset_bytes: Optional[int] = None,
-    limit_bytes: Optional[int] = None,
+    offset_line: int | None = None,
+    limit_lines: int | None = None,
+    offset_bytes: int | None = None,
+    limit_bytes: int | None = None,
 ) -> dict[str, Any]:
     """A page of a file. By lines (text) unless a byte range is asked for (then base64).
     Never more than MAX_READ_BYTES in one call; `eof` says whether there is more."""
@@ -88,9 +88,9 @@ def read(
 def write(
     path: str,
     *,
-    text: Optional[str] = None,
-    data_b64: Optional[str] = None,
-    if_match_sha256: Optional[str] = None,
+    text: str | None = None,
+    data_b64: str | None = None,
+    if_match_sha256: str | None = None,
     append: bool = False,
     make_parents: bool = True,
 ) -> dict[str, Any]:

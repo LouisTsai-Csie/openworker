@@ -15,17 +15,17 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aisuite as ai
 
-from ..engine import TurnEngine
-from ..events import EventType
-from ..permissions import Mode, PermissionEngine
-from ..tools import ToolRegistry
-from .files import file_tools
-from .git import git_tools
-from .search import search_tools
+from coworker.engine import TurnEngine
+from coworker.events import EventType
+from coworker.permissions import Mode, PermissionEngine
+from coworker.tools import ToolRegistry
+from coworker.tools.files import file_tools
+from coworker.tools.git import git_tools
+from coworker.tools.search import search_tools
 
 EXPLORER_INSTRUCTIONS = """You are a read-only code explorer working inside the user's workspace. \
 Answer the research task you're given by searching and reading the code (`grep`, `read_file`, \
@@ -44,7 +44,7 @@ def build_explorer_engine(
     workspace: str | Path,
     provider: Any,
     model: str,
-    model_settings: Optional[dict[str, Any]] = None,
+    model_settings: dict[str, Any] | None = None,
     max_iterations: int = _CHILD_MAX_ITERATIONS,
 ) -> TurnEngine:
     """A child engine with the Code agent's read-only tools and a fresh context."""
@@ -81,7 +81,7 @@ def explorer_tools(
     workspace: str | Path,
     provider: Any,
     model: str,
-    model_settings: Optional[dict[str, Any]] = None,
+    model_settings: dict[str, Any] | None = None,
 ) -> list:
     def explore(task: str) -> dict:
         """Delegate a broad, read-only research task to a subagent with its own fresh

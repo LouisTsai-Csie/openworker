@@ -24,16 +24,15 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
 
 import aisuite as ai
 
-from ..sandbox.runner.executor import (
+from coworker.sandbox.runner.executor import (
     _DEFAULT_TIMEOUT,
     _MAX_TIMEOUT,
 )
-from ..sandbox.runner.executor import Executor as Executor
-from ..sandbox.runner.executor import LocalExecutor as _StdlibLocalExecutor
+from coworker.sandbox.runner.executor import Executor as Executor
+from coworker.sandbox.runner.executor import LocalExecutor as _StdlibLocalExecutor
 
 _SIDECAR_ENV_VARS = ("COWORKER_API_TOKEN",)
 
@@ -52,7 +51,7 @@ class LocalExecutor(_StdlibLocalExecutor):
         # it on PATH up front, even before anything is installed there, means a tool the
         # user approves mid-session works in THIS shell immediately, by name, no respawn.
         # Appended last: the user's own copies always win.
-        from .. import toolchain
+        from coworker import toolchain
 
         extra = [*kwargs.pop("extra_path_dirs", ()), str(toolchain.bin_dir())]
         super().__init__(
@@ -150,8 +149,8 @@ def shell_tools(executor: Executor) -> list:
 
     def run_shell(
         command: str,
-        description: Optional[str] = None,
-        timeout_seconds: Optional[int] = None,
+        description: str | None = None,
+        timeout_seconds: int | None = None,
         run_in_background: bool = False,
     ) -> dict:
         # `description` is not used here on purpose: it rides along in the call arguments

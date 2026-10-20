@@ -304,7 +304,7 @@ async def test_grant_connector_emits_the_gate_and_returns_the_verdict(tmp_path):
     gate = [e for e in events if e.type is EventType.CONNECTOR_REQUESTED]
     assert gate and gate[0].data == {"request": "grant", "connector": "github", "worker": "nia", "reason": "push the branch"}
     assert seen["worker"] == "nia"
-    assert [e for e in events if e.type is EventType.TOOL_FINISHED][0].data["status"] == "ok"
+    assert next(e for e in events if e.type is EventType.TOOL_FINISHED).data["status"] == "ok"
 
 
 @pytest.mark.asyncio
@@ -316,7 +316,7 @@ async def test_request_connector_decline_is_a_plain_outcome(tmp_path):
     events = await _run(engine)
     gate = [e for e in events if e.type is EventType.CONNECTOR_REQUESTED]
     assert gate[0].data["request"] == "connect" and gate[0].data["worker"] == ""
-    assert [e for e in events if e.type is EventType.TOOL_FINISHED][0].data["status"] == "denied"
+    assert next(e for e in events if e.type is EventType.TOOL_FINISHED).data["status"] == "denied"
     result = next(m for m in engine.messages if m.get("role") == "tool")
     assert "declined" in str(result.get("content")) and "say plainly" in str(result.get("content"))
 

@@ -9,12 +9,13 @@ be treated as untrusted data, not instructions.
 from __future__ import annotations
 
 import os
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
 import aisuite as ai
 
-from ..secrets import SecretStore
-from .providers import WebSearchProvider, build_provider
+from coworker.secrets import SecretStore
+from coworker.web.providers import WebSearchProvider, build_provider
 
 _SCHEMA = {
     "type": "function",
@@ -41,7 +42,7 @@ _SCHEMA = {
 
 
 def provider_name(
-    secrets: Optional[SecretStore] = None, *, default: str = "duckduckgo"
+    secrets: SecretStore | None = None, *, default: str = "duckduckgo"
 ) -> str:
     """The configured provider's NAME, without building (or validating) the provider.
     Same resolution order as `resolve_provider`. Used by the web_search approval card,
@@ -60,13 +61,13 @@ PROVIDER_HOSTS = {
 }
 
 
-def provider_host(secrets: Optional[SecretStore] = None) -> str:
+def provider_host(secrets: SecretStore | None = None) -> str:
     """The host the configured search provider talks to; `''` for an unknown provider."""
     return PROVIDER_HOSTS.get(provider_name(secrets), "")
 
 
 def resolve_provider(
-    secrets: Optional[SecretStore] = None, *, default: str = "duckduckgo"
+    secrets: SecretStore | None = None, *, default: str = "duckduckgo"
 ) -> WebSearchProvider:
     secrets = secrets or SecretStore()
     profile = secrets.get("web_search:default") or {}
@@ -75,9 +76,9 @@ def resolve_provider(
     return build_provider(name, api_key)
 
 
-def _config_provider() -> Optional[str]:
+def _config_provider() -> str | None:
     try:
-        from ..config import load_config
+        from coworker.config import load_config
 
         return load_config().web_search_provider
     except Exception:
@@ -85,9 +86,9 @@ def _config_provider() -> Optional[str]:
 
 
 def make_web_search_tool(
-    secrets: Optional[SecretStore] = None,
+    secrets: SecretStore | None = None,
     *,
-    provider: Optional[WebSearchProvider] = None,
+    provider: WebSearchProvider | None = None,
 ) -> Callable[..., Any]:
     """Build the `web_search` tool. `provider` overrides resolution (used by tests)."""
 

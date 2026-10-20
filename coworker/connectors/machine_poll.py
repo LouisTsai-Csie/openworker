@@ -19,7 +19,8 @@ import asyncio
 import json
 import logging
 from collections import deque
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
 logger = logging.getLogger("coworker.connectors")
 
@@ -44,7 +45,7 @@ class MachinePollTransport:
         credential: str,
         unseal: Callable[[str], bytes],
         interval: float = 3.0,
-        cursor_path: Optional[Any] = None,
+        cursor_path: Any | None = None,
     ) -> None:
         self._url = base_url.rstrip("/") + "/v1/machine/events/poll"
         self._connection_id = connection_id
@@ -74,7 +75,7 @@ class MachinePollTransport:
         except asyncio.TimeoutError:
             pass
 
-    async def _poll_once(self) -> Optional[list[dict[str, Any]]]:
+    async def _poll_once(self) -> list[dict[str, Any]] | None:
         """One poll round-trip: the sealed events, or None on any refusal
         (already logged and backed off by the caller's returned delay)."""
         import httpx
@@ -131,7 +132,7 @@ class MachinePollTransport:
         except OSError:
             logger.warning("could not persist the poll cursor at %s", self._cursor_path)
 
-    async def recv(self) -> Optional[dict]:
+    async def recv(self) -> dict | None:
         while not self._closed.is_set():
             if self._buffer:
                 return self._buffer.popleft()

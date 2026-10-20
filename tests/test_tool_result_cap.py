@@ -152,7 +152,7 @@ def test_engine_bounds_tool_results_and_keeps_the_rest_of_the_message(tmp_path):
         tool_result_spill_dir=spill,
     )
     events = _run(engine, "go")
-    assert [e for e in events if e.type == EventType.TOOL_FINISHED][0].data["status"] == "ok"
+    assert next(e for e in events if e.type == EventType.TOOL_FINISHED).data["status"] == "ok"
     tool_msgs = [m for m in engine.messages if m.get("role") == "tool"]
     assert len(tool_msgs) == 1
     content = tool_msgs[0]["content"]

@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import re
 from html.parser import HTMLParser
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 import aisuite as ai
 
-from .guard import get_checked
+from coworker.web.guard import get_checked
 
 _MAX = 20000  # default chars returned
 

@@ -17,11 +17,11 @@ import socket
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit
 
-from . import channel as ch
-from .identity import KEY_FILENAME, SEAL_KEY_FILENAME, MachineIdentity, load_or_create
+from coworker.remote import channel as ch
+from coworker.remote.identity import KEY_FILENAME, SEAL_KEY_FILENAME, MachineIdentity, load_or_create
 
 CONFIG_FILENAME = "remote.json"
 
@@ -52,7 +52,7 @@ def _config_path(state: Path) -> Path:
     return state / CONFIG_FILENAME
 
 
-def load_remote_config(state: Path) -> Optional[dict[str, Any]]:
+def load_remote_config(state: Path) -> dict[str, Any] | None:
     path = _config_path(state)
     if not path.exists():
         return None
@@ -64,7 +64,7 @@ def load_remote_config(state: Path) -> Optional[dict[str, Any]]:
 
 
 def save_remote_config(state: Path, cfg: dict[str, Any]) -> None:
-    from ..secrets import write_private_text
+    from coworker.secrets import write_private_text
 
     write_private_text(_config_path(state), json.dumps(cfg, indent=2) + "\n")
 
@@ -91,7 +91,7 @@ def default_name() -> str:
 
 
 async def _handshake(
-    ws, identity: MachineIdentity, name: str, token: Optional[str]
+    ws, identity: MachineIdentity, name: str, token: str | None
 ) -> dict[str, Any]:
     hello: dict[str, Any] = {
         "type": "hello",
@@ -126,9 +126,9 @@ async def _serve_channel(
     ws,
     dispatcher: ch.AsgiDispatcher,
     app,
-    identity: Optional[MachineIdentity] = None,
+    identity: MachineIdentity | None = None,
     exporter=None,
-    state: Optional[Path] = None,
+    state: Path | None = None,
 ) -> None:
     """Steady state: dispatch each RPC concurrently so a slow request never
     blocks the next one; bridged WebSocket streams (live sessions) run as their
@@ -213,7 +213,7 @@ async def _serve_channel(
         except (ValueError, json.JSONDecodeError) as exc:
             await reply(frame_id, 400, {"error": str(exc)})
             return
-        from ..connectors.setup import store_managed_grant_bundle
+        from coworker.connectors.setup import store_managed_grant_bundle
 
         grant = {
             "user_id": str(payload.get("broker_user_id") or ""),
@@ -222,7 +222,7 @@ async def _serve_channel(
         manager = app.state.manager
         try:
             result = store_managed_grant_bundle(manager.secrets, name, form, grant)
-        except Exception as exc:  # noqa: BLE001 — the tab shows the reason
+        except Exception as exc:  # the tab shows the reason
             await reply(frame_id, 400, {"error": str(exc)[:200]})
             return
         if result.get("ok"):
@@ -319,7 +319,7 @@ async def _serve_channel(
     tasks.add(check_task)
     check_task.add_done_callback(tasks.discard)
 
-    export_task: Optional[asyncio.Task] = None
+    export_task: asyncio.Task | None = None
     if exporter is not None:
         # The cloud sink for THIS connection's lifetime: audit frames ride the
         # same socket, acks come back through the loop below.
@@ -385,7 +385,7 @@ async def _serve_channel(
 POLICY_CHECK_SECONDS = 300.0  # the box asks for a newer document this often (spec: 5 min)
 
 
-def policy_version(doc: Optional[dict[str, Any]]) -> int:
+def policy_version(doc: dict[str, Any] | None) -> int:
     """The document's version; 0 when unversioned (desktop controllers, tests)."""
     try:
         return max(0, int((doc or {}).get("version") or 0))
@@ -399,7 +399,7 @@ def held_policy(app) -> dict[str, Any]:
 
 
 def apply_policy(
-    app, policy: dict[str, Any], *, state: Optional[Path] = None, exporter=None
+    app, policy: dict[str, Any], *, state: Path | None = None, exporter=None
 ) -> tuple[bool, int]:
     """Persist + apply an org policy DOCUMENT on this box (spec §Versioned org
     policy). Today one field acts: `audit_export` (remote/audit_export.py).
@@ -407,7 +407,7 @@ def apply_policy(
     turns on by accident. A document OLDER than the one held is ignored — a
     stale controller never rolls a machine back. Returns (applied, version
     now held)."""
-    from .audit_export import ExportPolicy, save_policy
+    from coworker.remote.audit_export import ExportPolicy, save_policy
 
     incoming, current = policy_version(policy), policy_version(held_policy(app))
     if incoming and current and incoming < current:
@@ -423,7 +423,7 @@ def apply_policy(
 
 
 def _build_exporter(state: Path, app, welcome: dict[str, Any]):
-    from .audit_export import AuditExporter, ExportPolicy, load_policy
+    from coworker.remote.audit_export import AuditExporter, ExportPolicy, load_policy
 
     manager = getattr(app.state, "manager", None)
     store = getattr(manager, "audit_store", None)
@@ -451,7 +451,7 @@ async def run_joined(
     state: Path,
     controller: str,
     name: str,
-    token: Optional[str] = None,
+    token: str | None = None,
     app=None,
     once: bool = False,
     on_welcome=None,
@@ -528,10 +528,10 @@ def _build_local_app(state: Path):
     """
     import os
 
-    from ..config import load_config
-    from ..permissions import Mode
-    from ..server.app import create_app
-    from ..server.manager import SessionManager
+    from coworker.config import load_config
+    from coworker.permissions import Mode
+    from coworker.server.app import create_app
+    from coworker.server.manager import SessionManager
 
     os.environ.pop("COWORKER_API_TOKEN", None)
     cfg = load_config()
@@ -575,13 +575,13 @@ class _Only:
 
 
 def cli(
-    argv: Optional[list[str]] = None,
+    argv: list[str] | None = None,
     prog: str = "openworker",
-    only: Optional[tuple[str, ...]] = None,
+    only: tuple[str, ...] | None = None,
 ) -> int:
     """`only` limits the subcommands offered: TOP_COMMANDS for `openworker join|up`,
     MACHINE_COMMANDS for `openworker machine …`; None offers all of them."""
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(
@@ -672,7 +672,7 @@ def cli(
     if args.command == "service":
         return _cmd_service(state, args)
     if args.command == "sandbox":
-        from ..sandbox import setup_cmd
+        from coworker.sandbox import setup_cmd
 
         if args.sandbox_command == "setup":
             return setup_cmd.setup(yes=args.yes)
@@ -688,7 +688,7 @@ def _is_controller_address(url: str) -> bool:
     return bool(parts.netloc) and parts.path in ("", "/") and not parts.query
 
 
-def _cmd_join(state: Path, url: str, name: Optional[str]) -> int:
+def _cmd_join(state: Path, url: str, name: str | None) -> int:
     if _is_controller_address(url):
         return _cmd_auth_join(state, url, name)
     try:
@@ -712,7 +712,7 @@ def _cmd_join(state: Path, url: str, name: Optional[str]) -> int:
 
 
 def _cmd_auth_join(
-    state: Path, url: str, name: Optional[str], poll_interval: Optional[float] = None
+    state: Path, url: str, name: str | None, poll_interval: float | None = None
 ) -> int:
     """Device flow: print a code, wait for approval in the controller UI, then
     run the ordinary token join. `poll_interval` overrides the server's pacing
@@ -782,18 +782,18 @@ def _cmd_up(state: Path) -> int:
 
 
 def _run(state: Path, controller: str, name: str, token=None, on_welcome=None) -> int:
-    from ..statelock import EngineBusy, acquire
+    from coworker.statelock import EngineBusy, acquire
 
     # One engine per state dir (statelock.py). A supervisor restart may find
     # the previous process still tearing down, so wait a little before refusing.
     try:
-        _lock = acquire(state, timeout=10.0)  # noqa: F841 — held for the process's life
+        _lock = acquire(state, timeout=10.0)  # held for the process's life
     except EngineBusy as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 3
     # Sessions started by this process belong to a headless machine: with no setting they
     # run in OpenShell sandboxes when OpenShell is usable here, and say so loudly when not.
-    from ..sandbox.selection import HEADLESS_ENV
+    from coworker.sandbox.selection import HEADLESS_ENV
 
     os.environ[HEADLESS_ENV] = "1"
     _announce_sandbox()
@@ -819,8 +819,8 @@ def _run(state: Path, controller: str, name: str, token=None, on_welcome=None) -
 def sandbox_status() -> dict:
     """How sessions on this machine will run: {"provider", "explicit", "warning"} or
     {"provider": None, "refused": why}."""
-    from ..config import load_config
-    from ..sandbox.selection import select
+    from coworker.config import load_config
+    from coworker.sandbox.selection import select
 
     try:
         chosen = select(load_config().sandbox_provider, headless=True)
@@ -848,7 +848,7 @@ def _announce_sandbox() -> None:
 
 
 def _cmd_secrets(state: Path, args) -> int:
-    from ..secrets import SecretStore
+    from coworker.secrets import SecretStore
 
     store = SecretStore(state / "secrets.json")
     if args.secrets_command == "list":
@@ -951,7 +951,7 @@ def _systemctl_user(*args: str) -> bool:
         return False
 
 
-def _cmd_service(state: Path, args, platform: Optional[str] = None, home: Optional[Path] = None) -> int:
+def _cmd_service(state: Path, args, platform: str | None = None, home: Path | None = None) -> int:
     platform = platform or sys.platform
     home = home or Path.home()
     if platform == "darwin":
@@ -1183,8 +1183,8 @@ def _cmd_service_macos(state: Path, args, home: Path) -> int:
 
 
 def logs_command(
-    state: Path, platform: str, unit: Optional[str], lines: int, follow: bool
-) -> Optional[list[str]]:
+    state: Path, platform: str, unit: str | None, lines: int, follow: bool
+) -> list[str] | None:
     """The command that prints this machine's service log, or None where there is none."""
     n = str(max(1, int(lines)))
     if platform == "linux":
@@ -1196,7 +1196,7 @@ def logs_command(
     return None
 
 
-def _cmd_logs(state: Path, args, platform: Optional[str] = None) -> int:
+def _cmd_logs(state: Path, args, platform: str | None = None) -> int:
     import subprocess
 
     platform = platform or sys.platform
@@ -1222,7 +1222,7 @@ def _cmd_logs(state: Path, args, platform: Optional[str] = None) -> int:
 
 def machine_status(state: Path) -> dict:
     """What `status` reports, as data (`status --json` prints exactly this)."""
-    from .channel import app_version
+    from coworker.remote.channel import app_version
 
     cfg = load_remote_config(state)
     out: dict = {

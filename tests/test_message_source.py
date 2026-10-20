@@ -9,7 +9,7 @@ import asyncio
 
 from fastapi.testclient import TestClient
 
-from coworker.connectors.base import MessageEvent, MessageSource, SessionSource
+from coworker.connectors.base import MessageEvent, SessionSource
 from coworker.engine import TurnEngine
 from coworker.permissions import PermissionEngine
 from coworker.providers import AssistantTurn, ModelCapabilities, ProviderClient
@@ -253,7 +253,7 @@ def test_dm_message_source_kind_dm(tmp_path, monkeypatch):
     asyncio.run(mgr._dispatch_inbound(_dm_event()))
 
     assert len(captured) == 1
-    sid, message, source = captured[0]
+    sid, _message, source = captured[0]
     assert sid == "sDM"
     assert source["kind"] == "dm"
     assert source["connector"] == "slack"

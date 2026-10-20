@@ -24,15 +24,14 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
 
-from .model import BoardError, space_for_workspace
-from .store import CLAIM_POLICIES
+from coworker.teams.model import BoardError, space_for_workspace
+from coworker.teams.store import CLAIM_POLICIES
 
 _STATES = ("open", "in_progress", "blocked", "review", "done", "canceled")
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     if not getattr(args, "cmd", None):
@@ -84,7 +83,7 @@ def _parser() -> argparse.ArgumentParser:
 
     p = cmd("move", _cmd_move, "transition an item")
     p.add_argument("id", type=int)
-    p.add_argument("to", choices=_STATES[1:] + ("open",))
+    p.add_argument("to", choices=(*_STATES[1:], "open"))
     p.add_argument("--comment", default="")
     p.add_argument("--ref", action="append", default=[], dest="refs")
 
@@ -190,7 +189,7 @@ def _space(args) -> str:
 
 
 def _dialect(args):
-    from .dialect import RemoteDialect, local_dialect
+    from coworker.teams.dialect import RemoteDialect, local_dialect
 
     if args.url:
         if not args.token:
@@ -201,16 +200,16 @@ def _dialect(args):
     server = _discover_server()
     if server is not None:
         return RemoteDialect(server, _local_cli_token())
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
     return local_dialect(state_dir(), actor=args.local_actor, role=args.local_role)
 
 
-def _discover_server() -> Optional[str]:
+def _discover_server() -> str | None:
     """A running local server, found via its per-port sidecar token files."""
     import httpx
 
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
     ports = []
     try:
@@ -236,9 +235,9 @@ def _local_cli_token() -> str:
     shared registry; the plaintext is cached user-only in the state dir — the
     user's own credential on the user's own machine, same pattern as the sidecar
     token file."""
-    from ..secrets import state_dir, write_private_text
+    from coworker.secrets import state_dir, write_private_text
 
-    from .tokens import BoardTokens
+    from coworker.teams.tokens import BoardTokens
 
     cache = state_dir() / "ocw-cli.token"
     tokens = BoardTokens(state_dir() / "board-tokens.json")
@@ -349,7 +348,7 @@ def _cmd_assign(args) -> int:
 
 
 def _cmd_attach(args) -> int:
-    from .attachments import read_image_file
+    from coworker.teams.attachments import read_image_file
 
     try:
         data, name = read_image_file(args.file)
@@ -367,7 +366,7 @@ def _cmd_attach(args) -> int:
 
 
 def _cmd_attachment(args) -> int:
-    from .attachments import stored_name
+    from coworker.teams.attachments import stored_name
 
     stored = stored_name(args.ref) or args.ref
     data, _mime = _dialect(args).attachment(_space(args), stored)
@@ -419,9 +418,9 @@ def _cmd_spaces(args) -> int:
 
 
 def _cmd_token(args) -> int:
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
-    from .tokens import BoardTokens
+    from coworker.teams.tokens import BoardTokens
 
     tokens = BoardTokens(
         (Path(args.db).expanduser() if args.db else state_dir()) / "board-tokens.json"
@@ -455,7 +454,7 @@ def _cmd_token(args) -> int:
 
 
 def _cmd_mcp(args) -> int:
-    from .mcp_server import serve
+    from coworker.teams.mcp_server import serve
 
     serve(_dialect(args), space=_space(args))
     return 0

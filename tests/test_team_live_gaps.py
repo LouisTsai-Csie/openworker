@@ -1,40 +1,14 @@
 """Regressions found by the real lead + two-worker Team View run."""
 
 import asyncio
-from types import SimpleNamespace
 
 import pytest
 from coworker.engine import ApprovalOutcome, PermissionRequest
 from coworker.inbox import InboxStore
-from coworker.server.manager import SessionManager
-from coworker.sessions import SessionRecord
-from coworker.teams.registry import TeamWorker
 from coworker.teams.store import WORKER_WAITING
 from test_engine import ScriptedProvider, _collect, _engine, _text_turn, _tool_turn
 
 
-@pytest.fixture
-def manager(tmp_path, monkeypatch):
-    monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
-    (tmp_path / "repo").mkdir()
-    m = SessionManager(data_dir=tmp_path / "data", workspace=tmp_path / "repo")
-    m.session_store.save(
-        SessionRecord(
-            session_id="lead",
-            workspace=m.default_workspace,
-            model="sample",
-            mode="interactive",
-            agent="swe-lead",
-        )
-    )
-    m.teams.create(
-        space=m._board_space("lead"),
-        lead_session="lead",
-        lead_actor="lead",
-        workers=[TeamWorker(actor="sam", persona="swe-worker", session_id="worker")],
-    )
-    yield m
-    asyncio.run(m.aclose())
 
 
 def request_for(manager):

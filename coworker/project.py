@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
-from .secrets import state_dir
+from coworker.secrets import state_dir
 
 
 def default_global_agents_path() -> Path:
@@ -13,7 +12,7 @@ def default_global_agents_path() -> Path:
 
 
 def load_agents_md(
-    workspace: str | Path, *, global_path: Optional[str | Path] = None
+    workspace: str | Path, *, global_path: str | Path | None = None
 ) -> str:
     """Return a system-prompt block from the global and project AGENTS.md files.
 

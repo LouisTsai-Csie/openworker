@@ -20,14 +20,14 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .pricing import estimate_cost
+from coworker.headless.pricing import estimate_cost
 
 SCHEMA_VERSION = "ATIF-v1.7"
 
 
-def _iso(ts: Any) -> Optional[str]:
+def _iso(ts: Any) -> str | None:
     try:
         return datetime.fromtimestamp(float(ts), tz=timezone.utc).isoformat()
     except (TypeError, ValueError, OverflowError, OSError):
@@ -40,10 +40,10 @@ def _text(content: Any) -> str:
     if isinstance(content, str):
         return content
     try:
-        from ..attachments import content_to_text
+        from coworker.attachments import content_to_text
 
         return content_to_text(content)
-    except Exception:  # noqa: BLE001 - never fail the trajectory over a content part
+    except Exception:  # never fail the trajectory over a content part
         return json.dumps(content, default=str)
 
 
@@ -65,12 +65,12 @@ def build_trajectory(
     model_name: str,
     session_id: str,
     outcome: str,
-    prices: Optional[dict] = None,
-    agent_extra: Optional[dict[str, Any]] = None,
-    reasoning_effort: Optional[str] = None,
+    prices: dict | None = None,
+    agent_extra: dict[str, Any] | None = None,
+    reasoning_effort: str | None = None,
 ) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
-    pending: Optional[dict[str, Any]] = None  # the last agent step, for observations
+    pending: dict[str, Any] | None = None  # the last agent step, for observations
     totals = {"prompt": 0, "completion": 0, "cached": 0}
     cost_total = 0.0
     cost_known = False

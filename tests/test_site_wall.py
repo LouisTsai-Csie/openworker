@@ -106,7 +106,8 @@ def test_always_site_is_offered_only_for_egress_tools(tmp_path):
     from coworker.server.manager import SessionManager
 
     manager = SessionManager(workspace=str(tmp_path), data_dir=tmp_path / "state")
-    request = lambda tool, args: SimpleNamespace(tool_name=tool, arguments=args, metadata=None)  # noqa: E731
+    def request(tool, args):
+        return SimpleNamespace(tool_name=tool, arguments=args, metadata=None)
     assert manager.approval_outcome("always_site", request("web_fetch", {"url": "https://weather.com/"}), "s1") is ApprovalOutcome.ALWAYS_SITE
     assert manager.approval_outcome("always_site", request("web_search", {"query": "x"}), "s2") is ApprovalOutcome.ALWAYS_SITE
     # A raw resolve for another tool degrades to a single allow, like every other grant.

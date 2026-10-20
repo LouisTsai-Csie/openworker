@@ -14,19 +14,19 @@ catalog (see ``PERMISSIONS-AND-INBOX.md``).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable
+from dataclasses import dataclass
+from collections.abc import Callable
 
 import aisuite as ai
 
-from .agents.base import AgentContext
-from .risk import RiskClass
-from .sandbox.proxy import proxy_tools
-from .tools.files import file_tools
-from .tools.git import git_tools
-from .tools.search import search_tools
-from .tools.shell import shell_tools
-from .tools.todo import todo_tools
+from coworker.agents.base import AgentContext
+from coworker.risk import RiskClass
+from coworker.sandbox.proxy import proxy_tools
+from coworker.tools.files import file_tools
+from coworker.tools.git import git_tools
+from coworker.tools.search import search_tools
+from coworker.tools.shell import shell_tools
+from coworker.tools.todo import todo_tools
 
 # Context prerequisites a capability may require, mapped to a predicate over AgentContext.
 _REQUIREMENTS: dict[str, Callable[[AgentContext], bool]] = {

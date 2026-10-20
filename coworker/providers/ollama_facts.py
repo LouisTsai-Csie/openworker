@@ -14,26 +14,26 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
-from .. import model_config
-from . import local_machine
-from .ollama_context import context_length_from_show, resolve_num_ctx
-from .recommended import recommendation_for
+from coworker import model_config
+from coworker.providers import local_machine
+from coworker.providers.ollama_context import context_length_from_show, resolve_num_ctx
+from coworker.providers.recommended import recommendation_for
 
 CACHE_SECONDS = 60.0
 _cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 _lock = threading.Lock()
 
 
-def native_base(base_url: Optional[str]) -> str:
+def native_base(base_url: str | None) -> str:
     base = (base_url or "http://localhost:11434").strip().rstrip("/")
     return base[: -len("/v1")] if base.endswith("/v1") else base
 
 
-def model_facts(base_url: Optional[str] = None, *, fresh: bool = False) -> list[dict[str, Any]]:
+def model_facts(base_url: str | None = None, *, fresh: bool = False) -> list[dict[str, Any]]:
     """One row per pulled model. Empty when Ollama does not answer. Never raises."""
     base = native_base(base_url)
     now = time.monotonic()
@@ -47,7 +47,7 @@ def model_facts(base_url: Optional[str] = None, *, fresh: bool = False) -> list[
     return [dict(r) for r in rows]
 
 
-def forget(base_url: Optional[str] = None) -> None:
+def forget(base_url: str | None = None) -> None:
     with _lock:
         _cache.pop(native_base(base_url), None)
 

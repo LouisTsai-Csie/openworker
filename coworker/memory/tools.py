@@ -15,23 +15,23 @@ it back. Failures in the callback never fail the write.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import aisuite as ai
 
-from .base import MemoryItem, MemoryStore, Scope
+from coworker.memory.base import MemoryItem, MemoryStore, Scope
 
 _SCOPES = {s.value for s in Scope}
 
-_META = dict(category="memory", risk_level="low", capabilities=["remember"])
+_META = {"category": "memory", "risk_level": "low", "capabilities": ["remember"]}
 
 
 def memory_tools(
     store: MemoryStore,
     *,
-    workspace: Optional[str],
-    on_saved: Optional[Callable[[MemoryItem, Optional[str]], None]] = None,
-    saving_enabled: Optional[Callable[[], bool]] = None,
+    workspace: str | None,
+    on_saved: Callable[[MemoryItem, str | None], None] | None = None,
+    saving_enabled: Callable[[], bool] | None = None,
 ) -> list:
     """The agent's memory tools.
 
@@ -51,7 +51,7 @@ def memory_tools(
         "of implying you remembered it."
     )
 
-    def _announce(item: MemoryItem, previous: Optional[str]) -> None:
+    def _announce(item: MemoryItem, previous: str | None) -> None:
         """Surface the write to the user (§5.1). Best-effort: the notice is never worth
         failing a write that already succeeded."""
         if on_saved is None:

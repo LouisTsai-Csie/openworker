@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from email.message import EmailMessage
 
-import pytest
 
 from coworker.connectors.email_tools import (
     build_search_criteria,
@@ -47,7 +46,7 @@ class FakeIMAP:
         return "OK", [folder.encode() + b" (MESSAGES 7)"]
 
     def uid(self, command, *args):
-        self.commands.append(("uid", command) + args)
+        self.commands.append(("uid", command, *args))
         if command == "SEARCH":
             uids = b" ".join(uid.encode() for uid in sorted(self.messages, key=int))
             return "OK", [uids]
@@ -184,7 +183,7 @@ def test_criteria_bad_date_is_rejected():
 def test_criteria_non_ascii_gets_utf8_charset():
     criteria, _ = build_search_criteria(subject="日本語")
     assert criteria.startswith(b"CHARSET UTF-8 ")
-    assert "日本語".encode("utf-8") in criteria
+    assert "日本語".encode() in criteria
 
 
 # -- MIME helpers ----------------------------------------------------------------

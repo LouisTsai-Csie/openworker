@@ -18,10 +18,11 @@ import logging
 import threading
 import time
 import uuid
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
-from .runner import protocol as P
-from .transport import Transport
+from coworker.sandbox.runner import protocol as P
+from coworker.sandbox.transport import Transport
 
 log = logging.getLogger(__name__)
 
@@ -31,12 +32,12 @@ _RECONNECT_TRIES = 5
 
 
 class _Pending:
-    def __init__(self, frame: bytes, on_notify: Optional[NotifyHandler]) -> None:
+    def __init__(self, frame: bytes, on_notify: NotifyHandler | None) -> None:
         self.frame = frame
         self.on_notify = on_notify
         self.done = threading.Event()
-        self.result: Optional[dict[str, Any]] = None
-        self.error: Optional[P.RunnerError] = None
+        self.result: dict[str, Any] | None = None
+        self.error: P.RunnerError | None = None
 
 
 # Seconds to wait for the runner's first answer after the sandbox starts.
@@ -48,9 +49,9 @@ class RunnerClient:
         self._open = open_transport
         # Called by the first call() when nothing is connected yet: a workspace whose
         # sandbox starts on first use sets it, and clears it once started.
-        self.starter: Optional[Callable[[], Any]] = None
+        self.starter: Callable[[], Any] | None = None
         self._ping_seconds = ping_seconds
-        self._transport: Optional[Transport] = None
+        self._transport: Transport | None = None
         self._send_lock = threading.Lock()
         self._state_lock = threading.Lock()
         self._connect_lock = threading.Lock()  # one (re)connect at a time
@@ -59,7 +60,7 @@ class RunnerClient:
         self._acked = 0
         self._generation = 0
         self._closed = False
-        self.instance_id: Optional[str] = None
+        self.instance_id: str | None = None
         self.hello: dict[str, Any] = {}
         self.restarts = 0  # how many times the runner came back as a new instance
 
@@ -132,10 +133,10 @@ class RunnerClient:
     def call(
         self,
         method: str,
-        params: Optional[dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         *,
-        timeout: Optional[float] = None,
-        on_notify: Optional[NotifyHandler] = None,
+        timeout: float | None = None,
+        on_notify: NotifyHandler | None = None,
     ) -> dict[str, Any]:
         with self._state_lock:
             transport = self._transport
@@ -155,8 +156,8 @@ class RunnerClient:
         method: str,
         params: dict[str, Any],
         *,
-        timeout: Optional[float],
-        on_notify: Optional[NotifyHandler] = None,
+        timeout: float | None,
+        on_notify: NotifyHandler | None = None,
     ) -> dict[str, Any]:
         req_id = f"r-{uuid.uuid4().hex[:12]}"
         pending = _Pending(P.encode(P.request(req_id, method, params)), on_notify)

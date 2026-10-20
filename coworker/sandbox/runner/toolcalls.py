@@ -12,7 +12,7 @@ file (`aisuite_toolkits/`); run from a checkout, the installed aisuite is used i
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from . import tools_git, tools_grep, tools_read
 
@@ -54,7 +54,7 @@ def call(
     args: dict[str, Any],
     *,
     workspace: str,
-    roots: Optional[list[dict[str, Any]]] = None,
+    roots: list[dict[str, Any]] | None = None,
 ) -> Any:
     """`roots`: the session's folders as [{"path": ..., "writable": bool}], primary first.
     Without it the tools are scoped to `workspace` alone, writable (single-root sessions)."""

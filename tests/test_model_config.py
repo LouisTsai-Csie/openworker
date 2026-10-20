@@ -126,7 +126,8 @@ class _Inner(httpx.BaseTransport):
 def test_a_saved_context_size_wins_over_the_machine_rule():
     inner = _Inner()
     transport = OllamaContextTransport(inner=inner, memory_bytes=8 * local_machine.GB)
-    req = lambda: httpx.Request("POST", "http://127.0.0.1:11434/v1/chat/completions", json={"model": "qwen3-coder:30b", "messages": []})
+    def req():
+        return httpx.Request("POST", "http://127.0.0.1:11434/v1/chat/completions", json={"model": "qwen3-coder:30b", "messages": []})
     transport.handle_request(req())
     sent = [json.loads(r.content) for r in inner.requests if r.url.path == "/api/chat"]
     assert sent[0]["options"]["num_ctx"] == 16384  # the 8 GB tier

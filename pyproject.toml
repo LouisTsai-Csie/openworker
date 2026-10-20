@@ -45,7 +45,6 @@ Homepage = "https://openworker.com"
 Source = "https://github.com/andrewyng/openworker"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio", "pytest-cov>=5", "httpx", "httpx2"]
 # Inbound messaging listeners (outbound send_message needs only httpx, already a core dep).
 # aiohttp is slack-bolt's Socket Mode transport at runtime (and the FakeSlack test harness
 # drives the real handler) — declare it so CI installs it, not just transitively.
@@ -56,6 +55,29 @@ browser = ["playwright>=1.44"]
 bedrock = ["boto3>=1.34"]
 # OpenShell sandbox provider: the runner's stream is a gRPC call to the OpenShell gateway.
 openshell = ["grpcio>=1.60"]
+
+# Dev toolchain (PEP 735). `uv sync` installs this group by default; it is NOT part of
+# the published wheel, so pip users never pull the linters down. CI runs `uv sync --locked`
+# against uv.lock, so a green CI run is reproducible on any machine.
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio",
+    "pytest-cov>=5",
+    # A test that blocks for ever otherwise runs the whole job into the six-hour
+    # ceiling; see the `timeout` setting under [tool.pytest.ini_options].
+    "pytest-timeout>=2.3",
+    # The suite is ~3150 tests and CPU-bound; CI runs it with `-n auto`, which on a
+    # four-core runner is the difference between eight minutes and under three.
+    "pytest-xdist>=3.6",
+    "httpx",
+    "httpx2",
+    # Upper-bounded on purpose: both of these ARE the CI gate, and both add rules
+    # (ruff) or tighten inference (mypy) in a minor release. An unpinned bump turns
+    # main red for reasons nobody changed. Raise these deliberately, in their own PR.
+    "ruff>=0.17.1,<0.18",
+    "mypy>=2.4,<2.5",
+]
 
 # One command on the path. The server, the connectors tool, the acceptor and the team
 # board stay runnable as modules (`python -m coworker.server.run`, …) for development.
@@ -81,6 +103,12 @@ testpaths = ["tests"]
 # console script (CI) does not put the root on sys.path the way `python -m pytest` does.
 pythonpath = ["."]
 asyncio_mode = "auto"
+# Per-test ceiling. On 2026-10-20 a CI run finished 41% of the suite in three
+# minutes and then sat for forty more on one unbounded `ws.receive_json()` loop,
+# because a dead turn never sent the frame the test was waiting for. The slowest
+# test here takes about ten seconds, so this fails that one test with a stack
+# trace instead of letting it take the job down.
+timeout = 120
 
 [tool.coverage.run]
 source = ["coworker"]
@@ -104,4 +132,198 @@ exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
     "if __name__ == .__main__.:",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff. The codebase was already written against ruff — the `# noqa:` comments carry
+# ruff-only codes (BLE001, ANN001, S310, ARG001, A001) — it was just never switched on.
+#
+# This config is a GATE, not a style standard: every rule left enabled is green today,
+# so anything CI reports is new. Nothing pre-existing was silently dropped — each one
+# sits in exactly one of three places, with its reason:
+#   * `ignore`               — the rule disagrees with a deliberate choice, repo-wide.
+#   * per-file-ignores, A    — a real finding, not fixed yet. The rule stays live
+#                              everywhere else, so the same bug in a new file fails CI.
+#   * per-file-ignores, B    — deliberate at that specific site; read and confirmed.
+# Counts measured 2026-10-20 against 79k lines of coworker/ + 57k lines of tests/.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"  # matches requires-python
+# surfaces/ is the TypeScript + Rust GUI project; everything else Python is linted,
+# so a new top-level directory is covered the day it appears.
+extend-exclude = ["surfaces"]
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes — undefined names, unused imports/variables
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "B",    # bugbear — mutable defaults, loop-variable capture, bare re-raise
+    "C4",   # comprehension misuse
+    "SIM",  # obvious simplifications
+    "RUF",  # ruff's own
+    "BLE",  # blind except
+    "A",    # builtin shadowing
+    "UP",   # pyupgrade
+]
+
+ignore = [
+    # Every entry here is a rule the codebase still violates, with the count measured
+    # 2026-10-20. Rules that have been burned down are deleted from this list, not left
+    # behind: the list is the remaining debt, not a history of it.
+
+    # --- The formatter's job, not a manual sweep -------------------------------
+    "E501",    # 7396x line-too-long. `ruff format` reflows code; the residue is long
+               # string literals, URLs and comments. Adopt the formatter in its own PR.
+
+    # --- Disagrees with a deliberate choice here -------------------------------
+    "BLE001",  # 258x blind `except Exception`. This is an agent runtime: one bad
+               # connector must not take the server down. Most sites carry a trailing
+               # comment naming what must survive. Narrowing each one needs a per-site
+               # judgement about what the try block can raise — real work, not a sweep.
+    "SIM105",  # 129x try/except/pass -> contextlib.suppress: slower, and the explicit
+               # form reads better in the hot paths where most of these sit.
+    "E402",    #  33x import-not-at-top. Deliberate late imports break import cycles.
+               # Untangling those cycles is the real fix and is its own piece of work.
+    "A002",    #  14x a parameter named `id` / `type` / `input`. These are public tool
+               # and HTTP signatures; renaming them changes the wire API.
+    "RUF012",  #  13x mutable-class-default wants ClassVar on every dataclass default.
+    "SIM102",  #   9x collapsible if. Readability preference.
+    "SIM117",  #   7x nested with. Readability preference.
+    "E702",    #   5x semicolon. Style.
+    "E741",    #   4x `l` / `I` as a name. Style.
+    "B017",    #   4x assertRaises(Exception) in tests, where broad IS the assertion.
+    "B008",    #   2x function-call-in-default-argument: that IS FastAPI's Depends().
+    "SIM112",  #   1x uncapitalised environment variable.
+    "RUF001", "RUF002", "RUF003",  # 27x "ambiguous" unicode — the em dashes and arrows
+               # running through these comments and strings are intentional.
+]
+
+[tool.ruff.lint.per-file-ignores]
+# DELIBERATE at these sites. Read and confirmed, not deferred. Anything that was
+# merely "not fixed yet" has been fixed: RUF006 (dangling tasks) and B023 (loop-variable
+# capture) are gone from the codebase, so their entries are gone from here.
+
+# SIM115 wants a `with` block, but each of these handles must outlive the scope
+# that opens it: a lock file held for the engine's lifetime, a subprocess stderr
+# sink, and the real file descriptor the MCP SDK requires for a child's stderr.
+"coworker/statelock.py" = ["SIM115"]
+"coworker/mcp/client.py" = ["SIM115"]
+"coworker/sandbox/providers/seatbelt.py" = ["SIM115"]
+
+# B006: four MCP tool signatures take `refs: list[str] = []`. Every body copies
+# defensively (`list(refs or [])`), so the shared default is never mutated — and
+# the default is part of the JSON schema the model sees, so changing it to None
+# would change the agent's tool surface, not just the Python.
+"coworker/teams/mcp_server.py" = ["B006"]
+
+# B027: `interrupt()` / `close()` are optional no-op hooks on the Executor base.
+# @abstractmethod would force every executor to implement a method most do not need.
+"coworker/sandbox/runner/executor.py" = ["B027"]
+
+# Test fixtures open files and zip fixed-length literals; neither is a leak.
+"tests/test_toolchain.py" = ["SIM115"]
+"tests/test_sharing_v1.py" = ["SIM115"]
+"tests/test_auto_approve.py" = ["B905"]
+
+# ---------------------------------------------------------------------------
+[tool.mypy]
+packages = ["coworker"]
+python_version = "3.10"
+ignore_missing_imports = true      # aisuite, mcp, slack_bolt, … ship no stubs
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+# Windows-only ctypes shims resolve their names under a `sys.platform` guard that
+# mypy does not follow when checking on macOS/Linux (54 phantom name-defined errors).
+exclude = ["coworker/sandbox/winsec\\.py"]
+
+# RATCHET — these 70 modules still have errors mypy would report. The list was 71
+# when mypy was switched on (2026-10-19, 534 errors); coworker.tools.todo came off
+# it once its implicit-Optional was fixed. Delete an entry once its module is clean.
+# Only ever shrinks: a new module must be clean on arrival, which is the whole point.
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = [
+    "coworker.agent",
+    "coworker.automation.models",
+    "coworker.automation.scheduler",
+    "coworker.automation.store",
+    "coworker.automation.tools",
+    "coworker.catalog",
+    "coworker.cli",
+    "coworker.cloud",
+    "coworker.connectors.adapters",
+    "coworker.connectors.browser_automation",
+    "coworker.connectors.chat_tools",
+    "coworker.connectors.descriptors",
+    "coworker.connectors.email_tools",
+    "coworker.connectors.integration_tools",
+    "coworker.connectors.machine_poll",
+    "coworker.connectors.relay_client",
+    "coworker.connectors.setup",
+    "coworker.connectors.tools",
+    "coworker.conversations",
+    "coworker.engine",
+    "coworker.headless.runner",
+    "coworker.headless.trajectory",
+    "coworker.inbox",
+    "coworker.mcp.tools",
+    "coworker.memory.sqlite_store",
+    "coworker.providers.anthropic_provider",
+    "coworker.providers.bedrock_provider",
+    "coworker.providers.local_machine",
+    "coworker.providers.local_server",
+    "coworker.providers.openai_responses",
+    "coworker.providers.registry",
+    "coworker.providers.router",
+    "coworker.providers.vertex_provider",
+    "coworker.remote.acceptor",
+    "coworker.remote.audit_export",
+    "coworker.remote.cloudproxy",
+    "coworker.remote.joiner",
+    "coworker.remote.registry",
+    "coworker.remote.service",
+    "coworker.remote.stores",
+    "coworker.roots",
+    "coworker.sandbox.bundle",
+    "coworker.sandbox.client",
+    "coworker.sandbox.providers.openshell",
+    "coworker.sandbox.providers.seatbelt",
+    "coworker.sandbox.providers.windows_setup",
+    "coworker.sandbox.registry",
+    "coworker.sandbox.runner.daemon",
+    "coworker.sandbox.runner.executor",
+    "coworker.sandbox.runner.winpipe",
+    "coworker.sandbox.windows_wfp",
+    "coworker.sandbox.winsec",
+    "coworker.secrets",
+    "coworker.selfwake",
+    "coworker.server.app",
+    "coworker.server.manager",
+    "coworker.server.run",
+    "coworker.skills.store",
+    "coworker.teams.artifacts",
+    "coworker.teams.dialect",
+    "coworker.teams.store",
+    "coworker.teams.tools",
+    "coworker.tools.files",
+    "coworker.tools.git",
+    "coworker.tools.search",
+    "coworker.tui.app",
+    "coworker.web.fetch",
+    "coworker.web.guard",
+    "coworker.web.providers",
+    "coworker.web.tool",
+]
+
+# Conditional-import shims (`try: import X / except ImportError: import Y as X`). Their
+# `# type: ignore[no-redef]` reads as unused here only because ignore_missing_imports
+# resolves the fallback to Any — it is load-bearing wherever those stubs do exist.
+[[tool.mypy.overrides]]
+warn_unused_ignores = false
+module = [
+    "coworker.config",
+    "coworker.sandbox.runner.toolcalls",
+    "coworker.sandbox.setup_cmd",
 ]

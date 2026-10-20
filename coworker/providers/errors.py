@@ -13,7 +13,6 @@ dressed up as an access problem.
 
 from __future__ import annotations
 
-from typing import Optional
 
 # Error-body markers, verbatim from the vendors' error codes/messages:
 # OpenAI: {"error": {"code": "model_not_found", "message": "The model `X` does not exist or
@@ -55,7 +54,7 @@ _AUTH_FAILURE = (
 )
 
 
-def _auth_error_message(model: str, exc: Exception) -> Optional[str]:
+def _auth_error_message(model: str, exc: Exception) -> str | None:
     """Provider-specific guidance for API-key authentication failures, or None.
 
     Qwen/DashScope keys obtained from the China mainland portal (qwencloud.com) only work
@@ -89,7 +88,7 @@ def _auth_error_message(model: str, exc: Exception) -> Optional[str]:
     )
 
 
-def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
+def friendly_model_error(model: str, exc: Exception) -> str | None:
     """One actionable sentence for "your account can't use this model" failures, or None."""
     text = str(exc).lower()
     no_access = (

@@ -77,7 +77,7 @@ def test_agent_steps_carry_raw_counts_host_and_a_priced_total():
         },
     ]
     traj = _traj(messages)
-    step = [s for s in traj["steps"] if s["source"] == "agent"][0]
+    step = next(s for s in traj["steps"] if s["source"] == "agent")
     assert step["metrics"]["prompt_tokens"] == 1700 and step["metrics"]["cached_tokens"] == 500
     assert step["metrics"]["extra"] == {
         "input": 1000,
@@ -98,6 +98,6 @@ def test_an_unpriced_model_gets_counts_but_no_cost():
          "usage": {"input": 10, "output": 5}},
     ]
     traj = _traj(messages, model="together:some/unpriced-model")
-    step = [s for s in traj["steps"] if s["source"] == "agent"][0]
+    step = next(s for s in traj["steps"] if s["source"] == "agent")
     assert "cost_usd" not in step["metrics"] and step["metrics"]["prompt_tokens"] == 10
     assert "total_cost_usd" not in traj["final_metrics"]

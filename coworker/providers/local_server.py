@@ -20,13 +20,13 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
-from .. import model_config
-from . import local_machine
-from .recommended import recommendation_for
+from coworker import model_config
+from coworker.providers import local_machine
+from coworker.providers.recommended import recommendation_for
 
 LOCAL_SERVERS: dict[str, dict[str, str]] = {
     "llamacpp": {"title": "llama.cpp", "default_base": "http://localhost:8080"},
@@ -39,26 +39,26 @@ _cache: dict[tuple[str, str], tuple[float, list[dict[str, Any]]]] = {}
 _lock = threading.Lock()
 
 
-def v1_base(name: str, base_url: Optional[str]) -> str:
+def v1_base(name: str, base_url: str | None) -> str:
     """The server's `/v1` root from what the user typed: the root, or already `/v1`."""
     base = (base_url or LOCAL_SERVERS[name]["default_base"]).strip().rstrip("/")
     return base if base.endswith("/v1") else base + "/v1"
 
 
-def _headers(api_key: Optional[str]) -> dict[str, str]:
+def _headers(api_key: str | None) -> dict[str, str]:
     key = (api_key or "").strip()
     return {"Authorization": f"Bearer {key}"} if key else {}
 
 
-def alive(name: str, base_url: Optional[str], api_key: Optional[str] = None) -> bool:
+def alive(name: str, base_url: str | None, api_key: str | None = None) -> bool:
     try:
         return httpx.get(v1_base(name, base_url) + "/models", headers=_headers(api_key), timeout=0.8).status_code == 200
-    except Exception:  # noqa: BLE001 - a probe never raises
+    except Exception:  # a probe never raises
         return False
 
 
 def model_facts(
-    name: str, base_url: Optional[str], api_key: Optional[str] = None, *, fresh: bool = False
+    name: str, base_url: str | None, api_key: str | None = None, *, fresh: bool = False
 ) -> list[dict[str, Any]]:
     """One row per model the server serves (usually one). Empty when it does not answer."""
     base = v1_base(name, base_url)
@@ -81,14 +81,14 @@ def forget_all() -> None:
 
 # The server each provider client was built against (registry._local_server), so a
 # window lookup from the engine can ask the right server without a profile in hand.
-_built: dict[str, tuple[str, Optional[str]]] = {}
+_built: dict[str, tuple[str, str | None]] = {}
 
 
-def remember_server(name: str, base_url: Optional[str], api_key: Optional[str]) -> None:
+def remember_server(name: str, base_url: str | None, api_key: str | None) -> None:
     _built[name] = (base_url or "", api_key)
 
 
-def context_window_for(model: str) -> Optional[int]:
+def context_window_for(model: str) -> int | None:
     """The window a served model runs at: from the last facts read, else read now from
     the server the provider was built against. None when unknown or not a local-server
     model."""
@@ -96,7 +96,7 @@ def context_window_for(model: str) -> Optional[int]:
     if vendor not in LOCAL_SERVERS:
         return None
 
-    def find(rows: list[dict[str, Any]]) -> Optional[int]:
+    def find(rows: list[dict[str, Any]]) -> int | None:
         for row in rows:
             if row.get("name") == bare and row.get("context"):
                 return int(row["context"])
@@ -112,7 +112,7 @@ def context_window_for(model: str) -> Optional[int]:
     return find(model_facts(vendor, base_url or None, api_key))
 
 
-def _fetch(name: str, base: str, api_key: Optional[str]) -> list[dict[str, Any]]:
+def _fetch(name: str, base: str, api_key: str | None) -> list[dict[str, Any]]:
     headers = _headers(api_key)
     try:
         listing = httpx.get(base + "/models", headers=headers, timeout=4.0).json()
@@ -128,7 +128,7 @@ def _fetch(name: str, base: str, api_key: Optional[str]) -> list[dict[str, Any]]
             props = got if isinstance(got, dict) else {}
         except (httpx.HTTPError, ValueError, OSError):
             props = {}
-    tools: Optional[bool] = None
+    tools: bool | None = None
     if name == "vllm":
         tools = _vllm_tools_on(base, headers, str((items[0] or {}).get("id") or "")) if items else None
     elif name == "llamacpp":
@@ -142,7 +142,7 @@ def _fetch(name: str, base: str, api_key: Optional[str]) -> list[dict[str, Any]]
     return rows
 
 
-def _vllm_tools_on(base: str, headers: dict[str, str], model: str) -> Optional[bool]:
+def _vllm_tools_on(base: str, headers: dict[str, str], model: str) -> bool | None:
     """Ask vLLM for a one-token reply with a tool offered. A server started without tool
     calling refuses the request and names the flag; one with it answers."""
     probe = {
@@ -163,7 +163,7 @@ def _vllm_tools_on(base: str, headers: dict[str, str], model: str) -> Optional[b
     return None
 
 
-def _row(name: str, item: dict[str, Any], props: dict[str, Any], tools: Optional[bool]) -> dict[str, Any]:
+def _row(name: str, item: dict[str, Any], props: dict[str, Any], tools: bool | None) -> dict[str, Any]:
     served_id = str(item["id"])
     model_id = f"{name}:{served_id}"
     meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
@@ -200,7 +200,7 @@ def _row(name: str, item: dict[str, Any], props: dict[str, Any], tools: Optional
     }
 
 
-def _int(value: Any) -> Optional[int]:
+def _int(value: Any) -> int | None:
     return int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0 else None
 
 

@@ -26,14 +26,15 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any
+from collections.abc import Callable, Sequence
 
-from .. import credentials as creds
-from .. import netproxy, network_profiles
-from ..bundle import build_runner_zipapp
-from ..launch import read_paths, runner_command
-from ..transport import PipeTransport, Transport
-from . import seatbelt_profile
+from coworker.sandbox import credentials as creds
+from coworker.sandbox import netproxy, network_profiles
+from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox.launch import read_paths, runner_command
+from coworker.sandbox.transport import PipeTransport, Transport
+from coworker.sandbox.providers import seatbelt_profile
 
 SANDBOX_EXEC = "/usr/bin/sandbox-exec"
 _SECRET_NAME = re.compile(r"KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|AUTH|COOKIE|SESSION", re.IGNORECASE)
@@ -71,7 +72,7 @@ def preflight() -> None:
         raise SeatbeltUnavailable(f"sandbox-exec could not apply a profile: {probe.stderr.strip() or probe.returncode}")
 
 
-def clean_environment(base: Optional[dict[str, str]] = None) -> dict[str, str]:
+def clean_environment(base: dict[str, str] | None = None) -> dict[str, str]:
     """The server's environment without anything whose name says it is a secret, and without
     OpenWorker's own variables (one of them is the server's API token)."""
     source = os.environ if base is None else base
@@ -87,10 +88,10 @@ class SeatbeltProvider:
         roots: Sequence[dict[str, Any]],
         cwd: str | Path,
         profile: str = network_profiles.DEFAULT_PROFILE,
-        tool_dirs: Optional[Sequence[str]] = None,
+        tool_dirs: Sequence[str] | None = None,
         network: bool = True,
-        runner_path: Optional[Path] = None,
-        relay_silence_seconds: Optional[float] = None,
+        runner_path: Path | None = None,
+        relay_silence_seconds: float | None = None,
         credentials: Sequence[creds.Grant] = (),
         extra_hosts: Sequence[str] = (),
     ) -> None:
@@ -99,7 +100,7 @@ class SeatbeltProvider:
         self.extra_hosts = list(extra_hosts)
         self.roots = [{"path": seatbelt_profile.real(r["path"]), "writable": bool(r.get("writable"))} for r in roots]
         self.grants = list(credentials)
-        self.copied: Optional[creds.CopiedCredentials] = None
+        self.copied: creds.CopiedCredentials | None = None
         self.cwd = seatbelt_profile.real(cwd)
         self.profile = network_profiles.check(profile)
         self.tool_dirs = list(tool_dirs) if tool_dirs is not None else None  # None: the shipped list
@@ -111,8 +112,8 @@ class SeatbeltProvider:
         # Seatbelt matches real paths and `/tmp` is a link on macOS.
         self._dir = seatbelt_profile.real(tempfile.mkdtemp(prefix="owr-", dir="/tmp"))
         self.socket_path = os.path.join(self._dir, "r.sock")
-        self._daemon: Optional[subprocess.Popen] = None
-        self._proxy: Optional[netproxy.AllowListProxy] = None
+        self._daemon: subprocess.Popen | None = None
+        self._proxy: netproxy.AllowListProxy | None = None
 
     def describe(self) -> dict[str, Any]:
         if not self.network:
@@ -130,7 +131,7 @@ class SeatbeltProvider:
         }
 
     def profile_text(self) -> str:
-        from ... import toolchain
+        from coworker import toolchain
 
         return seatbelt_profile.render(
             self.roots,
@@ -181,7 +182,7 @@ class SeatbeltProvider:
                 SANDBOX_EXEC, "-p", self.profile_text(),
                 *runner_command(self._runner),
                 "serve", "--socket", self.socket_path, "--cwd", self.cwd, "--exit-with-parent",
-            ],  # fmt: skip
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=log,  # a file, not a pipe: nobody reads a pipe while the daemon lives
@@ -210,7 +211,7 @@ class SeatbeltProvider:
     def verify(self, client: Any) -> None:
         """Every folder is reachable inside, and the wall is really up: the home folder,
         which no session is given as a whole, must NOT be listable."""
-        from ..runner.protocol import RunnerError
+        from coworker.sandbox.runner.protocol import RunnerError
 
         for root in self.roots:
             client.call("fs.list", {"path": root["path"], "limit": 1}, timeout=15)
@@ -246,7 +247,7 @@ class SeatbeltProvider:
         """(time, "host:port") of the connections the sandbox refused since then."""
         return self._proxy.blocked_since(since) if self._proxy is not None else []
 
-    def regrant(self, roots: Sequence[dict[str, Any]], *, before_create: Optional[Callable[[], None]] = None) -> None:
+    def regrant(self, roots: Sequence[dict[str, Any]], *, before_create: Callable[[], None] | None = None) -> None:
         """The session's folders changed. A profile is fixed when a process starts, so the
         daemon is started again with a new one; the client sees a runner restart.
         `before_create` is the workspace's registry reservation (a no-op here: Seatbelt has

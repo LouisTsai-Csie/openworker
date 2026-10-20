@@ -19,7 +19,7 @@ import functools
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 _TABLE = Path(__file__).with_name("recommended_models.json")
 
@@ -27,9 +27,9 @@ _TABLE = Path(__file__).with_name("recommended_models.json")
 @dataclass(frozen=True)
 class Recommendation:
     name: str
-    context_max: Optional[int] = None
-    context_for_agents: Optional[int] = None
-    max_output_tokens: Optional[int] = None
+    context_max: int | None = None
+    context_for_agents: int | None = None
+    max_output_tokens: int | None = None
     thinking_available: bool = False
     thinking_default: bool = False
     sampling: dict[str, float] = field(default_factory=dict)
@@ -79,7 +79,7 @@ def _entries() -> tuple[tuple[tuple[str, ...], Recommendation], ...]:
     return tuple(out)
 
 
-def _int(value: Any) -> Optional[int]:
+def _int(value: Any) -> int | None:
     return int(value) if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
 
 
@@ -87,7 +87,7 @@ def bare_name(model: str) -> str:
     """`ollama:qwen3-coder:30b` → `qwen3-coder:30b`; a name with no known prefix is itself.
     Model names carry colons of their own (version tags), so only a known provider
     prefix is stripped."""
-    from .registry import provider_names
+    from coworker.providers.registry import provider_names
 
     vendor, sep, rest = model.partition(":")
     if sep and vendor in provider_names():
@@ -95,7 +95,7 @@ def bare_name(model: str) -> str:
     return model
 
 
-def recommendation_for(model: str) -> Optional[Recommendation]:
+def recommendation_for(model: str) -> Recommendation | None:
     """The table's entry for a model id, or None. Case does not matter."""
     name = bare_name(model).lower()
     for patterns, rec in _entries():

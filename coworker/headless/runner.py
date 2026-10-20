@@ -46,7 +46,7 @@ import time
 import traceback
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # How tool calls are approved (--approval-mode). `ask` is the app's "Ask for approval";
 # the engine stores it as "interactive".
@@ -54,7 +54,7 @@ APPROVAL_MODES = ["ask", "auto-approve", "bypass-approvals", "dangerously-bypass
 RETRY_DELAYS_ENV = "OPENWORKER_RUN_RETRY_DELAYS"
 
 
-def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="openworker run",
         description="Run one task to the end, and record it.",
@@ -203,7 +203,7 @@ def normalize_model(model: str) -> str:
     """Accept `provider:model` or `provider/model`; return OpenWorker's form. Splits on
     the FIRST slash only, so `together/moonshotai/Kimi-K3` becomes
     `together:moonshotai/Kimi-K3`."""
-    from ..providers.registry import get_descriptor
+    from coworker.providers.registry import get_descriptor
 
     if ":" in model and get_descriptor(model.split(":", 1)[0]) is not None:
         return model
@@ -333,7 +333,7 @@ def provider_retry_delays() -> tuple[int, ...]:
 # -- offline provider (tests) -------------------------------------------------------------
 
 
-def _scripted_effort(settings: dict[str, Any]) -> Optional[dict[str, Any]]:
+def _scripted_effort(settings: dict[str, Any]) -> dict[str, Any] | None:
     """The fake model echoes the level as a real provider's record would."""
     level = settings.get("reasoning_effort")
     if not level:
@@ -345,8 +345,8 @@ def scripted_provider(path: Path):
     """A fake model that replays turns from a JSON file: [{"text": ..., "tool_calls":
     [{"name": ..., "arguments": {...}}], "usage": {...}, "finish_reason": ...}, ...].
     For the offline tests only (`--scripted`)."""
-    from ..providers import AssistantTurn, ModelCapabilities, ProviderClient, ToolCall
-    from ..providers.base import TokenUsage
+    from coworker.providers import AssistantTurn, ModelCapabilities, ProviderClient, ToolCall
+    from coworker.providers.base import TokenUsage
 
     turns = json.loads(path.read_text(encoding="utf-8"))
 
@@ -422,7 +422,7 @@ def describe_reasoning_effort(model: str) -> dict[str, Any]:
     }
     if provider in ("anthropic", "bedrock", "vertex"):
         try:
-            from ..providers.anthropic_provider import (
+            from coworker.providers.anthropic_provider import (
                 DEFAULT_MAX_TOKENS,
                 DEFAULT_THINKING_BUDGET,
                 _uses_budget_thinking,
@@ -438,7 +438,7 @@ def describe_reasoning_effort(model: str) -> dict[str, Any]:
                 # to effort "high".
                 detail["effort"] = "high (API default; no output_config sent)"
                 label = "high (Anthropic adaptive thinking, effort not set = API default high)"
-        except Exception:  # noqa: BLE001 - never fail a run over a metadata lookup
+        except Exception:  # never fail a run over a metadata lookup
             label = "extended thinking on (OpenWorker default; details unavailable)"
         return {"label": label, "detail": detail}
     if provider == "openai":
@@ -498,7 +498,7 @@ def root_cause_text(exc: BaseException) -> str:
     """The exception at the bottom of a failed model call's chain, in a few words: what a
     person needs to see beside "Connection error." Empty when there is nothing underneath."""
     cause = exc.__cause__ or exc.__context__
-    last: Optional[BaseException] = None
+    last: BaseException | None = None
     depth = 0
     while cause is not None and depth < 8:
         last = cause
@@ -519,7 +519,7 @@ def recording_provider(inner, log_path: Path):
     `log_path` with its full cause chain (credentials redacted), then re-raised unchanged.
     The engine reports only the top-level message; the chain underneath is what says
     whether it was DNS, TLS, a proxy, a refused socket, or a malformed header."""
-    from ..providers import ProviderClient
+    from coworker.providers import ProviderClient
 
     class Recording(ProviderClient):
         def __init__(self) -> None:
@@ -530,7 +530,7 @@ def recording_provider(inner, log_path: Path):
         def _record(self, exc: BaseException, method: str) -> None:
             try:
                 self.last_cause = redact(root_cause_text(exc))
-            except Exception:  # noqa: BLE001
+            except Exception:
                 self.last_cause = ""
             try:
                 lines = [f"=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} {method} ==="]
@@ -546,7 +546,7 @@ def recording_provider(inner, log_path: Path):
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 with log_path.open("a", encoding="utf-8") as fh:
                     fh.write(redact("\n".join(lines)) + "\n")
-            except Exception:  # noqa: BLE001 - diagnostics must never mask the real error
+            except Exception:  # diagnostics must never mask the real error
                 pass
 
         def _note_turn(self, turn, method: str) -> None:
@@ -567,7 +567,7 @@ def recording_provider(inner, log_path: Path):
                 calls_path = log_path.with_name("model_calls.jsonl")
                 with calls_path.open("a", encoding="utf-8") as fh:
                     fh.write(json.dumps(rec) + "\n")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
         def complete(self, *, model, messages, tools=None, **settings):
@@ -667,7 +667,7 @@ def _read_prompt(args: argparse.Namespace) -> str:
     return text
 
 
-def _agent_version(explicit: Optional[str]) -> str:
+def _agent_version(explicit: str | None) -> str:
     if explicit:
         return explicit
     from importlib.metadata import PackageNotFoundError, version
@@ -677,7 +677,7 @@ def _agent_version(explicit: Optional[str]) -> str:
             return f"openworker {version(dist)}"
         except PackageNotFoundError:
             continue
-        except Exception:  # noqa: BLE001
+        except Exception:
             break
     return "openworker unknown"
 
@@ -685,7 +685,7 @@ def _agent_version(explicit: Optional[str]) -> str:
 def _extra_dirs(args: argparse.Namespace, workspace: Path) -> list:
     """The `--add-dir DIR` folders as writable roots: created if missing, deduplicated, and
     without the workspace itself (always the first root)."""
-    from ..roots import RootDir
+    from coworker.roots import RootDir
 
     found: list = []
     for raw in args.add_dir or []:
@@ -714,7 +714,7 @@ def workspace_folder_name(workspace: Path) -> str:
 
 
 def session_folder(workspace: Path, run_id: str) -> Path:
-    from ..secrets import state_dir
+    from coworker.secrets import state_dir
 
     return state_dir() / "sessions" / workspace_folder_name(workspace) / run_id
 
@@ -722,7 +722,7 @@ def session_folder(workspace: Path, run_id: str) -> Path:
 def allowed_sites(args: argparse.Namespace) -> list[str]:
     """`--allow-site` and `--allow-sites-file` as "host:port" entries. Exact host names,
     as on the network-access card; anything else stops the run before it starts."""
-    from ..permissions import network_request_hosts
+    from coworker.permissions import network_request_hosts
 
     wanted = list(args.allow_site or [])
     if args.allow_sites_file:
@@ -789,18 +789,18 @@ def _run(args: argparse.Namespace) -> int:
         print(f"openworker run: stripped stray whitespace from {', '.join(cleaned_keys)}", file=sys.stderr)
 
     # Build the engine only now, after the isolation variables are set.
-    from ..agent import build_engine
-    from ..agents.registry import get_agent
-    from ..audit import AuditStore
-    from ..events import EventType
-    from ..permissions import Mode
-    from ..providers import ProviderRouter
-    from ..roots import RootDir
-    from ..secrets import SecretStore, state_dir
-    from ..unattended import DANGEROUS_MODE_WARNING
+    from coworker.agent import build_engine
+    from coworker.agents.registry import get_agent
+    from coworker.audit import AuditStore
+    from coworker.events import EventType
+    from coworker.permissions import Mode
+    from coworker.providers import ProviderRouter
+    from coworker.roots import RootDir
+    from coworker.secrets import SecretStore, state_dir
+    from coworker.unattended import DANGEROUS_MODE_WARNING
 
     # An unknown id would otherwise run the default coworker without saying so.
-    from ..personas.registry import get_registry
+    from coworker.personas.registry import get_registry
 
     known = get_registry().ids()
     if args.coworker not in known:
@@ -818,7 +818,7 @@ def _run(args: argparse.Namespace) -> int:
     extra_dirs = _extra_dirs(args, workspace)
     roots = [RootDir(path=workspace, writable=True), *extra_dirs] if extra_dirs else None
     if not args.model:
-        from ..config import load_config
+        from coworker.config import load_config
 
         args.model = load_config(workspace).model
     model = normalize_model(args.model)
@@ -828,7 +828,7 @@ def _run(args: argparse.Namespace) -> int:
     # Who answers. Approvals and questions are separate: an approval is the person's at a
     # terminal and refused without one; a question is the person's at a terminal unless
     # --auto-answer says nobody will answer, and answered by rule without a terminal.
-    from .terminal import Terminal
+    from coworker.headless.terminal import Terminal
 
     terminal = Terminal.attached(cwd=workspace)
     auto_answer = bool(args.auto_answer) or terminal is None
@@ -894,7 +894,7 @@ def _run(args: argparse.Namespace) -> int:
             """The person gave the coworker another folder. The engine's list of folders is
             shared with the file tools, the permission checks and the sandbox, so they all
             see it from the next call."""
-            from ..basedir import ensure_under_base
+            from coworker.basedir import ensure_under_base
 
             resolved = ensure_under_base(folder, "folder")
             for root in engine.roots:
@@ -933,7 +933,7 @@ def _run(args: argparse.Namespace) -> int:
         engine.compaction_settings = lambda: dict(_forced)
     events: list[dict[str, Any]] = []
     outcome = "unknown"
-    error_text: Optional[str] = None
+    error_text: str | None = None
     raw_error = ""
     started = time.time()
 
@@ -960,7 +960,7 @@ def _run(args: argparse.Namespace) -> int:
                 isolation=isolation,
                 trajectory_extra_path=None,  # final copy to --trajectory-atif happens at the end
             )
-        except Exception:  # noqa: BLE001 - a provisional write must never break the run
+        except Exception:  # a provisional write must never break the run
             pass
 
     import signal
@@ -970,7 +970,7 @@ def _run(args: argparse.Namespace) -> int:
     # part a run waiting out a provider error ignored the signal until a hard kill.
     stop: dict[str, Any] = {"asked": False, "loop": None, "event": None}
 
-    def _on_term(signum, frame):  # noqa: ARG001
+    def _on_term(signum, frame):
         stop["asked"] = True
         try:
             engine.request_interrupt()
@@ -1108,15 +1108,15 @@ def _run(args: argparse.Namespace) -> int:
         outcome = "timeout"
         try:
             engine.request_interrupt()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     except KeyboardInterrupt:  # Ctrl-C: stop, and still leave the record
         outcome = "interrupted"
         try:
             engine.request_interrupt()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
-    except Exception as exc:  # noqa: BLE001 - recorded, then reported by exit code
+    except Exception as exc:  # recorded, then reported by exit code
         outcome = "crash"
         error_text = "".join(traceback.format_exception(exc))
     finally:
@@ -1124,19 +1124,19 @@ def _run(args: argparse.Namespace) -> int:
         if executor is not None:
             try:
                 executor.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         # The run's sandbox ends with the run.
         sandbox = getattr(engine, "sandbox_workspace", None)
         if sandbox is not None:
             try:
                 sandbox.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
     wall = time.time() - started
     try:
         events_fh.close()
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
     if stop["asked"] and outcome in ("unknown", "timeout"):
@@ -1234,15 +1234,15 @@ def _final_answer(engine: Any) -> str:
     return ""
 
 
-def _merged_model_settings(args: argparse.Namespace, model: str) -> Optional[dict[str, Any]]:
-    from .. import model_config
+def _merged_model_settings(args: argparse.Namespace, model: str) -> dict[str, Any] | None:
+    from coworker import model_config
 
     saved = {} if getattr(args, "isolated", False) else model_config.model_settings_for(model)
     merged = {**saved, **(_model_settings(args) or {})}
     return merged or None
 
 
-def _model_settings(args: argparse.Namespace) -> Optional[dict[str, Any]]:
+def _model_settings(args: argparse.Namespace) -> dict[str, Any] | None:
     """Explicit per-run settings that ride model_settings into every provider call:
     the output ceiling and the reasoning-effort level."""
     settings: dict[str, Any] = {}
@@ -1288,7 +1288,7 @@ def _effort_summary(args: argparse.Namespace, model: str, events: list[dict[str,
 
 def _context_record(engine: Any) -> dict[str, Any]:
     try:
-        from .. import compaction as _compaction
+        from coworker import compaction as _compaction
 
         cfg = engine._compaction_config()
         window = cfg.get("context_window")
@@ -1301,7 +1301,7 @@ def _context_record(engine: Any) -> dict[str, Any]:
                 cap_tokens=int(cfg["cap_tokens"]),
             ),
         }
-    except Exception:  # noqa: BLE001 - a record field must never break the run
+    except Exception:  # a record field must never break the run
         return {"window": None, "window_source": "unknown", "compaction_trigger_tokens": None}
 
 
@@ -1312,21 +1312,21 @@ def _write_records(
     events: list[dict[str, Any]],
     answers: Answers,
     outcome: str,
-    error_text: Optional[str],
+    error_text: str | None,
     wall: float,
     model: str,
     args: argparse.Namespace,
     run_id: str,
     isolation: dict[str, str],
-    trajectory_extra_path: Optional[str],
+    trajectory_extra_path: str | None,
 ) -> dict[str, Any]:
     """Compute the summary from the events so far and (re)write summary.json,
     messages.json, answers.json, and trajectory.json. Called after every iteration with a
     provisional outcome and once more at the end with the final one, so a process killed
     by an outer time limit still leaves a usable record."""
-    from ..events import EventType
-    from .pricing import estimate_cost
-    from .trajectory import build_trajectory, write_trajectory
+    from coworker.events import EventType
+    from coworker.headless.pricing import estimate_cost
+    from coworker.headless.trajectory import build_trajectory, write_trajectory
 
     tool_finished = [e for e in events if e["type"] == EventType.TOOL_FINISHED.value]
     assistant = [e for e in events if e["type"] == EventType.ASSISTANT_MESSAGE.value]
@@ -1455,11 +1455,11 @@ def _write_records(
     return summary
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     try:
         code = run(args)
-    except Exception:  # noqa: BLE001 - last resort: say what happened, exit non-zero
+    except Exception:  # last resort: say what happened, exit non-zero
         traceback.print_exc()
         code = 1
     sys.exit(code)

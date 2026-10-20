@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from coworker.agents.base import AgentContext  # noqa: E402  (before catalog: import order)
-from coworker import catalog  # noqa: E402, I001
+from coworker.agents.base import AgentContext
+from coworker import catalog
 from coworker.roots import RootDir
 from coworker.sandbox import netproxy, network_profiles
 from coworker.sandbox.providers import seatbelt, seatbelt_profile
@@ -90,7 +90,7 @@ def _ask(proxy: netproxy.AllowListProxy, request: bytes) -> bytes:
         while True:
             try:
                 data = s.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 break
             if not data:
                 break
@@ -306,7 +306,7 @@ def test_the_network_is_only_the_proxy(sandbox):
 
 @live
 def test_our_own_tools_run_behind_the_wall(sandbox):
-    ws, project, reference, private, roots = sandbox
+    ws, project, reference, _private, roots = sandbox
     ctx = AgentContext(workspace=project, executor=ws.executor, roots=roots, sandbox=ws)
     tools = {t.__name__: t for t in catalog.expand(["code_files", "search"], ctx)}
     tools["write_file"]("notes.md", "one\ntwo\n")
@@ -321,7 +321,7 @@ def test_our_own_tools_run_behind_the_wall(sandbox):
 def test_granting_a_folder_restarts_the_sandbox_and_says_so(sandbox):
     from coworker.sandbox.workspace import RESTART_NOTICE
 
-    ws, project, reference, private, roots = sandbox
+    ws, _project, _reference, private, roots = sandbox
     run = ws.executor.run
     run("export KEEP=yes")
     assert "classified-content" not in run(f"cat {private}/secret.txt 2>&1")["output"]

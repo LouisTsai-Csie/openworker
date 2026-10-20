@@ -92,9 +92,8 @@ def test_a_stuck_holder_does_not_stall_a_turn_for_ever(tmp_path: Path) -> None:
 def test_the_lock_is_re_entrant_and_shared_by_stores_on_the_same_file(tmp_path: Path) -> None:
     path = tmp_path / "secrets.json"
     one, two = SecretStore(path), SecretStore(path)
-    with one.exclusive():
-        with one.exclusive():
-            two.put("a", {"n": 1})  # the same thread, another store on the same file
+    with one.exclusive(), one.exclusive():
+        two.put("a", {"n": 1})  # the same thread, another store on the same file
     assert one.get("a") == {"n": 1}
 
 

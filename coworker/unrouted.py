@@ -16,7 +16,6 @@ import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -29,7 +28,7 @@ class UnroutedItem:
 
 
 class UnroutedStore:
-    def __init__(self, path: Optional[str | Path] = None, *, cap: int = 200) -> None:
+    def __init__(self, path: str | Path | None = None, *, cap: int = 200) -> None:
         self.path = Path(path) if path else None
         self._cap = cap
         self._lock = threading.Lock()

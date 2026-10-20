@@ -13,7 +13,8 @@ import shlex
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any
+from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
 
 # Constructs whose *contents* we cannot evaluate, so a command carrying one is never
@@ -68,9 +69,7 @@ def _is_prefix_eligible(argv: list[str]) -> bool:
         return False
     if program in _INTERPRETERS and any(a in _INLINE_CODE_FLAGS for a in argv[1:]):
         return False
-    if any(a.lower() in _DANGEROUS_FLAGS for a in argv[1:]):
-        return False
-    return True
+    return not any(a.lower() in _DANGEROUS_FLAGS for a in argv[1:])
 
 
 # Tools granting authority that OUTLIVES this session: instructions the agent will follow
@@ -103,7 +102,7 @@ def network_request_hosts(arguments: dict[str, Any]) -> tuple[list[str], list[st
     """The hosts a `request_network_access` call names, as ("host:port" entries, rejected
     inputs). Exact host names only: no wildcards, no addresses, nothing that is not a name,
     since the entry is shown to a person and opened on the sandbox as written."""
-    from .sandbox.network_profiles import clean_host
+    from coworker.sandbox.network_profiles import clean_host
 
     raw = (arguments or {}).get("hosts")
     items = [raw] if isinstance(raw, str) else list(raw or []) if isinstance(raw, (list, tuple)) else []
@@ -130,7 +129,7 @@ def protected_paths() -> list[Path]:
     ordinary-looking command, it quietly appends to the rule file, every future session is
     more permissive. That happens in the DEFAULT interactive mode, so this cannot be a
     property of a sandbox or of any one mode; it is a floor."""
-    from .secrets import state_dir
+    from coworker.secrets import state_dir
 
     base = state_dir()
     return [
@@ -212,9 +211,9 @@ def write_paths(tool_name: str, arguments: dict[str, Any]) -> tuple[list[str], b
     # its path, so it cannot be auto-scoped.
     return ([], False)
 
-from .risk import (  # re-exported for back-compat (manager.py imports WRITE_TOOLS)
-    SHELL_TOOL,
-    WRITE_TOOLS,
+from coworker.risk import (  # re-exported for back-compat (manager.py imports WRITE_TOOLS)
+    SHELL_TOOL,  # noqa: F401  — re-export, no local use
+    WRITE_TOOLS,  # noqa: F401  — re-export, imported by server/manager.py
     RiskClass,
     RiskOverrides,
     classify,
@@ -274,7 +273,7 @@ class Mode(str, Enum):
     CUSTOM = "custom"  # interactive + auto-allow the config's `auto_allow` tools
 
     @classmethod
-    def _missing_(cls, value: object) -> "Mode | None":
+    def _missing_(cls, value: object) -> Mode | None:
         # Legacy spelling from configs, saved sessions, and older UIs.
         if value == "auto":
             return cls.BYPASS_APPROVALS
@@ -293,7 +292,7 @@ BYPASS_MODES = frozenset({Mode.BYPASS_APPROVALS, Mode.DANGEROUSLY_BYPASS_APPROVA
 CLEARED_BY_MODE = "cleared by mode"
 
 
-def _cleared(floor: str) -> "Decision":
+def _cleared(floor: str) -> Decision:
     return Decision(True, f"{CLEARED_BY_MODE}: {floor}")
 
 
@@ -324,13 +323,13 @@ def standing_rule_candidate(
     tool_name: str,
     arguments: dict[str, Any],
     metadata: Any = None,
-    overrides: Optional[RiskOverrides] = None,
-) -> Optional[str]:
+    overrides: RiskOverrides | None = None,
+) -> str | None:
     """The target value iff this call is eligible for a task-scoped standing rule
     (UX-DECISIONS §25): external-risk only (never exec/write-local — shell asks forever),
     the tool must declare a target argument, and the call must actually name a target.
     Returns None otherwise — ineligible calls keep parking approvals as today."""
-    from .connectors.tool_defs import standing_target_for
+    from coworker.connectors.tool_defs import standing_target_for
 
     if classify(tool_name, metadata, overrides) is not RiskClass.EXTERNAL:
         return None
@@ -364,16 +363,16 @@ class PermissionEngine:
     # "*.example.com"), the same list its commands are held to. These tools run in the
     # OpenWorker process, outside the sandbox; before this the list did not apply to them
     # and Bypass reached any site (reported on 0.3.0, 2026-10-02).
-    sandbox_sites: Optional[list[str]] = None
+    sandbox_sites: list[str] | None = None
     # Where `web_search` goes: the configured provider's host (it has no url argument).
-    search_host: Optional[Callable[[], str]] = None
+    search_host: Callable[[], str] | None = None
     # Persists a site the user chose to always allow (adds it to the machine's list) and
     # returns that list, so this session's copy carries the same entries.
-    grant_site: Optional[Callable[[str], Optional[list[str]]]] = None
+    grant_site: Callable[[str], list[str] | None] | None = None
     # Opens a site on the session's running sandbox, so commands reach it too (OPE-219).
-    open_site: Optional[Callable[[str], None]] = None
+    open_site: Callable[[str], None] | None = None
     # Takes a site back from the session's running sandbox.
-    close_site: Optional[Callable[[str], None]] = None
+    close_site: Callable[[str], None] | None = None
     # "host:port" entries a person allowed for this session only (either card, or the
     # session's own list in the app). The machine's list is `sandbox_sites`.
     session_sites: list[str] = field(default_factory=list)
@@ -393,18 +392,18 @@ class PermissionEngine:
     # grant across restarts (mention-spawned sessions also re-derive from the thread map).
     thread_grants: set[str] = field(default_factory=set)
     # User-local risk override resolver (Phase 2). None → use the base classification.
-    risk_overrides: Optional[RiskOverrides] = None
+    risk_overrides: RiskOverrides | None = None
     # OPE-136 durable trust: tool name → has the user minted a standing "don't ask" rule?
     # (RiskOverrideStore.trusted). Waives only the card, only outside AUTO_APPROVE —
     # never the class, the mode gates, or the audit trail. None → no trust rules.
-    trust_overrides: Optional[Callable[[str], bool]] = None
+    trust_overrides: Callable[[str], bool] | None = None
     # The write half (RiskOverrideStore.set_trust) — how ApprovalOutcome.ALWAYS_TRUST
     # lands on disk. Kept as an injected callable so this module never imports the store.
-    grant_trust: Optional[Callable[[str], None]] = None
+    grant_trust: Callable[[str], None] | None = None
     # Shared, possibly-mutable list of roots (RootDir-like / dicts). When omitted, the single
     # `workspace_root` is the sole writable root (back-compat). Kept by reference and re-read on
     # every check, so runtime add/remove of folders takes effect without rebuilding the engine.
-    roots: Optional[list] = None
+    roots: list | None = None
 
     def __post_init__(self) -> None:
         self.workspace_root = Path(self.workspace_root).expanduser().resolve()
@@ -420,7 +419,7 @@ class PermissionEngine:
             elif isinstance(r, (str, Path)):
                 p, w = r, True
             else:  # duck-typed RootDir-like
-                p, w = getattr(r, "path"), bool(getattr(r, "writable", False))
+                p, w = r.path, bool(getattr(r, "writable", False))
             out.append((Path(p).expanduser().resolve(), w))
         return out
 
@@ -583,7 +582,7 @@ class PermissionEngine:
             # Also a session grant, so §1.5 applies: in Auto-Approve the reviewer judges
             # these rather than the classifier waving them through.
             if honor_session_grants and self.session_readonly and command:
-                from .readonly import is_readonly_command, read_targets
+                from coworker.readonly import is_readonly_command, read_targets
 
                 # The classifier vets what a command DOES; the roots vet what it READS
                 # (OPE-130). Without the second half, a grant the user reads as "stop
@@ -761,7 +760,7 @@ class PermissionEngine:
         return True
 
     def _note_session_site(self, host_or_entry: str) -> None:
-        from .sandbox.network_profiles import clean_host
+        from coworker.sandbox.network_profiles import clean_host
 
         try:
             entry = clean_host(host_or_entry)
@@ -778,14 +777,14 @@ class PermissionEngine:
         try:
             self.open_site(host_or_entry)
             self.site_open_errors.pop(host_or_entry, None)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.site_open_errors[host_or_entry] = str(exc) or type(exc).__name__
 
     def _entry_allowed(self, entry: str) -> bool:
         """Whether a "host:port" entry is already open to this session's commands: on the
         machine's list (same port; `*.example.com` covers subdomains) or allowed for the
         session."""
-        from .sandbox.network_profiles import clean_host
+        from coworker.sandbox.network_profiles import clean_host
 
         if entry in self.session_sites:
             return True
@@ -841,7 +840,7 @@ class PermissionEngine:
         if self.search_host is not None:
             try:
                 return _host_of(self.search_host() or "")
-            except Exception:  # noqa: BLE001 - an unknown provider reads as "not allowed"
+            except Exception:  # an unknown provider reads as "not allowed"
                 return ""
         return ""
 
@@ -900,7 +899,7 @@ class PermissionEngine:
 
     def _touches_protected(
         self, tool_name: str, arguments: dict[str, Any], is_shell: bool
-    ) -> Optional[str]:
+    ) -> str | None:
         """The protected settings path this call would modify, or None.
 
         For writes we resolve the real target. For shell we can only inspect the command
@@ -945,10 +944,7 @@ class PermissionEngine:
         allowed = {d for d in (_host_of(x) for x in self.allowed_domains) if d}
         if include_session:
             allowed |= self.session_allow_domains
-        for dom in allowed:
-            if host == dom or host.endswith("." + dom):
-                return True
-        return False
+        return any(host == dom or host.endswith("." + dom) for dom in allowed)
 
     def _command_allowed(self, command: str) -> bool:
         """True only when EVERY part of a (possibly compound) command is independently

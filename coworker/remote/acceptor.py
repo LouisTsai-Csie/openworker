@@ -27,16 +27,16 @@ import json
 import re
 import secrets as pysecrets
 import time
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from . import channel as ch
-from .audit import AuditLog, NullAuditLog
-from .identity import seal_b64, verify_b64, verify_seal_attestation
-from .provision import LocalProvisioner, Provisioner
-from .stores import Ephemera, InMemoryEphemera, Registry
+from coworker.remote import channel as ch
+from coworker.remote.audit import AuditLog, NullAuditLog
+from coworker.remote.identity import seal_b64, verify_b64, verify_seal_attestation
+from coworker.remote.provision import LocalProvisioner, Provisioner
+from coworker.remote.stores import Ephemera, InMemoryEphemera, Registry
 
 TOKEN_TTL_SECONDS = 600.0
 _CHALLENGE_BYTES = 32
@@ -77,7 +77,7 @@ class _LiveMachine:
 
 
 class RemoteAcceptor:
-    def __init__(self, registry: Registry, ephemera: Optional[Ephemera] = None) -> None:
+    def __init__(self, registry: Registry, ephemera: Ephemera | None = None) -> None:
         self.registry = registry
         self.ephemera: Ephemera = ephemera or InMemoryEphemera()
         self._live: dict[str, _LiveMachine] = {}  # machine_id -> live channel
@@ -88,7 +88,7 @@ class RemoteAcceptor:
         bound_fingerprint: str = "",
         org_id: str = "",
         actor: str = "",
-        provenance: Optional[dict[str, str]] = None,
+        provenance: dict[str, str] | None = None,
     ) -> tuple[str, float]:
         """Mint one single-use enrollment token; arming is per-token, not a
         mode. A bound token enrolls only the machine identity it was approved
@@ -104,7 +104,7 @@ class RemoteAcceptor:
     def disarm(self) -> None:
         self.ephemera.clear_tokens()
 
-    def consume_token(self, token: str) -> Optional[dict[str, Any]]:
+    def consume_token(self, token: str) -> dict[str, Any] | None:
         """None = invalid/expired; else {"fingerprint": binding or "", "org_id": …}."""
         return self.ephemera.consume_token(token)
 
@@ -113,10 +113,10 @@ class RemoteAcceptor:
         return self.ephemera.has_tokens()
 
     # -- presence -------------------------------------------------------------
-    def live(self, machine_id: str) -> Optional[_LiveMachine]:
+    def live(self, machine_id: str) -> _LiveMachine | None:
         return self._live.get(machine_id)
 
-    def machines(self, org_id: Optional[str] = None) -> list[dict[str, Any]]:
+    def machines(self, org_id: str | None = None) -> list[dict[str, Any]]:
         rows = []
         for row in self.registry.list(org_id):
             live = self._live.get(row["id"])
@@ -198,9 +198,9 @@ def mount_acceptor(
     origin_allowed=None,
     api_token: str = "",
     wallet=None,
-    ephemera: Optional[Ephemera] = None,
-    provisioner: Optional[Provisioner] = None,
-    audit: Optional[AuditLog] = None,
+    ephemera: Ephemera | None = None,
+    provisioner: Provisioner | None = None,
+    audit: AuditLog | None = None,
     tenant_resolver=None,
     deploy_allowed=None,
     approval_url: str = "",
@@ -263,7 +263,7 @@ def mount_acceptor(
     multi_tenant = tenant_resolver is not None
     _desktop_tenant = {"org_id": "", "actor": ""}
 
-    async def _tenant(conn) -> Optional[dict[str, Any]]:
+    async def _tenant(conn) -> dict[str, Any] | None:
         """Resolve the caller's tenant from a Request or WebSocket; None = 401.
         The resolver may be sync or async (a hosted one awaits its IdP)."""
         if tenant_resolver is None:
@@ -947,7 +947,11 @@ def mount_acceptor(
 
         machine_id = pubkey = ""
         attached = leased = False
-        heartbeat_task: Optional[asyncio.Task] = None
+        heartbeat_task: asyncio.Task | None = None
+        # Policy pushes are fire-and-forget, but the loop keeps only a weak reference
+        # to a task: one nothing else holds can be collected mid-send and the push
+        # would vanish without a record. Hold each until it completes.
+        policy_tasks: set[asyncio.Task] = set()
         try:
             hello = json.loads(await ws.receive_text())
             if hello.get("type") != "hello":
@@ -1124,7 +1128,7 @@ def mount_acceptor(
                     current = _int((doc or {}).get("version")) if isinstance(doc, dict) else 0
                     if isinstance(doc, dict) and (current > reported or (current == 0 and reported == 0)):
 
-                        async def _send_newer(doc=doc, current=current):
+                        async def _send_newer(doc=doc, current=current, reported=reported):
                             try:
                                 status, body, _ = await rpc.request_frame(
                                     {"type": "policy", "policy": doc}
@@ -1141,7 +1145,9 @@ def mount_acceptor(
                             except (asyncio.TimeoutError, ConnectionError):
                                 _record(policy_status, machine_id, known, reported, "unreachable")
 
-                        asyncio.create_task(_send_newer())
+                        _policy_task = asyncio.create_task(_send_newer())
+                        policy_tasks.add(_policy_task)
+                        _policy_task.add_done_callback(policy_tasks.discard)
                     else:
                         await ws.send_text(
                             json.dumps({"type": "policy_current", "version": reported})
@@ -1263,7 +1269,7 @@ def mount_acceptor(
     return acceptor
 
 
-async def _reject(ws: WebSocket, reason: str, detail: Optional[str] = None) -> None:
+async def _reject(ws: WebSocket, reason: str, detail: str | None = None) -> None:
     try:
         await ws.send_text(json.dumps(ch.reject_frame(reason, detail)))
         await ws.close(code=1008)
@@ -1279,7 +1285,7 @@ def _hash_profile(data: Any) -> str:
     ).hexdigest()
 
 
-def _wallet_hash(wallet, profile: str) -> Optional[str]:
+def _wallet_hash(wallet, profile: str) -> str | None:
     if wallet is None:
         return None
     try:

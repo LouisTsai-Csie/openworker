@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .base import Agent
+from coworker.agents.base import Agent
 
 CHAT_INSTRUCTIONS = (
     "You are coworker's chat assistant. Answer clearly and concisely. You have no file "

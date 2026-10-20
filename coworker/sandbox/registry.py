@@ -20,9 +20,9 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ..secrets import state_dir
+from coworker.secrets import state_dir
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class SandboxLimitReached(RuntimeError):
     pass
 
 
-def registry_id(path: Optional[Path] = None) -> str:
+def registry_id(path: Path | None = None) -> str:
     """A short, stable id for a registry file: the same state folder always gives the same
     id, and another state folder a different one. It is a label value on each sandbox."""
     target = Path(path) if path is not None else state_dir() / "sandbox" / "registry.db"
@@ -68,7 +68,7 @@ def registry_id(path: Optional[Path] = None) -> str:
 def _alive(pid: int) -> bool:
     if sys.platform == "win32":
         # `os.kill(pid, 0)` is TerminateProcess on Windows, not a probe.
-        from .runner import winpipe
+        from coworker.sandbox.runner import winpipe
 
         return not winpipe.process_is_gone(pid)
     try:
@@ -81,7 +81,7 @@ def _alive(pid: int) -> bool:
 
 
 class SandboxRegistry:
-    def __init__(self, path: Optional[Path] = None) -> None:
+    def __init__(self, path: Path | None = None) -> None:
         self.path = Path(path) if path is not None else state_dir() / "sandbox" / "registry.db"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.id = registry_id(self.path)
@@ -110,7 +110,7 @@ class SandboxRegistry:
         provider: str,
         session_id: str = "",
         agent: str = "",
-        roots: Optional[list] = None,
+        roots: list | None = None,
         profile: str = "",
         enforcement: str = "",
         machine_id: str = LOCAL_MACHINE,
@@ -135,7 +135,7 @@ class SandboxRegistry:
             db.execute("DELETE FROM sandboxes WHERE name = ?", (name,))
 
     # -- reads ------------------------------------------------------------------------
-    def list(self, machine_id: Optional[str] = None) -> list[dict[str, Any]]:
+    def list(self, machine_id: str | None = None) -> list[dict[str, Any]]:
         query, args = "SELECT * FROM sandboxes", ()
         if machine_id is not None:
             query, args = query + " WHERE machine_id = ?", (machine_id,)
@@ -148,7 +148,7 @@ class SandboxRegistry:
     def count(self, machine_id: str = LOCAL_MACHINE) -> int:
         return len(self.list(machine_id))
 
-    def find(self, session_id: str, agent: str = "") -> Optional[dict[str, Any]]:
+    def find(self, session_id: str, agent: str = "") -> dict[str, Any] | None:
         for row in self.list():
             if row["session_id"] == session_id and (not agent or row["agent"] == agent):
                 return row
@@ -164,7 +164,7 @@ class SandboxRegistry:
         dead = [r for r in rows if not _alive(int(r["server_pid"]))]
         openshell_names: set[str] = set()
         if any(r["provider"] == "openshell" for r in dead) or _openshell_present():
-            from .providers import openshell
+            from coworker.sandbox.providers import openshell
 
             try:
                 listed = openshell.list_our_sandboxes(self.id)
@@ -187,7 +187,7 @@ class SandboxRegistry:
                 except Exception:
                     pass
         if _openshell_present():
-            from .providers import openshell
+            from coworker.sandbox.providers import openshell
 
             try:
                 openshell.reap_runtime_dirs(_alive)  # copied credentials of dead servers

@@ -67,7 +67,7 @@ def _text(text="done"):
 def test_mode_exists_with_a_label_and_sits_in_the_bypass_family():
     assert Mode("dangerously-bypass-approvals") is DANGEROUS
     assert MODE_LABELS["dangerously-bypass-approvals"] == "Dangerously bypass approvals"
-    assert BYPASS_MODES == {Mode.BYPASS_APPROVALS, DANGEROUS}
+    assert BYPASS_MODES == {Mode.BYPASS_APPROVALS, DANGEROUS}  # noqa: SIM300 - actual == expected; SIM300 reads the ALL-CAPS name as the constant
     # The legacy spelling still means the SAFE bypass, never the dangerous one.
     assert Mode("auto") is Mode.BYPASS_APPROVALS
 
@@ -181,7 +181,7 @@ _FETCH_THEN_RUN = [
 
 
 def test_bypass_still_raises_the_downloaded_file_card(tmp_path):
-    engine, rows, cards = _engine(tmp_path, list(_FETCH_THEN_RUN), mode=Mode.BYPASS_APPROVALS)
+    engine, _rows, cards = _engine(tmp_path, list(_FETCH_THEN_RUN), mode=Mode.BYPASS_APPROVALS)
     events = _run(engine)
     assert any(e.type is EventType.PERMISSION_REQUIRED for e in events)
     assert cards == ["run_shell"]

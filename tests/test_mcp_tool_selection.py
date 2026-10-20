@@ -65,7 +65,7 @@ def test_fail_closed_growth_a_new_server_tool_stays_out():
         url="https://mcp.example.com/v1/mcp",
         include_tools=["getIssue", "createIssue"],
     )
-    grown = OFFERED + ["adminPurge"]
+    grown = [*OFFERED, "adminPurge"]
     names = [fn.__name__ for fn in _build(server, grown)]
     assert "mcp__jirax__adminPurge" not in names
     assert names == ["mcp__jirax__getIssue", "mcp__jirax__createIssue"]

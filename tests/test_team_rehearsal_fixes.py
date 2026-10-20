@@ -12,7 +12,7 @@ from coworker.reviewer import Verdict, build_messages
 from coworker.runtime_context import capture
 from coworker.teams import Actor, Role
 from test_engine import ScriptedProvider
-from test_team_live_gaps import manager, request_for
+from test_team_live_gaps import request_for
 
 
 def lead_for_review(manager, monkeypatch, *, verdict="allow", during=None):

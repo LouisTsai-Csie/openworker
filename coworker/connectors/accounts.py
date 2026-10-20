@@ -17,10 +17,10 @@ account routes, the accounts GUI) keys off that.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from ..secrets import SecretStore
-from .descriptors import ConnectorDescriptor, get_descriptor
+from coworker.secrets import SecretStore
+from coworker.connectors.descriptors import ConnectorDescriptor, get_descriptor
 
 IDENTITY = "@identity"
 
@@ -106,7 +106,7 @@ def default_account(secrets: SecretStore, connector: str) -> str:
 
 def resolve(
     secrets: SecretStore, connector: str, account: str = ""
-) -> tuple[str, str, Optional[dict[str, Any]]]:
+) -> tuple[str, str, dict[str, Any] | None]:
     """(account_id, profile_key, profile) for the requested — or default —
     account. Profile is None when nothing matches."""
     account_id = _norm(account) or default_account(secrets, connector)

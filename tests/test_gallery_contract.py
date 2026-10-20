@@ -19,12 +19,9 @@ from pathlib import Path
 
 import pytest
 
-from coworker.server.manager import SessionManager
-from coworker.sessions import SessionRecord
 from proposal_fixtures import work_proposal, team_proposal
 
 CONTRACT = Path(__file__).resolve().parents[1] / "surfaces/gui/src/gallery/states.contract.json"
-OPUS, SONNET = "anthropic:claude-opus-4-8", "anthropic:claude-sonnet-4-8"
 
 
 @pytest.fixture(scope="module")
@@ -32,21 +29,6 @@ def contract():
     return json.loads(CONTRACT.read_text())["cards"]
 
 
-@pytest.fixture
-def manager(tmp_path, monkeypatch):
-    monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
-    ws = tmp_path / "repo"
-    ws.mkdir()
-    m = SessionManager(data_dir=tmp_path / "data", workspace=str(ws))
-    m.secrets.put("github:default", {"token": "ghp_test", "enabled": True})
-    m.secrets.put("linear:default", {"token": "lin_test", "enabled": True})
-    # A machine that can run two models, so the payload carries real model information.
-    monkeypatch.setattr(m, "model_selectable", lambda model: model in (OPUS, SONNET))
-    monkeypatch.setattr(m, "_curated_models", lambda: [OPUS, SONNET])
-    m.session_store.save(
-        SessionRecord(session_id="lead-sid", workspace=m.default_workspace, model=SONNET, mode="auto-approve", messages=[], agent="swe-lead")
-    )
-    yield m
 
 
 def _kind(value) -> str:
@@ -71,11 +53,11 @@ def _compare(label: str, server: dict, canonical: dict, all_states: list[dict]) 
     return problems
 
 
-async def _parked(manager, start, title_prefix):
+async def _parked(gallery_manager, start, title_prefix):
     task = asyncio.create_task(start)
     for _ in range(100):
         await asyncio.sleep(0.02)
-        items = [i for i in manager.inbox.list(session_id="lead-sid", state="pending") if i.title.startswith(title_prefix)]
+        items = [i for i in gallery_manager.inbox.list(session_id="lead-sid", state="pending") if i.title.startswith(title_prefix)]
         if items:
             return task, items[0]
     raise AssertionError(f"nothing parked for {title_prefix!r}")
@@ -87,9 +69,9 @@ def _inbox_data(card: dict) -> tuple[dict, list[dict]]:
 
 
 @pytest.mark.asyncio
-async def test_staffing_card_payload_matches_the_gallery(manager, contract):
+async def test_staffing_card_payload_matches_the_gallery(gallery_manager, contract):
     card = contract["team-request"]
-    approve = manager.inbox_team_approver("lead-sid", "swe-lead")
+    approve = gallery_manager.inbox_team_approver("lead-sid", "swe-lead")
     args = {
         "members": [
             {"persona": "swe-worker", "name": "nia", "reason": "builds it", "connectors": ["github"], "connector_reasons": {"github": "pushes the branch"}},
@@ -98,54 +80,54 @@ async def test_staffing_card_payload_matches_the_gallery(manager, contract):
         "note": "Two workers.",
     }
     args = team_proposal(args["members"])
-    task, item = await _parked(manager, approve(args, "t1"), "Create this team?")
+    task, item = await _parked(gallery_manager, approve(args, "t1"), "Create this team?")
     data = item.data or {}
     canonical, states = _inbox_data(card)
     problems = _compare("team gate", data, canonical, states)
     # Same check one level down: the roster rows.
     gallery_members = [m for s in states for m in s.get("members", [])]
-    canonical_member = {k: v for k, v in canonical["members"][0].items()}
+    canonical_member = dict(canonical["members"][0].items())
     for member in data["members"]:
         problems += _compare("team member", member, {k: canonical_member[k] for k in ("persona", "name", "resolved_model")}, gallery_members)
     # The inline event carries the same fields minus the gate marker.
     event_canonical = card["states"][card["canonical"]]
     problems += _compare("team_proposed", {k: v for k, v in data.items() if k != "gate"}, event_canonical, list(card["states"].values()))
-    manager.inbox.resolve(item.id, '{"approved": false}')
+    gallery_manager.inbox.resolve(item.id, '{"approved": false}')
     await task
     assert not problems, "\n".join(problems)
 
 
 @pytest.mark.asyncio
-async def test_work_items_payload_matches_the_gallery(manager, contract):
+async def test_work_items_payload_matches_the_gallery(gallery_manager, contract):
     card = contract["work-items"]
-    approve = manager.inbox_items_approver("lead-sid", "swe-lead")
+    approve = gallery_manager.inbox_items_approver("lead-sid", "swe-lead")
     args = {"items": [{"title": "Cap the backoff", "criteria": "no wait exceeds maxDelayMs", "description": "in retry.ts"}], "note": "one item"}
     args = work_proposal(args["items"])
-    task, item = await _parked(manager, approve(args, "t2"), "Approve the proposed")
+    task, item = await _parked(gallery_manager, approve(args, "t2"), "Approve the proposed")
     canonical, states = _inbox_data(card)
     problems = _compare("items gate", item.data or {}, canonical, states)
     gallery_items = [i for s in card["states"].values() for i in s.get("items", [])]
     problems += _compare("work item", (item.data or {})["items"][0], {"title": "", "criteria": ""}, gallery_items)
-    manager.inbox.resolve(item.id, '{"approved": false}')
+    gallery_manager.inbox.resolve(item.id, '{"approved": false}')
     await task
     assert not problems, "\n".join(problems)
 
 
 @pytest.mark.asyncio
-async def test_connector_request_payload_matches_the_gallery(manager, contract):
+async def test_connector_request_payload_matches_the_gallery(gallery_manager, contract):
     card = contract["connector-request"]
-    ask = manager.inbox_connector_requester("lead-sid", "swe-lead")
-    task, item = await _parked(manager, ask({"connector": "jira", "reason": "track the work"}, "t3"), "Connect jira?")
+    ask = gallery_manager.inbox_connector_requester("lead-sid", "swe-lead")
+    task, item = await _parked(gallery_manager, ask({"connector": "jira", "reason": "track the work"}, "t3"), "Connect jira?")
     canonical, states = _inbox_data(card)
     problems = _compare("connector request", item.data or {}, canonical, states)
     # The gallery writes the same title the server does.
     assert item.title == card["inbox"][card["canonical"]]["title"].replace("jira", "jira")
-    manager.inbox.resolve(item.id, '{"approved": false}')
+    gallery_manager.inbox.resolve(item.id, '{"approved": false}')
     await task
     assert not problems, "\n".join(problems)
 
 
-def test_approval_prompt_data_matches_the_gallery(manager, contract):
+def test_approval_prompt_data_matches_the_gallery(gallery_manager, contract):
     card = contract["approval"]
 
     class Request:
@@ -154,7 +136,7 @@ def test_approval_prompt_data_matches_the_gallery(manager, contract):
         metadata = None
 
     canonical, states = _inbox_data(card)
-    problems = _compare("parked approval", manager.approval_prompt_data("lead-sid", Request()), canonical, states)
+    problems = _compare("parked approval", gallery_manager.approval_prompt_data("lead-sid", Request()), canonical, states)
     assert not problems, "\n".join(problems)
 
 
@@ -172,13 +154,13 @@ def test_question_fields_match_the_gallery(contract):
         assert len(fields["questions"]) == len(parked["questions"]), f"question/{state_id}: grouped questions"
 
 
-def test_lead_decision_payload_matches_the_gallery(manager, contract):
+def test_lead_decision_payload_matches_the_gallery(gallery_manager, contract):
     """`decide_worker_call`: the parked approval carries the worker's call the card shows."""
     card = contract["worker-decision"]
     from coworker.teams.registry import TeamWorker
-    manager.teams.create(space="acme", lead_session="lead-sid", lead_actor="lead",
+    gallery_manager.teams.create(space="acme", lead_session="lead-sid", lead_actor="lead",
         workers=[TeamWorker(actor="nia", persona="swe-worker", session_id="worker-sid")])
-    parked = manager.inbox.add_approval(
+    parked = gallery_manager.inbox.add_approval(
         "worker-sid", "Run `run_shell`?", body="requires approval\ncommand: npm run build",
         data={"tool": "run_shell", "arguments": {"command": "npm run build"}},
     )
@@ -188,7 +170,7 @@ def test_lead_decision_payload_matches_the_gallery(manager, contract):
         arguments = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
         metadata = None
 
-    data = manager.approval_prompt_data("lead-sid", Request())
+    data = gallery_manager.approval_prompt_data("lead-sid", Request())
     canonical, states = _inbox_data(card)
     problems = _compare("lead decision", data, canonical, states)
     problems += _compare(

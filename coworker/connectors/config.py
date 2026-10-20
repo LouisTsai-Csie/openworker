@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional
 
-from ..secrets import SecretStore
-from .base import SessionSource
+from coworker.secrets import SecretStore
+from coworker.connectors.base import SessionSource
 
 PLATFORMS = ("telegram", "slack", "github")
 
@@ -58,12 +57,12 @@ def is_authorized(settings: ConnectorSettings, source: SessionSource) -> bool:
     return bool(uid) and uid in settings.allowed_users
 
 
-def _csv(value: Optional[str]) -> set[str]:
+def _csv(value: str | None) -> set[str]:
     return {p.strip() for p in (value or "").split(",") if p.strip()}
 
 
 def load_settings(
-    secrets: Optional[SecretStore] = None,
+    secrets: SecretStore | None = None,
 ) -> dict[str, ConnectorSettings]:
     """Per-platform settings from the SecretStore profile + env overrides.
 
@@ -132,6 +131,6 @@ def _slack_team_profiles(secrets: SecretStore) -> list[tuple[str, dict]]:
 
 def _github_install_profiles(secrets: SecretStore) -> list[tuple[str, dict]]:
     """(installation_id, profile) for every managed GitHub App installation."""
-    from .github_installs import list_installs
+    from coworker.connectors.github_installs import list_installs
 
     return [(iid, profile) for iid, profile in list_installs(secrets) if profile]

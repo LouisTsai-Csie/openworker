@@ -22,7 +22,7 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Any, Optional
+from typing import Any
 
 GB = 1024**3
 
@@ -41,7 +41,7 @@ CONTEXT_ABOVE_TIERS = 131_072
 MIN_AGENT_CONTEXT = 16_384
 
 
-def system_memory_bytes() -> Optional[int]:
+def system_memory_bytes() -> int | None:
     """Total system memory, or None when it cannot be read."""
     try:
         if sys.platform == "win32":
@@ -74,7 +74,7 @@ def system_memory_bytes() -> Optional[int]:
     return None
 
 
-def nvidia_gpu_memory_bytes() -> Optional[int]:
+def nvidia_gpu_memory_bytes() -> int | None:
     """Memory of the largest NVIDIA card `nvidia-smi` reports, or None: no tool, no
     card, or a card with no memory of its own (DGX Spark answers "N/A")."""
     exe = shutil.which("nvidia-smi")
@@ -91,14 +91,14 @@ def nvidia_gpu_memory_bytes() -> Optional[int]:
 
 
 @functools.lru_cache(maxsize=1)
-def model_memory_bytes() -> Optional[int]:
+def model_memory_bytes() -> int | None:
     """The memory a local model loads into on this machine."""
     return nvidia_gpu_memory_bytes() or system_memory_bytes()
 
 
 def recommended_context(
-    model_max: Optional[int], memory_bytes: Optional[int]
-) -> Optional[int]:
+    model_max: int | None, memory_bytes: int | None
+) -> int | None:
     """The context window to run a local model at, from the memory available.
 
     None when the memory is unknown: the caller keeps its own default. Never above the
@@ -234,7 +234,7 @@ def system_facts() -> dict[str, Any]:
     return facts
 
 
-def fit_for(model_bytes: Optional[int], memory_bytes: Optional[int] = None) -> str:
+def fit_for(model_bytes: int | None, memory_bytes: int | None = None) -> str:
     """How a model file of this size sits on this machine: `runs_well`, `tight`,
     `too_large`, or `unknown`."""
     memory = memory_bytes if memory_bytes is not None else model_memory_bytes()

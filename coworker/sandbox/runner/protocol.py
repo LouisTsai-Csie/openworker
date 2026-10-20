@@ -8,7 +8,7 @@ can never contain a real line break however many lines the output has.
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 PROTOCOL_VERSION = 1
 
@@ -47,7 +47,7 @@ def encode(obj: dict[str, Any]) -> bytes:
     return (json.dumps(obj, ensure_ascii=True, separators=(",", ":")) + "\n").encode("ascii")
 
 
-def decode(line: bytes | str) -> Optional[dict[str, Any]]:
+def decode(line: bytes | str) -> dict[str, Any] | None:
     """A frame, or None when the line is not a JSON object (a stray print, a banner).
     The reader drops such lines instead of failing."""
     if isinstance(line, bytes):
@@ -65,11 +65,11 @@ def decode(line: bytes | str) -> Optional[dict[str, Any]]:
     return obj if isinstance(obj, dict) else None
 
 
-def request(req_id: str, method: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+def request(req_id: str, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": req_id, "method": method, "params": params or {}}
 
 
-def notification(method: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+def notification(method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "method": method, "params": params or {}}
 
 
@@ -77,7 +77,7 @@ def result(req_id: str, value: dict[str, Any]) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": req_id, "result": value}
 
 
-def error(req_id: Optional[str], code: int, message: str, data: Optional[dict] = None) -> dict[str, Any]:
+def error(req_id: str | None, code: int, message: str, data: dict | None = None) -> dict[str, Any]:
     err: dict[str, Any] = {"code": code, "message": message}
     if data:
         err["data"] = data
@@ -87,7 +87,7 @@ def error(req_id: Optional[str], code: int, message: str, data: Optional[dict] =
 class RunnerError(Exception):
     """An error response, as an exception on the client side."""
 
-    def __init__(self, code: int, message: str, data: Optional[dict] = None) -> None:
+    def __init__(self, code: int, message: str, data: dict | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message

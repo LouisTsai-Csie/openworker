@@ -21,15 +21,16 @@ import time
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Optional
+from typing import Any
+from collections.abc import AsyncIterator, Awaitable, Callable
 
-from . import compaction as _compaction
-from . import provenance
-from . import session_facts
-from . import toolchain as _toolchain
-from . import toolresult
-from . import unattended as _attendance
-from .events import Event, EventType
+from coworker import compaction as _compaction
+from coworker import provenance
+from coworker import session_facts
+from coworker import toolchain as _toolchain
+from coworker import toolresult
+from coworker import unattended as _attendance
+from coworker.events import Event, EventType
 
 # §8.4 retry guard: the reviewer pauses for the rest of the turn after this many denials
 # IN A ROW (2→5 + streak semantics, owner ruling 2026-08-24 — a cumulative 2 silently
@@ -59,11 +60,11 @@ _REVIEWER_PAUSED_TEXT = (
     "Auto-approve is paused for the rest of this turn — the reviewer blocked "
     f"{_REVIEWER_TRIP} actions in a row, so approvals now come to you."
 )
-from .permissions import CLEARED_BY_MODE, Mode, PermissionEngine
-from .providers import AssistantTurn, ProviderClient, ToolCall
-from .providers.errors import friendly_model_error
-from .providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
-from .tools import ToolRegistry
+from coworker.permissions import CLEARED_BY_MODE, Mode, PermissionEngine
+from coworker.providers import AssistantTurn, ProviderClient, ToolCall
+from coworker.providers.errors import friendly_model_error
+from coworker.providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
+from coworker.tools import ToolRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -94,7 +95,7 @@ def _readonly_ok(arguments: dict) -> bool:
     command = str((arguments or {}).get("command", "") or "")
     if not command:
         return False
-    from .readonly import is_readonly_command
+    from coworker.readonly import is_readonly_command
 
     return is_readonly_command(command)
 
@@ -105,12 +106,12 @@ class PermissionRequest:
     arguments: dict[str, Any]
     metadata: Any
     reason: str
-    tool_call_id: Optional[str] = None  # for durable resume (idempotent inbox item)
+    tool_call_id: str | None = None  # for durable resume (idempotent inbox item)
     # Where an MCP call actually goes ({transport, host}, from the server DEF at
     # registration) — carried on the request so a PARKED approval shows the same
     # destination evidence as the live card (§35 parity). None for non-MCP tools.
-    mcp_destination: Optional[dict] = None
-    escalation: Optional[dict] = None
+    mcp_destination: dict | None = None
+    escalation: dict | None = None
     provenance: str = ""
 
 
@@ -129,44 +130,30 @@ class TurnEngine:
         registry: ToolRegistry,
         permissions: PermissionEngine,
         model: str,
-        instructions: Optional[str] = None,
-        approver: Optional[Approver] = None,
+        instructions: str | None = None,
+        approver: Approver | None = None,
         max_iterations: int = 12,
-        model_settings: Optional[dict[str, Any]] = None,
-        messages: Optional[list[dict[str, Any]]] = None,
-        audit_sink: Optional[Callable[[dict[str, Any]], None]] = None,
-        context_provider: Optional[Callable[[], str]] = None,
-        directory_requester: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
-        plan_approver: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
-        question_asker: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
-        tool_requester: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
-        team_approver: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
-        items_approver: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
+        model_settings: dict[str, Any] | None = None,
+        messages: list[dict[str, Any]] | None = None,
+        audit_sink: Callable[[dict[str, Any]], None] | None = None,
+        context_provider: Callable[[], str] | None = None,
+        directory_requester: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        plan_approver: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        question_asker: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        tool_requester: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        team_approver: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
+        items_approver: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
         # Handles `request_connector` / `grant_connector` (spec §11.6): emits
         # CONNECTOR_REQUESTED, waits for the human, returns {approved, …}.
-        connector_requester: Optional[
-            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
-        ] = None,
+        connector_requester: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None,
         # Called (thread-safe, best-effort) when the user stops the turn — e.g. the
         # executor's kill for a running shell command.
-        interrupt_hooks: Optional[list[Callable[[], None]]] = None,
+        interrupt_hooks: list[Callable[[], None]] | None = None,
         # OPE-186 change 1: bound every tool result before it enters the conversation
         # (head + marker + tail; full text in a spill file). None = the module default
         # (10,000 bytes), 0 = off. See coworker/toolresult.py.
-        tool_result_max_bytes: Optional[int] = None,
-        tool_result_spill_dir: Optional[Path] = None,
+        tool_result_max_bytes: int | None = None,
+        tool_result_spill_dir: Path | None = None,
     ) -> None:
         self.provider = provider
         self.registry = registry
@@ -214,24 +201,24 @@ class TurnEngine:
         # constructor footprint stays put. `compaction_settings` is a live getter (Settings
         # changes apply without a rebuild); `is_attended` gates the failure prompt (None →
         # treat as unattended: never park a background run on internal bookkeeping).
-        self.compaction_state: Optional[_compaction.CompactionState] = None
-        self.compaction_settings: Optional[Callable[[], dict[str, Any]]] = None
-        self.is_attended: Optional[Callable[[], bool]] = None
+        self.compaction_state: _compaction.CompactionState | None = None
+        self.compaction_settings: Callable[[], dict[str, Any]] | None = None
+        self.is_attended: Callable[[], bool] | None = None
         # Attendance (coworker/unattended.py): who answers when the agent asks. A live
         # getter returning "attended" / "inbox" / "auto"; None reads as attended. In "auto"
         # the engine answers questions, folder requests and pinned installs itself by fixed
         # rule, and refuses any approval card only a person could clear — never a hang.
-        self.attendance: Optional[Callable[[], str]] = None
+        self.attendance: Callable[[], str] | None = None
         # Approvals are separate from questions. A surface that answers questions by rule
         # (attendance "auto") while a person still answers approval cards sets this: a
         # terminal run with --auto-answer. Unset, attendance "auto" covers both.
-        self.cards_reach_person: Optional[Callable[[], bool]] = None
+        self.cards_reach_person: Callable[[], bool] | None = None
         self._dangerous_warned = False
         # Session facts (spec Part 0 / §2.4) — the known world frozen at session start, plus
         # the per-turn ingestion record. Set post-construction by the surface, same as
         # compaction above, so the constructor footprint stays put. None ⇒ nothing recorded
         # and behaviour is byte-identical; NOTHING consumes it in v1 either way.
-        self.session_facts: Optional[session_facts.SessionFacts] = None
+        self.session_facts: session_facts.SessionFacts | None = None
         # Auto-Approve reviewer (spec Part 8). Set post-construction; None ⇒ Mode.AUTO_APPROVE
         # behaves exactly like INTERACTIVE. Consulted only on decisions the gate marked
         # needs_user, only in AUTO_APPROVE mode, only when the session is attended (an
@@ -240,7 +227,7 @@ class TurnEngine:
         # cumulative: an allow/unsure verdict or an ask_user answer resets the streak —
         # the owner-hit 2026-08-24 was a 2-denial cumulative trip silently downgrading a
         # long agentic turn to hand-approval for everything after one over-strict pair.
-        self.reviewer: Optional[Any] = None
+        self.reviewer: Any | None = None
         self.reviewer_enabled = True  # standalone injected reviewers; manager supplies live flag
         self.reviewer_settings_epoch = 0
         self.reviewer_settings_key = None
@@ -282,15 +269,13 @@ class TurnEngine:
         # can say where queries actually go (§1.9). Set post-construction by the surface
         # (the engine itself knows nothing about providers); None ⇒ no extras. Called at
         # card time, not session start, so a mid-session Settings change shows through.
-        self.approval_extras: Optional[
-            Callable[[str, dict[str, Any]], dict[str, Any]]
-        ] = None
+        self.approval_extras: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None
         # Harness-resolved original action for a lead's permission proxy. Never
         # derived from the lead's note or another agent's conversation.
-        self.delegated_approval: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None
-        self.reviewer_context: Optional[Callable[[], dict[str, Any]]] = None
-        self.reviewer_owner_history: Optional[Callable[[], tuple[str, list[dict[str, Any]]]]] = None
-        self.reviewer_denial_message: Optional[str] = None
+        self.delegated_approval: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+        self.reviewer_context: Callable[[], dict[str, Any]] | None = None
+        self.reviewer_owner_history: Callable[[], tuple[str, list[dict[str, Any]]]] | None = None
+        self.reviewer_denial_message: str | None = None
         self._authorized_delegates: dict[str, dict] = {}
         # What the agent itself created this session (OPE-114 §1). The reviewer never sees
         # file contents, so `python scripts/setup.py` is unjudgeable from its text — but the
@@ -308,7 +293,7 @@ class TurnEngine:
         )
         # Completed tool calls so far, so a fact can say how many steps back the write was.
         self._step = 0
-        self._last_context_tokens: Optional[int] = None
+        self._last_context_tokens: int | None = None
         self.audit_context: dict[str, Any] = {}
         if instructions and not (
             self.messages and self.messages[0].get("role") == "system"
@@ -322,7 +307,7 @@ class TurnEngine:
         self._continuations = 0
         self._warned_context_fallback = False
         # Each pending steering message: (text, optional MessageSource sidecar dict).
-        self._steering: list[tuple[str, Optional[dict[str, Any]], Optional[dict[str, Any]]]] = []
+        self._steering: list[tuple[str, dict[str, Any] | None, dict[str, Any] | None]] = []
         # tool_call.id → the standing rule that auto-allowed it ("tool → target"), so the
         # TOOL_FINISHED event can carry the note to the tool card (§25).
         self._standing_notes: dict[str, str] = {}
@@ -373,19 +358,19 @@ class TurnEngine:
         return message
 
     def queue_steering(
-        self, text: str, source: Optional[dict[str, Any]] = None,
-        activity: Optional[dict[str, Any]] = None,
+        self, text: str, source: dict[str, Any] | None = None,
+        activity: dict[str, Any] | None = None,
     ) -> None:
         self._steering.append((text, source, activity))
 
     # -- main loop --------------------------------------------------------------
     async def run(
         self,
-        user_input: "str | list",
+        user_input: str | list,
         *,
-        source: Optional[dict[str, Any]] = None,
-        display: Optional[str] = None,
-        activity: Optional[dict[str, Any]] = None,
+        source: dict[str, Any] | None = None,
+        display: str | None = None,
+        activity: dict[str, Any] | None = None,
     ) -> AsyncIterator[Event]:
         # `user_input` is a string, or OpenAI content-parts (text + image_url) for attachments.
         # `source` (a MessageSource dict) is a display-only sidecar for connector messages: it
@@ -448,7 +433,7 @@ class TurnEngine:
             # generator teardown (disconnect) all land here.
             self.permissions.clear_run_allowances()
 
-    def switch_model(self, model: str) -> Optional[str]:
+    def switch_model(self, model: str) -> str | None:
         """Rebind the session's model mid-conversation (roadmap item 3). History is
         canonical OpenAI shape and every provider converts per call, so the switch is just
         the field write — plus a persisted notice marking WHERE it happened, with a
@@ -467,7 +452,7 @@ class TurnEngine:
             self.reviewer.model = model
         if not had_history:
             return None
-        from .providers.matrix import model_labels
+        from coworker.providers.matrix import model_labels
 
         text = f"Model switched to {model_labels().get(model, model)}"
         try:
@@ -502,7 +487,7 @@ class TurnEngine:
             return message.get("kind") == "error"
         return False
 
-    def _append_notice(self, kind: str, text: Optional[str] = None, **fields: Any) -> None:
+    def _append_notice(self, kind: str, text: str | None = None, **fields: Any) -> None:
         """Persist a turn-ending marker (error/interrupted) as a display-only `notice`
         message: it survives reload like the transcript does, but `_outbound_messages`
         drops the role so no provider ever sees it. Extra `fields` (e.g. the failing
@@ -661,17 +646,9 @@ class TurnEngine:
                 self._append_notice("compacted", notice, compaction=record)
                 yield Event(EventType.COMPACTED, {"text": notice, "compaction": record})
 
-            turn: Optional[AssistantTurn] = None
+            turn: AssistantTurn | None = None
             streamed: list[str] = []
             streamed_reasoning: list[str] = []
-
-            def _partial_turn() -> AssistantTurn:
-                # What the user watched arrive — text and thinking, NO tool calls (any
-                # half-formed calls would either orphan or execute against the stop).
-                return AssistantTurn(
-                    text="".join(streamed) or None,
-                    reasoning="".join(streamed_reasoning) or None,
-                )
 
             model_started, model_clock = time.time(), time.monotonic()
             try:
@@ -706,7 +683,9 @@ class TurnEngine:
                 # Same contract as the stop path below: the partial the user watched
                 # arrive survives the failure.
                 if streamed or streamed_reasoning:
-                    self.messages.append(_assistant_message(_partial_turn()))
+                    self.messages.append(
+                        _assistant_message(_partial_turn(streamed, streamed_reasoning))
+                    )
                 friendly = friendly_model_error(self.model, exc)
                 payload = {
                     "error": friendly or str(exc),
@@ -720,7 +699,9 @@ class TurnEngine:
             if self._cancel.is_set() and turn is None:
                 # Stopped mid-stream: persist exactly what the user watched arrive.
                 if streamed or streamed_reasoning:
-                    self.messages.append(_assistant_message(_partial_turn()))
+                    self.messages.append(
+                        _assistant_message(_partial_turn(streamed, streamed_reasoning))
+                    )
                 self._append_notice("interrupted")
                 yield Event(EventType.INTERRUPTED, {"iterations": iterations})
                 return
@@ -878,7 +859,7 @@ class TurnEngine:
 
     # -- auto-compaction (OPE-27) ------------------------------------------------
     def _compaction_config(self) -> dict[str, Any]:
-        from . import model_config
+        from coworker import model_config
 
         cfg = dict(self.compaction_settings() or {}) if self.compaction_settings else {}
         # The user's per-model settings (model_config.py): a saved window stands in for
@@ -888,14 +869,14 @@ class TurnEngine:
         if saved_pct:
             cfg["threshold_pct"] = saved_pct
         if not cfg.get("context_window"):
-            from .providers.matrix import model_context_windows
+            from coworker.providers.matrix import model_context_windows
 
             cfg["context_window"] = model_context_windows().get(self.model) or saved_window
             if not cfg["context_window"]:
                 # Ollama's window is the num_ctx we send (providers/ollama_context.py),
                 # not the 128k guess — compact before that window context-shifts.
-                from .providers.local_server import context_window_for as _server_window
-                from .providers.ollama_context import context_window_for
+                from coworker.providers.local_server import context_window_for as _server_window
+                from coworker.providers.ollama_context import context_window_for
 
                 cfg["context_window"] = context_window_for(self.model) or _server_window(self.model)
             if not cfg["context_window"] and not self._warned_context_fallback:
@@ -932,7 +913,7 @@ class TurnEngine:
             cap_tokens=int(cfg["cap_tokens"]),
         )
 
-    def _compaction_record(self) -> Optional[dict[str, Any]]:
+    def _compaction_record(self) -> dict[str, Any] | None:
         """The compaction that just happened, as persisted on the `compacted` notice and
         carried on the COMPACTED event (OPE-170 problem 2): summary text, working state,
         the boundary into the canonical transcript, the summarizer model, and whether it
@@ -942,7 +923,7 @@ class TurnEngine:
         state = self.compaction_state
         return state.as_dict() if state is not None else None
 
-    async def _compact_now(self, *, force: bool = False) -> Optional[str]:
+    async def _compact_now(self, *, force: bool = False) -> str | None:
         """Run the compaction policy. Callers gate on `_compaction_due()` (or `force`,
         the overflow path). Returns the user-facing notice text when the outbound view
         changed, else None. Failure policy per spec: retry once (both modes); attended →
@@ -962,7 +943,7 @@ class TurnEngine:
         )
         model = str(cfg.get("model") or "") or self.model
 
-        def _build() -> Optional[_compaction.CompactionState]:
+        def _build() -> _compaction.CompactionState | None:
             return _compaction.build_state(
                 self.messages,
                 provider=self.provider,
@@ -973,7 +954,7 @@ class TurnEngine:
                 user_budget_tokens=user_budget,
             )
 
-        state: Optional[_compaction.CompactionState] = None
+        state: _compaction.CompactionState | None = None
         failed = False
         for _attempt in range(2):  # first try + the unconditional single retry
             try:
@@ -1178,7 +1159,7 @@ class TurnEngine:
             outcomes = await asyncio.gather(
                 *[asyncio.to_thread(self._execute_sync, tc) for tc in concurrent]
             )
-            for tool_call, (result, status) in zip(concurrent, outcomes):
+            for tool_call, (result, status) in zip(concurrent, outcomes, strict=True):
                 yield self._record_result(tool_call, result, status)
 
         for tool_call in serial:
@@ -1249,7 +1230,7 @@ class TurnEngine:
         """Attendance is "auto": nobody will answer, so the engine answers by fixed rule."""
         try:
             return self.attendance is not None and self.attendance() == _attendance.AUTO
-        except Exception:  # noqa: BLE001 - a broken getter must read as attended
+        except Exception:  # a broken getter must read as attended
             return False
 
     def _nobody_answers_cards(self) -> bool:
@@ -1259,7 +1240,7 @@ class TurnEngine:
             try:
                 if self.cards_reach_person():
                     return False
-            except Exception:  # noqa: BLE001 - a broken getter must not open a card nobody sees
+            except Exception:  # a broken getter must not open a card nobody sees
                 pass
         return self._auto_answering()
 
@@ -1269,7 +1250,7 @@ class TurnEngine:
         a person attending (`is_attended` unset counts as NOT attended, so automations —
         which never set it — can never be reviewed; §1.5), or attendance "auto", where
         every escalation is refused by rule instead of parked."""
-        from .permissions import Mode
+        from coworker.permissions import Mode
 
         return (
             self.reviewer is not None
@@ -1295,7 +1276,7 @@ class TurnEngine:
         Attachments collapse to neutral markers via `reviewer_text` (§4.4): the reviewer
         learns a file was attached, never what it says — an attachment body is
         outside-authored text riding a user turn."""
-        from .attachments import reviewer_text
+        from coworker.attachments import reviewer_text
 
         texts: list[str] = []
         for msg in self.messages:
@@ -1335,7 +1316,7 @@ class TurnEngine:
         except Exception:
             return "", [], {"context_unavailable": True}
 
-    def _downloaded_target(self, tool_call: ToolCall) -> Optional[Any]:
+    def _downloaded_target(self, tool_call: ToolCall) -> Any | None:
         """A file this call would run that the agent DOWNLOADED this session, or None.
         Fetch-then-execute has no quiet legitimate form, so it reaches a person over both
         the reviewer and any command allowlist (OPE-114 §1)."""
@@ -1401,7 +1382,7 @@ class TurnEngine:
                 for tc in pending
             ]
         )
-        for tc, verdict in zip(pending, verdicts):
+        for tc, verdict in zip(pending, verdicts, strict=True):
             if (self.reviewer is not consulted_reviewer
                     or self.reviewer_settings_epoch != settings_epoch
                     or not self._reviewer_active()
@@ -1416,13 +1397,13 @@ class TurnEngine:
         snapshot = self._reviewer_input_snapshots.pop(tool_call.id, None)
         if verdict is not None:
             if snapshot is not None and snapshot != self._review_inputs():
-                from .reviewer import Verdict
+                from coworker.reviewer import Verdict
                 return Verdict("unsure", "Approval context changed since review; a human must decide.")
             return verdict
         request, history, context = self._review_inputs()
         delegated = self._delegated_context(tool_call)
         if delegated:
-            from .reviewer import Verdict
+            from coworker.reviewer import Verdict
             if delegated.get("hard_deny") or delegated.get("human_only"):
                 return Verdict("unsure", delegated["reason"])
             verdict = await self.reviewer.review(
@@ -1443,7 +1424,7 @@ class TurnEngine:
             **({"action_context": context} if context else {}),
         )
         if (request, history, context) != self._review_inputs():
-            from .reviewer import Verdict
+            from coworker.reviewer import Verdict
             return Verdict("unsure", "Approval context changed during review; review the current request.")
         return result
 
@@ -1548,11 +1529,11 @@ class TurnEngine:
         if self._shadow_tasks:
             await asyncio.gather(*list(self._shadow_tasks), return_exceptions=True)
 
-    async def _authorize(self, tool_call: ToolCall) -> "AsyncIterator[Event | bool]":
+    async def _authorize(self, tool_call: ToolCall) -> AsyncIterator[Event | bool]:
         """Permission flow for one call (TOOL_PROPOSED is emitted by the caller). Yields
         its events, then True/False (allowed) last. Denied/unknown calls get their
         tool-error message appended here."""
-        from .permissions import standing_rule_candidate
+        from coworker.permissions import standing_rule_candidate
 
         spec = self.registry.get(tool_call.name)
         metadata = spec.metadata if spec else None
@@ -1716,7 +1697,7 @@ class TurnEngine:
                 # §8.4 deny asymmetry — full reason to the USER (event + audit above),
                 # terse non-diagnostic refusal to the AGENT. The sanctioned way around a
                 # deny is ask the human, never reshape the request.
-                from .reviewer import AGENT_DENY_MESSAGE
+                from coworker.reviewer import AGENT_DENY_MESSAGE
 
                 self._reviewer_denials += 1
                 tripped = self._reviewer_denials == _REVIEWER_TRIP
@@ -2030,7 +2011,7 @@ class TurnEngine:
         # the model could probe around). Lift it onto the message as a sidecar
         # (like `source`), stripped from every provider feed in
         # `_outbound_messages` but persisted for the GUI's tool card.
-        display: Optional[dict[str, Any]] = None
+        display: dict[str, Any] | None = None
         if isinstance(result, dict) and "_display" in result:
             display = result.get("_display") or None
             result = {k: v for k, v in result.items() if k != "_display"}
@@ -2170,7 +2151,7 @@ class TurnEngine:
         """The decomposition gate: emit the proposed items, await the user's decision.
         Approval creates them on the board (server-side, inside the approver) and the
         result carries their ids; rejection returns feedback for a revised split."""
-        from .teams.proposals import validate_work_proposal
+        from coworker.teams.proposals import validate_work_proposal
         args = tool_call.arguments or {}
         problem = None
         try:
@@ -2263,8 +2244,8 @@ class TurnEngine:
         decision. Approval PRE-SPAWNS the worker sessions (server-side, inside the
         approver) and the result carries the roster with actor ids so the lead can
         assign; rejection returns the user's feedback for a revised proposal."""
-        from .teams.proposals import validate_team_proposal
-        from .teams.model import BoardError
+        from coworker.teams.proposals import validate_team_proposal
+        from coworker.teams.model import BoardError
         args = tool_call.arguments or {}
         problem = None
         try:
@@ -2428,7 +2409,7 @@ class TurnEngine:
                     "version": info.get("version", ""),
                     "note": "installed by the unattended-auto rule (pinned, checksum-verified)",
                 }
-            except Exception as exc:  # noqa: BLE001 - the agent must hear why
+            except Exception as exc:  # the agent must hear why
                 result = {
                     "installed": False,
                     "error": f"install failed: {exc}",
@@ -2521,7 +2502,7 @@ class TurnEngine:
         try:
             for when, entry in (workspace.blocked_since(0.0) if evidence else []):
                 last[entry] = max(when, last.get(entry, 0.0))
-        except Exception:  # noqa: BLE001 - evidence is a help, never a reason to fail the card
+        except Exception:  # evidence is a help, never a reason to fail the card
             last, evidence = {}, False
         now = time.time()
         return {
@@ -2799,7 +2780,7 @@ class TurnEngine:
         ):
             caps = self.provider.capabilities(self.model)
             if not getattr(caps, "pdf", False):
-                from . import pdf_support
+                from coworker import pdf_support
 
                 out = [
                     (
@@ -2885,7 +2866,7 @@ class TurnEngine:
         return out
 
 
-def _effort_record(turn: AssistantTurn, setting: Optional[str]) -> Optional[dict[str, Any]]:
+def _effort_record(turn: AssistantTurn, setting: str | None) -> dict[str, Any] | None:
     """What the run record says about reasoning effort for this reply (OPE-176): the
     provider's own mapping when it reported one; otherwise, when a level was configured,
     an explicit "requested but not reported" so the setting is never silently lost."""
@@ -2900,8 +2881,17 @@ def _effort_record(turn: AssistantTurn, setting: Optional[str]) -> Optional[dict
     return None
 
 
+def _partial_turn(streamed: list[str], streamed_reasoning: list[str]) -> AssistantTurn:
+    """What the user watched arrive — text and thinking, NO tool calls (any
+    half-formed calls would either orphan or execute against the stop)."""
+    return AssistantTurn(
+        text="".join(streamed) or None,
+        reasoning="".join(streamed_reasoning) or None,
+    )
+
+
 def _assistant_message(
-    turn: AssistantTurn, model: Optional[str] = None, effort_setting: Optional[str] = None
+    turn: AssistantTurn, model: str | None = None, effort_setting: str | None = None
 ) -> dict[str, Any]:
     message: dict[str, Any] = {
         "role": "assistant",

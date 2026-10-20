@@ -14,7 +14,7 @@ import pytest
 import aisuite as ai
 from coworker.engine import TurnEngine
 from coworker.events import EventType
-from coworker.permissions import Decision, Mode, PermissionEngine
+from coworker.permissions import PermissionEngine
 from coworker.providers import AssistantTurn, ToolCall
 from coworker.roots import RootDir, normalize_roots, render_context
 from coworker.tools import ToolRegistry
@@ -73,7 +73,7 @@ def test_toolkit_reads_any_root_writes_only_writable(tmp_path):
 
 
 def test_toolkit_runtime_added_root_is_seen_live(tmp_path):
-    scratch, ro, rw = _roots(tmp_path)
+    scratch, ro, _rw = _roots(tmp_path)
     shared = normalize_roots([RootDir(path=scratch, writable=True)])
     tools = {f.__name__: f for f in ai.toolkits.files(roots=shared)}
     # initially the ro dir is out of bounds
@@ -92,7 +92,7 @@ def _meta(reg, name):
 
 
 def test_permissions_write_blocked_in_readonly_root(tmp_path):
-    scratch, ro, rw = _roots(tmp_path)
+    scratch, ro, _rw = _roots(tmp_path)
     reg = ToolRegistry()
     reg.register_all(
         ai.toolkits.files(roots=[{"path": str(scratch), "writable": True}])

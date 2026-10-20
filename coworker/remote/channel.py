@@ -37,7 +37,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 # v2: hello carries seal_sig — the sealing key attested by the identity key.
 PROTOCOL_VERSION = 2
@@ -288,7 +289,7 @@ class AsgiWsBridge:
             pass
 
 
-def reject_frame(reason: str, detail: Optional[str] = None) -> dict[str, Any]:
+def reject_frame(reason: str, detail: str | None = None) -> dict[str, Any]:
     frame: dict[str, Any] = {"type": "reject", "reason": reason}
     if detail:
         frame["detail"] = detail

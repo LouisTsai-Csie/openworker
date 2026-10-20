@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 import aisuite as ai
 
@@ -21,7 +21,7 @@ class Skill:
     name: str
     description: str
     instructions: str = ""  # full body — loaded on demand
-    path: Optional[str] = None
+    path: str | None = None
     allowed_tools: list[str] = field(default_factory=list)
 
 
@@ -72,7 +72,7 @@ class SkillLoader:
     def names(self) -> list[str]:
         return list(self._skills)
 
-    def get(self, name: str) -> Optional[Skill]:
+    def get(self, name: str) -> Skill | None:
         return self._skills.get(name)
 
     def catalog(self) -> list[dict]:
@@ -111,7 +111,7 @@ def _parse_skill(md: Path) -> Skill:
 
 
 def skill_catalog_text(
-    loader: SkillLoader, allowed: Optional[set[str]] = None
+    loader: SkillLoader, allowed: set[str] | None = None
 ) -> str:
     catalog = [
         c for c in loader.catalog() if allowed is None or c["name"] in allowed
@@ -125,7 +125,7 @@ def skill_catalog_text(
     )
 
 
-AllowedSkills = Union[set, Callable[[], set], None]
+AllowedSkills = set | Callable[[], set] | None
 
 
 def skill_tools(loader: SkillLoader, allowed: AllowedSkills = None) -> list:
@@ -134,7 +134,7 @@ def skill_tools(loader: SkillLoader, allowed: AllowedSkills = None) -> list:
     immediately, and skills created after the engine was built are still loadable
     (loader rescans on a miss)."""
 
-    def _allowed_now() -> Optional[set]:
+    def _allowed_now() -> set | None:
         return allowed() if callable(allowed) else allowed
 
     def load_skill(name: str) -> dict:

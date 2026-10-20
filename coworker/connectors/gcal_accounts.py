@@ -13,9 +13,9 @@ no "Never show agents" policy yet).
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 PREFIX = "google_calendar:account:"
 DEFAULT_KEY = "google_calendar:default"
@@ -69,7 +69,7 @@ def default_account(secrets: SecretStore) -> str:
 
 def resolve(
     secrets: SecretStore, account: str = ""
-) -> tuple[str, str, Optional[dict[str, Any]]]:
+) -> tuple[str, str, dict[str, Any] | None]:
     """(email, profile_key, profile) for the requested — or default — account.
     Profile is None when nothing matches (not connected / unknown account)."""
     email = _norm(account) or default_account(secrets)

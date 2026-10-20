@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import Any, Awaitable, Callable
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 import aisuite as ai
 
-from .config import MCPServerDef
+from coworker.mcp.config import MCPServerDef
 
 CallAsync = Callable[[str, dict[str, Any]], Awaitable[Any]]
 
@@ -75,13 +76,13 @@ def build_callables(
         # call to any other tool on this server, since the approval gate and the
         # include/exclude filter only ever see the visible tool name.
         def _make_invoke(remote: str) -> Callable[..., Any]:
-            def _invoke(**kwargs: Any) -> Any:
+            def _call(**kwargs: Any) -> Any:
                 future = asyncio.run_coroutine_threadsafe(
                     call_async(remote, kwargs), loop
                 )
                 return future.result(timeout)
 
-            return _invoke
+            return _call
 
         _invoke = _make_invoke(remote)
 

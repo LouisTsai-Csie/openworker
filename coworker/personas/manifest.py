@@ -12,7 +12,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -87,7 +87,7 @@ class PersonaManifest:
     # (board worker verbs, no ask_user-shaped prompt); None = solo-only. Solo
     # personas are NOT team-eligible — team-awareness changes who the prompt talks
     # to, so staffing fails closed on personas without the trait.
-    team: Optional[str] = None
+    team: str | None = None
     approval_guidance: str = ""
     default_permission_mode: str = "interactive"
     # `models:` (connectors-across-machines spec §4): the ORDERED list of model ids this
@@ -110,7 +110,7 @@ class PersonaManifest:
     # gates behavior, so a third-party persona claiming "security" is harmless.
     group: str = "general"
     builtin: bool = False
-    source: Optional[str] = (
+    source: str | None = (
         None  # where it was loaded from (path / url), for provenance
     )
 
@@ -129,8 +129,8 @@ class PersonaManifest:
 
     def to_agent(self):
         """Materialize the runtime Agent (prompt + catalog-expanded tools + traits)."""
-        from ..agents.base import Agent
-        from ..catalog import expand
+        from coworker.agents.base import Agent
+        from coworker.catalog import expand
 
         tool_ids = list(self.tools)
         factory = (lambda ctx: expand(tool_ids, ctx)) if tool_ids else None
@@ -296,9 +296,9 @@ def _recommends(persona_id: str, meta: dict) -> list[Recommendation]:
 def parse_manifest(
     text: str,
     *,
-    fallback_id: Optional[str] = None,
+    fallback_id: str | None = None,
     builtin: bool = False,
-    source: Optional[str] = None,
+    source: str | None = None,
 ) -> PersonaManifest:
     meta, body = _split_frontmatter(text)
 
@@ -395,7 +395,7 @@ def parse_manifest(
 
 def _validate_tools(persona_id: str, tools: list[str]) -> None:
     # Imported here to avoid a module-load cycle (catalog imports agents.base).
-    from ..catalog import CATALOG
+    from coworker.catalog import CATALOG
 
     unknown = [t for t in tools if t not in CATALOG]
     if unknown:

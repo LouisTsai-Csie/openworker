@@ -9,12 +9,13 @@ results (the artifacts are real files in that folder).
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
 import aisuite as ai
 
-from .models import Schedule, ScheduledTask, grant_entries
-from .store import TaskStore
+from coworker.automation.models import Schedule, ScheduledTask, grant_entries
+from coworker.automation.store import TaskStore
 
 _CREATE_SCHEMA = {
     "type": "function",

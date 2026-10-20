@@ -72,12 +72,11 @@ def test_long_session_survives_repeated_compaction(tmp_path):
                 m for m in reversed(engine.messages) if m.get("role") == "assistant"
             )
             assert f"turn {i + 1}:" in str(last.get("content", ""))
-            if engine.compaction_state is not None:
-                if (
-                    not boundaries
-                    or engine.compaction_state.boundary_index != boundaries[-1]
-                ):
-                    boundaries.append(engine.compaction_state.boundary_index)
+            if engine.compaction_state is not None and (
+                not boundaries
+                or engine.compaction_state.boundary_index != boundaries[-1]
+            ):
+                boundaries.append(engine.compaction_state.boundary_index)
             mgr.save(sid, engine)
             if i == 4:  # mid-conversation restart: state must survive the rebuild
                 mgr._engines.pop(sid)

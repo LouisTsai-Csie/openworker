@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..secrets import SecretStore
+from coworker.secrets import SecretStore
 
 PREFIX = "github:install:"
 DEFAULT_KEY = "github:default"

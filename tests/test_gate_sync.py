@@ -4,7 +4,6 @@ import asyncio
 import pytest
 
 from test_engine import ScriptedProvider, _text_turn, _tool_turn
-from test_team_live_gaps import manager
 from proposal_fixtures import work_proposal, team_proposal
 
 

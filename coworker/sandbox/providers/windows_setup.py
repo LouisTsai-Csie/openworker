@@ -31,9 +31,9 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .. import netproxy
+from coworker.sandbox import netproxy
 
 OPEN, CLOSED = "open", "closed"
 ACCOUNTS = {OPEN: "OWSandboxOpenNet", CLOSED: "OWSandboxClosedNet"}  # 20 characters at most
@@ -170,7 +170,7 @@ Write-Output "removed"
 '''
 
 
-def state() -> Optional[dict[str, Any]]:
+def state() -> dict[str, Any] | None:
     """What setup recorded, or None when setup has not run (or was removed)."""
     try:
         return json.loads(STATE_FILE.read_text(encoding="utf-8"))
@@ -184,7 +184,7 @@ def current() -> bool:
     return bool(recorded) and int(recorded.get("version") or 0) >= SETUP_VERSION
 
 
-def account(kind: str = CLOSED) -> Optional[tuple[str, str, str]]:
+def account(kind: str = CLOSED) -> tuple[str, str, str] | None:
     """(name, sid, password) of the `open` or `closed` account when the full mode can be
     used by THIS user: setup of this version has run and the credential file is readable.
     The password never leaves the process."""
@@ -203,7 +203,7 @@ def account(kind: str = CLOSED) -> Optional[tuple[str, str, str]]:
     return (name, sid, password) if password else None
 
 
-def problem() -> Optional[str]:
+def problem() -> str | None:
     """Why the Windows sandbox cannot be used by this user right now, or None."""
     recorded = state()
     if not recorded:
@@ -227,7 +227,7 @@ def reap_private_folders() -> list[str]:
     is alive while its named pipe exists. Best effort; returns what was removed."""
     import shutil
 
-    from ..runner import winpipe
+    from coworker.sandbox.runner import winpipe
 
     removed: list[str] = []
     try:
@@ -327,11 +327,11 @@ def info() -> dict[str, Any]:
 
 def _wfp_command() -> tuple[str, str]:
     """How the elevated script runs windows_wfp.py: (executable, first argument)."""
-    from ..launch import frozen
+    from coworker.sandbox.launch import frozen
 
     if frozen():
         return sys.executable, "sandbox-wfp"
-    from .. import windows_wfp
+    from coworker.sandbox import windows_wfp
 
     return sys.executable, str(Path(windows_wfp.__file__).resolve())
 
@@ -343,7 +343,7 @@ def _wfp_arguments() -> list[str]:
 
 def run_setup() -> tuple[bool, str]:
     """Create the accounts and everything around them. Returns (ok, what the script said)."""
-    from .. import winsec
+    from coworker.sandbox import winsec
 
     ports = netproxy.WINDOWS_PORTS
     arguments = [
@@ -392,7 +392,7 @@ def checks() -> list[tuple[str, bool, str]]:
     rows.append(("this user can start sandboxes as those accounts", usable, "" if usable else f"{CRED_FILE} is not readable by this user; run setup as this user"))
     rule = _firewall_rule_enabled()
     rows.append(("the closed account's outbound traffic is blocked (firewall rule)", rule, "" if rule else "the rule is missing; run setup again"))
-    from .. import windows_wfp
+    from coworker.sandbox import windows_wfp
 
     present = windows_wfp.present()
     if present is None:

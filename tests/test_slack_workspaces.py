@@ -66,11 +66,11 @@ def test_managed_callback_installs_and_hot_reloads(client, monkeypatch):
     # The broker-resolved workspace domain persists (names collide; domains don't)
     # and rides the workspaces list for the GUI's group headers.
     assert client.manager.secrets.get("slack:team:T1")["domain"] == "dom-t1"
-    slack = [
+    slack = next(
         c
         for c in client.get("/v1/connectors").json()["connectors"]
         if c["name"] == "slack"
-    ][0]
+    )
     assert [w["domain"] for w in slack["workspaces"]] == ["dom-t1"]
     assert slack["workspaces"][0]["approval_owner_ids"] == ["U_T1"]
     assert client.manager.secrets.get("slack:default")["mode"] == "relay"

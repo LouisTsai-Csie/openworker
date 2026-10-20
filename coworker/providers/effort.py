@@ -20,9 +20,10 @@ default max).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional, Sequence
+from typing import Any
+from collections.abc import Sequence
 
-from ..config import EFFORT_LEVELS
+from coworker.config import EFFORT_LEVELS
 
 _RANK = {level: i for i, level in enumerate(EFFORT_LEVELS)}
 
@@ -37,7 +38,7 @@ NO_EFFORT = "none"
 class EffortPlan:
     requested: str
     # The level/value actually sent; None when nothing was sent (unsupported, rejected).
-    effective: Optional[str]
+    effective: str | None
     # Provider request parameters to merge (empty when nothing is sent).
     params: dict[str, Any] = field(default_factory=dict)
     note: str = ""
@@ -51,12 +52,12 @@ class EffortPlan:
             out["note"] = self.note
         return out
 
-    def without_param(self, note: str) -> "EffortPlan":
+    def without_param(self, note: str) -> EffortPlan:
         """The plan after the endpoint rejected the parameter and it was dropped."""
         return EffortPlan(self.requested, None, {}, note)
 
 
-def validate_level(value: Any, source: str = "reasoning_effort") -> Optional[str]:
+def validate_level(value: Any, source: str = "reasoning_effort") -> str | None:
     """Normalise a configured value to one of EFFORT_LEVELS (case-insensitive) or raise."""
     if value is None:
         return None
@@ -70,7 +71,7 @@ def validate_level(value: Any, source: str = "reasoning_effort") -> Optional[str
     return text
 
 
-def nearest_supported(level: str, supported: Sequence[str]) -> Optional[str]:
+def nearest_supported(level: str, supported: Sequence[str]) -> str | None:
     """The accepted level closest in rank to `level`; ties resolve to the higher one.
 
     Levels outside `_RANK` (e.g. "none", an effort value OpenAI-compatible endpoints
@@ -117,8 +118,8 @@ BUDGET_TOKENS_BY_LEVEL = {
 }
 
 
-def _anthropic_supported(model: str) -> Optional[tuple[str, ...]]:
-    best: Optional[tuple[str, ...]] = None
+def _anthropic_supported(model: str) -> tuple[str, ...] | None:
+    best: tuple[str, ...] | None = None
     best_len = -1
     for prefix, levels in _ANTHROPIC_EFFORT:
         if model.startswith(prefix) and len(prefix) > best_len:

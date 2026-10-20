@@ -7,7 +7,6 @@ card. The checks live inside the tools; these pin them.
 """
 from __future__ import annotations
 
-from pathlib import Path
 
 import pytest
 
@@ -51,7 +50,7 @@ def test_upload_refuses_a_file_outside_the_granted_folders(workspace):
 
 
 def test_upload_refuses_a_traversal_that_lands_outside(workspace):
-    root, outside = workspace
+    root, _outside = workspace
     upload = _tools([RootDir(path=root, writable=True)])["browser_upload_file"]
 
     result = upload("input[type=file]", str(root / ".." / "home" / "id_rsa"))

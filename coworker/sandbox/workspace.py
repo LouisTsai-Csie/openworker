@@ -17,9 +17,10 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence
+from typing import Any
+from collections.abc import Callable, Sequence
 
-from .runner.executor import Executor
+from coworker.sandbox.runner.executor import Executor
 
 PROVIDER_ENV = "OPENWORKER_SANDBOX_PROVIDER"
 DIRECT = "direct"
@@ -50,7 +51,7 @@ class Workspace(ABC):
 
 class DirectWorkspace(Workspace):
     def __init__(self, *, cwd: str | Path) -> None:
-        from ..tools.shell import LocalExecutor  # here, not at the top: tools.shell imports us
+        from coworker.tools.shell import LocalExecutor  # here, not at the top: tools.shell imports us
 
         self._executor = LocalExecutor(cwd=cwd)
 
@@ -80,15 +81,15 @@ class RunnerWorkspace(Workspace):
         registry: Any = None,
         session_id: str = "",
         agent: str = "",
-        live_roots: Optional[list] = None,
+        live_roots: list | None = None,
         start: bool = True,
     ) -> None:
-        from .client import RunnerClient
-        from .executor import RunnerExecutor
+        from coworker.sandbox.client import RunnerClient
+        from coworker.sandbox.executor import RunnerExecutor
 
         self.provider = provider
         self.registry = registry
-        self._registered: Optional[str] = None
+        self._registered: str | None = None
         self._session_id, self._agent = session_id, agent
         # The session's own RootDir list. It changes while the session runs (a folder is
         # granted or taken away); a sandbox's walls are fixed when it starts.
@@ -168,7 +169,7 @@ class RunnerWorkspace(Workspace):
             state=state,
         )
 
-    def sync_roots(self) -> Optional[str]:
+    def sync_roots(self) -> str | None:
         """Restart the sandbox when the session's folders are no longer the ones it was
         started with (design ruling 15). Returns what to tell the agent, or None. Runs
         before every command, so it is also where a sandbox not yet started starts."""
@@ -212,7 +213,7 @@ class RunnerWorkspace(Workspace):
 
     def context(self) -> str:
         """What the agent is told about this sandbox each turn (ruling 21)."""
-        from .credentials import context_lines
+        from coworker.sandbox.credentials import context_lines
 
         text = context_lines(getattr(self.provider, "copied", None))
         notes = getattr(self.provider, "notes", None) or []
@@ -226,7 +227,7 @@ class RunnerWorkspace(Workspace):
     def _asking(self) -> bool:
         try:
             return bool(self.can_ask_network())
-        except Exception:  # noqa: BLE001
+        except Exception:
             return False
 
     def _network_context(self) -> str:
@@ -258,7 +259,7 @@ class RunnerWorkspace(Workspace):
         ask = getattr(self.provider, "blocked_since", None)
         return list(ask(since)) if ask is not None else []
 
-    def network_note(self, started: float, result: Optional[dict[str, Any]] = None) -> Optional[dict[str, Any]]:
+    def network_note(self, started: float, result: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """What joins a command's result when the sandbox blocked something: the sites, and
         a note that says plainly what is and is not known. The attempts are tied to the time
         the command ran, not to the command.
@@ -356,21 +357,21 @@ def _same_roots(a: list, b: list) -> bool:
     return key(a) == key(b)
 
 
-def provider_name(explicit: Optional[str] = None) -> str:
+def provider_name(explicit: str | None = None) -> str:
     return (explicit or os.environ.get(PROVIDER_ENV) or DIRECT).strip().lower()
 
 
 def open_workspace(
     *,
     cwd: str | Path,
-    provider: Optional[str] = None,
-    roots: Optional[list] = None,
+    provider: str | None = None,
+    roots: list | None = None,
     session_id: str = "",
     agent: str = "",
-    credentials: Optional[list] = None,
-    network_profile: Optional[str] = None,
-    toolchains: Optional[list] = None,
-    extra_hosts: Optional[list] = None,
+    credentials: list | None = None,
+    network_profile: str | None = None,
+    toolchains: list | None = None,
+    extra_hosts: list | None = None,
     start: bool = True,
 ) -> Workspace:
     """The session's workspace for the configured provider. `credentials`: the machine's
@@ -387,24 +388,24 @@ def open_workspace(
     if name == DIRECT:
         return DirectWorkspace(cwd=cwd)
     if name == RUNNER_LOCAL:
-        from .providers.runner_local import RunnerLocalProvider
+        from coworker.sandbox.providers.runner_local import RunnerLocalProvider
 
         return RunnerWorkspace(RunnerLocalProvider(cwd=cwd), cwd=cwd)
     listed = [{"path": str(r.path), "writable": bool(r.writable)} for r in (roots or [])]
     listed = listed or [{"path": str(cwd), "writable": True}]
-    from .credentials import granted
+    from coworker.sandbox.credentials import granted
 
     grants = granted(credentials)
-    from .network_profiles import check, clean_hosts, default_profile
+    from coworker.sandbox.network_profiles import check, clean_hosts, default_profile
 
     profile = check((network_profile or "").strip().lower() or default_profile())
     added = clean_hosts(extra_hosts)
-    from . import toolchains as toolchain_list
+    from coworker.sandbox import toolchains as toolchain_list
 
     tool_dirs = toolchain_list.granted(toolchains)
     if name == SEATBELT:
-        from .providers.seatbelt import SeatbeltProvider
-        from .registry import SandboxRegistry
+        from coworker.sandbox.providers.seatbelt import SeatbeltProvider
+        from coworker.sandbox.registry import SandboxRegistry
 
         return RunnerWorkspace(
             SeatbeltProvider(roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added),
@@ -416,8 +417,8 @@ def open_workspace(
             start=start,
         )
     if name == OPENSHELL:
-        from .providers.openshell import OpenShellProvider
-        from .registry import SandboxRegistry
+        from coworker.sandbox.providers.openshell import OpenShellProvider
+        from coworker.sandbox.registry import SandboxRegistry
 
         label = "-".join(part for part in (session_id[:24], agent[:24]) if part)
         registry = SandboxRegistry()
@@ -431,8 +432,8 @@ def open_workspace(
             start=start,
         )
     if name == WINDOWS:
-        from .providers.windows import WindowsProvider
-        from .registry import SandboxRegistry
+        from coworker.sandbox.providers.windows import WindowsProvider
+        from coworker.sandbox.registry import SandboxRegistry
 
         return RunnerWorkspace(
             WindowsProvider(roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added),

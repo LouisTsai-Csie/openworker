@@ -9,7 +9,6 @@ import json
 import httpx
 import pytest
 
-from coworker import model_config
 from coworker.providers import local_machine, local_server
 from coworker.providers.capabilities import capabilities_for
 from coworker.providers.registry import get_descriptor, provider_descriptors

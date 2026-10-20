@@ -12,9 +12,9 @@ Tool results are JSON — raw data for the agent, not prose.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from .model import BoardError
+from coworker.teams.model import BoardError
 
 
 def build(dialect, *, space: str):
@@ -41,7 +41,7 @@ def build(dialect, *, space: str):
         try:
             result = func(*args, **kwargs)
             if func.__name__ in ("transition", "assign", "claim", "set_status", "comment", "link"):
-                from .tools import mutation_receipt
+                from coworker.teams.tools import mutation_receipt
                 return mutation_receipt(result)
             return result
         except (BoardError, ValueError) as error:
@@ -60,7 +60,7 @@ def build(dialect, *, space: str):
             return {"error": "after_item must be a non-negative integer"}
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
             return {"error": "limit must be between 1 and 100"}
-        from .tools import item_snapshot
+        from coworker.teams.tools import item_snapshot
         items = [i for i in result if i["id"] > after_item]
         page = [item_snapshot(i, brief=True) for i in items[:limit]]
         for i in page:
@@ -73,7 +73,7 @@ def build(dialect, *, space: str):
     def board_show(item: int) -> Any:
         """Current task details, not historical comments. Use board_comments for
         incremental handoffs and board_proposal for shared approved intent."""
-        from .tools import item_snapshot
+        from coworker.teams.tools import item_snapshot
         result = _safe(dialect.get_item, space, item)
         snapshot = item_snapshot(result)
         if snapshot.get("proposal_ref"):
@@ -107,7 +107,7 @@ def build(dialect, *, space: str):
         title: str,
         criteria: str,
         description: str = "",
-        parent: Optional[int] = None,
+        parent: int | None = None,
         case: str = "",
     ) -> Any:
         """File a new work item (open, unassigned — work starts when it is
@@ -151,7 +151,7 @@ def build(dialect, *, space: str):
         """Attach a screenshot or image (png/jpg/gif/webp, ≤10MB) from a local
         file to a work item — so the lead/reviewer can SEE what you did. Give it
         a caption saying what the image shows. Great with review hand-offs."""
-        from .attachments import read_image_file
+        from coworker.teams.attachments import read_image_file
 
         try:
             data, name = read_image_file(path)
@@ -214,7 +214,7 @@ def build(dialect, *, space: str):
         case: str,
         body: str,
         kind: str = "note",
-        item: Optional[int] = None,
+        item: int | None = None,
         entities: list[str] = [],
         refs: list[str] = [],
     ) -> Any:
@@ -235,7 +235,7 @@ def build(dialect, *, space: str):
     @mcp.tool()
     def journal_read(
         case: str,
-        item: Optional[int] = None,
+        item: int | None = None,
         author: str = "",
         kind: str = "",
         entity: str = "",

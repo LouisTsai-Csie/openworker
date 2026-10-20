@@ -12,7 +12,6 @@ from coworker.server.app import create_app
 from coworker.teams import Actor, BoardError, Role
 from coworker.teams.attachments import AttachmentStore, MAX_ATTACHMENT_BYTES, read_image_file, stored_name
 from coworker.teams.tools import board_tools
-from test_team_live_gaps import manager
 from test_team_reader_recovery import create_item
 
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=")

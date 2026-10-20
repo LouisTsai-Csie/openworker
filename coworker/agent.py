@@ -8,50 +8,51 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
-from .agents import Agent, AgentContext, code_agent
-from .automation import scheduling_tools
-from .clock import clock_tools
-from .selfwake import selfwake_tools
-from .subscriptions import subscription_tools
-from .config import load_config
-from .connectors import (
+from coworker.agents import Agent, AgentContext, code_agent
+from coworker.automation import scheduling_tools
+from coworker.clock import clock_tools
+from coworker.selfwake import selfwake_tools
+from coworker.subscriptions import subscription_tools
+from coworker.config import load_config
+from coworker.connectors import (
     connector_list,
     load_settings,
     make_integration_tools,
     make_send_file_tool,
     make_send_message_tool,
 )
-from .engine import Approver, TurnEngine
-from .environment import environment_context
-from .memory import (
+from coworker.engine import Approver, TurnEngine
+from coworker.environment import environment_context
+from coworker.memory import (
     MemoryStore,
     Scope,
     format_user_rules,
     memory_tools,
     render_memory_block,
 )
-from .permissions import Mode, PermissionEngine
-from .project import load_agents_md
-from . import session_facts
-from .roots import RootDir, normalize_roots, render_context
-from .providers import ProviderClient, ProviderRouter
-from .overrides import RiskOverrideStore
-from .secrets import SecretStore, state_dir
-from .skills import SkillLoader, save_skill_tool, skill_catalog_text, skill_tools
-from .tools import ToolRegistry
-from .tools.ask import ask_user_tool
-from .tools.directories import request_directory_tool
-from .tools.plan import propose_plan_tool
-from .tools.toolreq import request_tool_tool
-from .tools.subagent import explorer_tools
-from .web import make_web_fetch_tool, make_web_search_tool
-from .workspace_trust import WorkspaceTrustStore
-from .sandbox import inside as _openshell
-from .sandbox.selection import select as select_sandbox
-from .sandbox.workspace import open_workspace
-from .tools.todo import TodoList
+from coworker.permissions import Mode, PermissionEngine
+from coworker.project import load_agents_md
+from coworker import session_facts
+from coworker.roots import RootDir, normalize_roots, render_context
+from coworker.providers import ProviderClient, ProviderRouter
+from coworker.overrides import RiskOverrideStore
+from coworker.secrets import SecretStore, state_dir
+from coworker.skills import SkillLoader, save_skill_tool, skill_catalog_text, skill_tools
+from coworker.tools import ToolRegistry
+from coworker.tools.ask import ask_user_tool
+from coworker.tools.directories import request_directory_tool
+from coworker.tools.plan import propose_plan_tool
+from coworker.tools.toolreq import request_tool_tool
+from coworker.tools.subagent import explorer_tools
+from coworker.web import make_web_fetch_tool, make_web_search_tool
+from coworker.workspace_trust import WorkspaceTrustStore
+from coworker.sandbox import inside as _openshell
+from coworker.sandbox.selection import select as select_sandbox
+from coworker.sandbox.workspace import open_workspace
+from coworker.tools.todo import TodoList
 
 # Appended each turn while discuss mode is active: enforcement-only read-only, with no
 # pressure toward a plan proposal (that's what distinguishes it from plan mode).
@@ -139,7 +140,7 @@ CHAT_PLATFORMS: frozenset[str] = frozenset({"slack", "telegram"})
 
 
 def _chat_platforms(
-    agent: Agent, secrets: SecretStore, connector_filter: Optional[set[str]] = None
+    agent: Agent, secrets: SecretStore, connector_filter: set[str] | None = None
 ) -> set[str]:
     """The chat platforms this session may post to: gateway-enabled (token or relay
     present) ∩ the persona's `connectors:` allowlist ∩ the session's effective set."""
@@ -202,7 +203,7 @@ def _loaded_skill_names(messages: list[dict[str, Any]]) -> set[str]:
     return loaded
 
 
-def _skill_dirs(workspace: Optional[Path]) -> list[Path]:
+def _skill_dirs(workspace: Path | None) -> list[Path]:
     dirs = [state_dir() / "skills"]
     if workspace is not None:
         dirs.append(workspace / ".coworker" / "skills")
@@ -224,75 +225,75 @@ def _is_within(path: Path, root: Path) -> bool:
 def build_engine(
     *,
     agent: Agent,
-    workspace: Optional[str | Path] = None,
+    workspace: str | Path | None = None,
     model: str = "gpt-5.6-sol",
     mode: Mode = Mode.INTERACTIVE,
-    approver: Optional[Approver] = None,
-    provider: Optional[ProviderClient] = None,
-    allowed_commands: Optional[list[str]] = None,
-    max_iterations: Optional[int] = None,
-    model_settings: Optional[dict[str, Any]] = None,
+    approver: Approver | None = None,
+    provider: ProviderClient | None = None,
+    allowed_commands: list[str] | None = None,
+    max_iterations: int | None = None,
+    model_settings: dict[str, Any] | None = None,
     # OPE-186: explicit tool-result byte cap (None = config, then the 10,000 default;
     # 0 = off) and where bounded results' full text is spilled (None = the session's
     # scratch root if there is one, else a per-process temp directory).
-    tool_result_max_bytes: Optional[int] = None,
-    tool_result_spill_dir: Optional[str | Path] = None,
-    memory_store: Optional[MemoryStore] = None,
+    tool_result_max_bytes: int | None = None,
+    tool_result_spill_dir: str | Path | None = None,
+    memory_store: MemoryStore | None = None,
     # Twentieth pass: the project key memory loads/saves under. Defaults to the
     # workspace path; the manager passes the resolved key (binding > git > path)
     # so all worktrees of a repo share one memory and named bindings work.
-    memory_workspace: Optional[str] = None,
+    memory_workspace: str | None = None,
     # MEMORY-SPEC §5.1: called with the MemoryItem right after `remember` persists it —
     # the manager uses this to push the memory_saved event that powers the save toast.
-    on_memory_saved: Optional[Any] = None,
+    on_memory_saved: Any | None = None,
     # MEMORY-SPEC §6: the user's standing rules (Settings textarea). Injected verbatim
     # above auto memories; independent of the memory on/off switch. No tool writes it.
     # A CALLABLE is read per turn (the server passes one so a Settings edit reaches
     # conversations already open); a plain string is a fixed value for CLI/tests.
-    user_rules: Optional[Any] = None,
+    user_rules: Any | None = None,
     # True when the user turned memory OFF in Settings (vs. memory simply not wired):
     # injects the honesty notice so the model says so instead of faking a save.
     memory_off: bool = False,
     # LIVE saving switch, consulted per write so turning memory off applies to
     # conversations already running (the registry is fixed at build, so the tool stays
     # and refuses). Same pattern as the skills menu's live filter.
-    memory_saving_enabled: Optional[Any] = None,
-    messages: Optional[list[dict[str, Any]]] = None,
-    extra_tools: Optional[list[Any]] = None,
-    secrets: Optional[SecretStore] = None,
-    task_store: Optional[Any] = None,
-    wake_store: Optional[Any] = None,
-    session_id: Optional[str] = None,
-    audit_sink: Optional[Any] = None,
-    roots: Optional[list] = None,
-    directory_requester: Optional[Any] = None,
-    plan_approver: Optional[Any] = None,
-    question_asker: Optional[Any] = None,
-    tool_requester: Optional[Any] = None,
-    connector_requester: Optional[Any] = None,
-    team_approver: Optional[Any] = None,
-    items_approver: Optional[Any] = None,
-    subscription_store: Optional[Any] = None,
-    channel_buffer: Optional[Any] = None,
-    routing_targets: Optional[list[str]] = None,
+    memory_saving_enabled: Any | None = None,
+    messages: list[dict[str, Any]] | None = None,
+    extra_tools: list[Any] | None = None,
+    secrets: SecretStore | None = None,
+    task_store: Any | None = None,
+    wake_store: Any | None = None,
+    session_id: str | None = None,
+    audit_sink: Any | None = None,
+    roots: list | None = None,
+    directory_requester: Any | None = None,
+    plan_approver: Any | None = None,
+    question_asker: Any | None = None,
+    tool_requester: Any | None = None,
+    connector_requester: Any | None = None,
+    team_approver: Any | None = None,
+    items_approver: Any | None = None,
+    subscription_store: Any | None = None,
+    channel_buffer: Any | None = None,
+    routing_targets: list[str] | None = None,
     # Cloud-first subscribe / release hooks (connectors-across-machines spec §3.3):
     # the manager's, so an agent's subscribe obeys the same one-responder rule as the UI.
-    subscription_register: Optional[Callable[[str, str], dict]] = None,
-    subscription_release: Optional[Callable[[str, str], None]] = None,
+    subscription_register: Callable[[str, str], dict] | None = None,
+    subscription_release: Callable[[str, str], None] | None = None,
     # §11.6: a lead's `decide_worker_call` resolves a worker's parked prompt through the
     # manager (team membership + the durable wait queue live there).
-    worker_decider: Optional[Callable[[str, str, str, str], dict]] = None,
-    connector_filter: Optional[set[str]] = None,
+    worker_decider: Callable[[str, str, str, str], dict] | None = None,
+    connector_filter: set[str] | None = None,
     # A set (static snapshot) or a zero-arg callable (live, re-evaluated per load_skill).
-    skill_filter: Optional[set[str] | Callable[[], set[str]]] = None,
+    skill_filter: set[str] | Callable[[], set[str]] | None = None,
     # Auto-Approve flags (spec Part 8 / §1.5). None ⇒ read the config.toml value; the server
     # passes its prefs-backed booleans so the GUI Settings toggle takes effect. Both stores
     # are user-global, preserving the "a repo can't enable this" invariant.
-    auto_approve: Optional[bool] = None,
-    auto_approve_shadow: Optional[bool] = None,
+    auto_approve: bool | None = None,
+    auto_approve_shadow: bool | None = None,
     # Persona-carried skill folders (OPE-58): the bundle's skills/ dir joins the loader so
     # its skills are readable by load_skill, not just listed by the filter.
-    extra_skill_dirs: Optional[list[str | Path]] = None,
+    extra_skill_dirs: list[str | Path] | None = None,
 ) -> TurnEngine:
     ws = Path(workspace).expanduser().resolve() if workspace else None
     if agent.requires_folder and ws is None:
@@ -323,7 +324,7 @@ def build_engine(
         root_list.append(RootDir(path=_openshell.SKILLS_DIR, writable=False, label="openshell-skills"))
 
     if tool_result_spill_dir is not None:
-        spill_dir: Optional[Path] = Path(tool_result_spill_dir).expanduser().resolve()
+        spill_dir: Path | None = Path(tool_result_spill_dir).expanduser().resolve()
     else:
         scratch = next((r.path for r in root_list if r.label == "scratch"), None)
         if scratch is not None:
@@ -478,7 +479,7 @@ def build_engine(
 
     instructions = f"{agent.system_prompt}\n\n{_NARRATION_GUIDANCE}\n\n{_FIRST_CONTACT_GUIDANCE}"
     if agent.team == "lead":
-        from .teams.proposals import PROPOSAL_GUIDANCE
+        from coworker.teams.proposals import PROPOSAL_GUIDANCE
         instructions += "\n\n" + PROPOSAL_GUIDANCE
     if agent.team in ("lead", "worker"):
         instructions += (
@@ -608,8 +609,8 @@ def build_engine(
     # The lead's gates: propose_work_items (decomposition → items on approval, any
     # mode) and propose_team (staffing → pre-spawn on approval).
     if agent.team == "lead":
-        from .teams.tools import propose_team_tool, propose_work_items_tool
-        from .tools.connreq import grant_connector_tool
+        from coworker.teams.tools import propose_team_tool, propose_work_items_tool
+        from coworker.tools.connreq import grant_connector_tool
 
         registry.register(propose_work_items_tool())
         registry.register(propose_team_tool())
@@ -617,13 +618,13 @@ def build_engine(
         # Manual lead answers its workers' parked calls (the call itself asks the human).
         registry.register(grant_connector_tool())
         if worker_decider is not None:
-            from .teams.tools import decide_worker_call_tool
+            from coworker.teams.tools import decide_worker_call_tool
 
             registry.register(decide_worker_call_tool(worker_decider))
     # §11.6: any connector-capable coworker may ask the human to connect a service it
     # could use (bounded by its `connectors:` declaration — the consent ceiling).
     if agent.connectors:
-        from .tools.connreq import request_connector_tool
+        from coworker.tools.connreq import request_connector_tool
 
         registry.register(request_connector_tool())
 
@@ -750,8 +751,8 @@ def build_engine(
     # permission engine is the wall for them. No sandbox, or "Allow everything": no wall.
     _sandbox_provider = getattr(sandbox_workspace, "provider", None)
     if _sandbox_provider is not None and getattr(_sandbox_provider, "profile", "") == "allowlist":
-        from .sandbox import settings as _sandbox_settings
-        from .web import provider_host as _provider_host
+        from coworker.sandbox import settings as _sandbox_settings
+        from coworker.web import provider_host as _provider_host
 
         engine.permissions.sandbox_sites = list(getattr(_sandbox_provider, "extra_hosts", None) or [])
         engine.permissions.search_host = lambda: _provider_host(secrets)
@@ -765,11 +766,11 @@ def build_engine(
             # and the app can say that commands still lack the site.
             import logging
 
-            from .sandbox.network_profiles import clean_host
+            from coworker.sandbox.network_profiles import clean_host
 
             try:
                 sandbox_workspace.add_hosts([clean_host(host)])
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logging.getLogger(__name__).warning("could not open %s on the session's sandbox: %s", host, exc)
                 raise
 
@@ -777,15 +778,15 @@ def build_engine(
         engine.permissions.open_site = _open_site
         engine.permissions.close_site = lambda entry: sandbox_workspace.remove_hosts([entry])
         # The agent can ask for a site, except where nobody can answer (full access).
-        from .permissions import Mode as _Mode
-        from .tools.network import request_network_access_tool
+        from coworker.permissions import Mode as _Mode
+        from coworker.tools.network import request_network_access_tool
 
         registry.register(request_network_access_tool(engine.permissions))
         sandbox_workspace.can_ask_network = lambda: engine.permissions.mode is not _Mode.BYPASS_APPROVALS
     engine.todo = todo  # type: ignore[attr-defined]
     engine.agent_name = agent.name  # type: ignore[attr-defined]
     engine.roots = root_list  # type: ignore[attr-defined]  # shared list; Slice C mutates in place
-    from .runtime_context import capture as capture_runtime, runtime_context_tool
+    from coworker.runtime_context import capture as capture_runtime, runtime_context_tool
     registry.register(runtime_context_tool(engine.permissions))
     engine.runtime_facts = capture_runtime(engine.permissions.workspace_root, engine.permissions._resolved_roots())
     # Session facts (spec Part 0 / §2.4): freeze the known world NOW, before the agent has
@@ -805,7 +806,7 @@ def build_engine(
     # not at session start, so a mid-session Settings change shows through.
     def _approval_extras(tool_name: str, _arguments: dict) -> dict:
         if tool_name == "web_search":
-            from .web import provider_name
+            from coworker.web import provider_name
 
             return {"search_provider": provider_name(secrets)}
         return {}
@@ -841,7 +842,7 @@ def build_engine(
     )
     engine.reviewer_enabled = bool(live_on)
     if live_on or shadow_on:
-        from .reviewer import Reviewer
+        from coworker.reviewer import Reviewer
 
         engine.reviewer = Reviewer(
             provider=provider,

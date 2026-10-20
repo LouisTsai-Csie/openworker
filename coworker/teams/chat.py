@@ -20,9 +20,9 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .model import BoardError
+from coworker.teams.model import BoardError
 
 
 class ChatStore:
@@ -94,7 +94,7 @@ class ChatStore:
             self._conn.commit()
         return group
 
-    def get_group(self, group_id: str) -> Optional[dict[str, Any]]:
+    def get_group(self, group_id: str) -> dict[str, Any] | None:
         with self._lock:
             row = self._conn.execute(
                 "SELECT * FROM chat_groups WHERE group_id = ?", (group_id,)

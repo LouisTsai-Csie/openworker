@@ -25,13 +25,12 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
-from typing import Optional
 
 
 class PersonaConnectionStore:
     """``{persona_id: {connector: bool}}`` — the per-persona default on/off for each connector."""
 
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else None
         self._lock = threading.Lock()
         self._rows: dict[str, dict[str, bool]] = {}
@@ -104,7 +103,7 @@ class SessionConnectionStore:
     """``{session_id: {connector: bool}}`` — per-session overrides only; an absent entry means the
     session inherits the persona default."""
 
-    def __init__(self, path: Optional[str | Path] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self.path = Path(path) if path else None
         self._lock = threading.Lock()
         self._rows: dict[str, dict[str, bool]] = {}

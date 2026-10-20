@@ -354,7 +354,7 @@ def test_complete_goes_through_stream_and_reasoning_effort_rides(tmp_path, monke
 def test_401_refreshes_once_and_retries_with_new_bearer(tmp_path, monkeypatch):
     first = _FakeSDKClient(errors=[_status_error(401, "Unauthorized")])
     second = _FakeSDKClient(events=[_completed_event("after refresh")])
-    provider, secrets, built = _provider(tmp_path, monkeypatch, [first, second])
+    provider, _secrets, built = _provider(tmp_path, monkeypatch, [first, second])
     fresh = _access(7200)
     monkeypatch.setattr(
         codex_auth,

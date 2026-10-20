@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 
 
 @dataclass
@@ -51,7 +52,7 @@ def normalize_roots(roots: Iterable[Any] | None) -> list[RootDir]:
         else:  # duck-typed object with .path/.writable
             out.append(
                 RootDir(
-                    path=getattr(r, "path"),
+                    path=r.path,
                     writable=bool(getattr(r, "writable", False)),
                 )
             )

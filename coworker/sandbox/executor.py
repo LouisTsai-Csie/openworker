@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any
+from collections.abc import Callable
 
-from .client import RunnerClient
-from .runner import protocol as P
-from .runner.executor import Executor
+from coworker.sandbox.client import RunnerClient
+from coworker.sandbox.runner import protocol as P
+from coworker.sandbox.runner.executor import Executor
 
 _RESULT_KEYS = ("command", "cwd", "exit_code", "output", "timed_out", "truncated", "error")
 _DEFAULT_TIMEOUT = 120.0
@@ -29,9 +30,9 @@ class RunnerExecutor(Executor):
         cwd: str,
         shell: str = "main",
         default_timeout: float = _DEFAULT_TIMEOUT,
-        on_output: Optional[Callable[[str], None]] = None,
-        before_call: Optional[Callable[[], Optional[str]]] = None,
-        after_call: Optional[Callable[[float, dict[str, Any]], Optional[dict[str, Any]]]] = None,
+        on_output: Callable[[str], None] | None = None,
+        before_call: Callable[[], str | None] | None = None,
+        after_call: Callable[[float, dict[str, Any]], dict[str, Any] | None] | None = None,
     ) -> None:
         self._client = client
         # Called before every command. The workspace uses it to restart the sandbox when the
@@ -56,7 +57,7 @@ class RunnerExecutor(Executor):
             "error": message,
         }
 
-    def run(self, command: str, timeout: Optional[float] = None) -> dict[str, Any]:
+    def run(self, command: str, timeout: float | None = None) -> dict[str, Any]:
         timeout = timeout or self.default_timeout
         notice = self._before_call() if self._before_call is not None else None
         started = time.time()
@@ -82,7 +83,7 @@ class RunnerExecutor(Executor):
         if self._after_call is not None:
             try:
                 answer.update(self._after_call(started, answer) or {})
-            except Exception:  # noqa: BLE001 - a note must never cost the command's result
+            except Exception:  # a note must never cost the command's result
                 pass
         return answer
 
