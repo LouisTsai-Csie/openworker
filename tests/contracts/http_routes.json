@@ -1,0 +1,4285 @@
+{
+  "routes": [
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/auth/callback",
+      "name": "cloud_auth_callback",
+      "path_params": [],
+      "query_params": [
+        [
+          "code",
+          "str",
+          "''"
+        ],
+        [
+          "state",
+          "str",
+          "''"
+        ],
+        [
+          "error",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/j/{token}",
+      "name": "join_hint",
+      "path_params": [
+        [
+          "token",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/mcp/oauth/callback",
+      "name": "mcp_oauth_callback",
+      "path_params": [],
+      "query_params": [
+        [
+          "code",
+          "str",
+          "''"
+        ],
+        [
+          "state",
+          "str",
+          "''"
+        ],
+        [
+          "error",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/oauth/callback",
+      "name": "managed_oauth_callback",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/activity",
+      "name": "activity",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/agents",
+      "name": "agents",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/attachments/inspect-pdf",
+      "name": "attachments_inspect_pdf",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/audit",
+      "name": "audit_list",
+      "path_params": [],
+      "query_params": [
+        [
+          "limit",
+          "int",
+          "100"
+        ],
+        [
+          "session_id",
+          "str | None",
+          "None"
+        ],
+        [
+          "connector",
+          "str | None",
+          "None"
+        ],
+        [
+          "tool",
+          "str | None",
+          "None"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/automations",
+      "name": "automations_list",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/automations",
+      "name": "automations_create",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/automations/{task_id}",
+      "name": "automation_delete",
+      "path_params": [
+        [
+          "task_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/automations/{task_id}",
+      "name": "automation_get",
+      "path_params": [
+        [
+          "task_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/automations/{task_id}",
+      "name": "automation_update",
+      "path_params": [
+        [
+          "task_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/automations/{task_id}/run",
+      "name": "automation_run",
+      "path_params": [
+        [
+          "task_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/automations/{task_id}/runs/{run_id}/finalize",
+      "name": "automation_run_finalize",
+      "path_params": [
+        [
+          "task_id",
+          "str",
+          "required"
+        ],
+        [
+          "run_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/automations/{task_id}/seen",
+      "name": "automations_seen",
+      "path_params": [
+        [
+          "task_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/attachment",
+      "name": "board_attachment",
+      "path_params": [],
+      "query_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ],
+        [
+          "space",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/comment",
+      "name": "board_comment_text",
+      "path_params": [],
+      "query_params": [
+        [
+          "space",
+          "str",
+          "required"
+        ],
+        [
+          "id",
+          "int",
+          "required"
+        ],
+        [
+          "seq",
+          "int",
+          "required"
+        ],
+        [
+          "offset",
+          "int",
+          "0"
+        ],
+        [
+          "max_chars",
+          "int",
+          "12000"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/comments",
+      "name": "board_comments",
+      "path_params": [],
+      "query_params": [
+        [
+          "space",
+          "str",
+          "required"
+        ],
+        [
+          "id",
+          "int",
+          "required"
+        ],
+        [
+          "after_seq",
+          "int",
+          "0"
+        ],
+        [
+          "limit",
+          "int",
+          "20"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/consume",
+      "name": "board_consume",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/item",
+      "name": "board_get_item",
+      "path_params": [],
+      "query_params": [
+        [
+          "space",
+          "str",
+          "required"
+        ],
+        [
+          "id",
+          "int",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/items",
+      "name": "board_list_items",
+      "path_params": [],
+      "query_params": [
+        [
+          "space",
+          "str",
+          "required"
+        ],
+        [
+          "state",
+          "str",
+          "''"
+        ],
+        [
+          "assignee",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items",
+      "name": "board_create_item",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items/assign",
+      "name": "board_assign_item",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items/attach",
+      "name": "board_attach",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items/claim",
+      "name": "board_claim_item",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items/comment",
+      "name": "board_comment_item",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items/status",
+      "name": "board_set_status",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/items/transition",
+      "name": "board_transition_item",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/journal",
+      "name": "board_journal_read",
+      "path_params": [],
+      "query_params": [
+        [
+          "case",
+          "str",
+          "required"
+        ],
+        [
+          "item",
+          "int | None",
+          "None"
+        ],
+        [
+          "author",
+          "str",
+          "''"
+        ],
+        [
+          "kind",
+          "str",
+          "''"
+        ],
+        [
+          "entity",
+          "str",
+          "''"
+        ],
+        [
+          "include_raw",
+          "str",
+          "''"
+        ],
+        [
+          "limit",
+          "int",
+          "100"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/journal",
+      "name": "board_journal_append",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/journal/cases",
+      "name": "board_journal_cases",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/link",
+      "name": "board_link_items",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/pending",
+      "name": "board_pending",
+      "path_params": [],
+      "query_params": [
+        [
+          "space",
+          "str",
+          "required"
+        ],
+        [
+          "limit",
+          "int",
+          "200"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/policy",
+      "name": "board_get_policy",
+      "path_params": [],
+      "query_params": [
+        [
+          "space",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/board/policy",
+      "name": "board_set_policy",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/spaces",
+      "name": "board_spaces",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/board/whoami",
+      "name": "board_whoami",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/browser/close",
+      "name": "browser_close_post",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/browser/screenshot",
+      "name": "browser_screenshot_post",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/browser/state",
+      "name": "browser_state_get",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/capabilities",
+      "name": "capabilities",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/channels/recent",
+      "name": "recent_channels",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/chat/completions",
+      "name": "chat_completions",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/configurations",
+      "name": "cloud_configurations",
+      "path_params": [],
+      "query_params": [
+        [
+          "connector",
+          "str",
+          "'github'"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/configurations",
+      "name": "cloud_configurations_add",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/cloud/configurations/{config_id}",
+      "name": "cloud_configurations_delete",
+      "path_params": [
+        [
+          "config_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/configurations/{config_id}/edit",
+      "name": "cloud_configurations_edit",
+      "path_params": [
+        [
+          "config_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/connections",
+      "name": "cloud_connections",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/connections/{connection_id}/default-machine",
+      "name": "cloud_connection_default_machine",
+      "path_params": [
+        [
+          "connection_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/connections/{connection_id}/delegate",
+      "name": "cloud_connection_delegate",
+      "path_params": [
+        [
+          "connection_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/cloud/connections/{connection_id}/holders/{machine_id}",
+      "name": "cloud_connection_forget_holder",
+      "path_params": [
+        [
+          "connection_id",
+          "str",
+          "required"
+        ],
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/connections/{name}/revoke",
+      "name": "cloud_revoke_connections",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/gallery",
+      "name": "cloud_gallery",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/gallery/{slug}",
+      "name": "cloud_gallery_detail",
+      "path_params": [
+        [
+          "slug",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/login",
+      "name": "cloud_login",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/logout",
+      "name": "cloud_logout",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/machines",
+      "name": "cloud_machines",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE",
+        "PATCH"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}",
+      "name": "cloud_machine_admin",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}/connectors/{name}/connect-sealed",
+      "name": "cloud_connector_connect_sealed",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE",
+        "GET",
+        "PATCH",
+        "POST",
+        "PUT"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}/p/{path:path}",
+      "name": "cloud_proxy",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "path",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE",
+        "GET"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}/secrets",
+      "name": "cloud_machine_secrets",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}/secrets",
+      "name": "cloud_deploy_secrets",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}/sessions",
+      "name": "cloud_machine_sessions",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/machines/{machine_id}/sessions/{session_id}/messages",
+      "name": "cloud_machine_transcript",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/people",
+      "name": "cloud_people",
+      "path_params": [],
+      "query_params": [
+        [
+          "connector",
+          "str",
+          "''"
+        ],
+        [
+          "scope",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/people",
+      "name": "cloud_people_add",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/people/remove",
+      "name": "cloud_people_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/status",
+      "name": "cloud_status",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/cloud/subscriptions",
+      "name": "cloud_subscriptions",
+      "path_params": [],
+      "query_params": [
+        [
+          "connector",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/subscriptions/remove",
+      "name": "cloud_subscriptions_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/cloud/telemetry",
+      "name": "cloud_telemetry",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/connectors",
+      "name": "connectors_list",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/github/installations/{installation_id}/disconnect",
+      "name": "github_installation_disconnect",
+      "path_params": [
+        [
+          "installation_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/connectors/github/status",
+      "name": "github_status",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/gmail/accounts/{email}/default",
+      "name": "gmail_account_default",
+      "path_params": [
+        [
+          "email",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/gmail/accounts/{email}/disconnect",
+      "name": "gmail_account_disconnect",
+      "path_params": [
+        [
+          "email",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/connectors/gmail/filters",
+      "name": "gmail_filters",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/google_calendar/accounts/{email}/default",
+      "name": "gcal_account_default",
+      "path_params": [
+        [
+          "email",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/google_calendar/accounts/{email}/disconnect",
+      "name": "gcal_account_disconnect",
+      "path_params": [
+        [
+          "email",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/connectors/hubspot/hidden-fields",
+      "name": "hubspot_hidden_fields",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/hubspot/portals/{hub_id}/default",
+      "name": "hubspot_portal_default",
+      "path_params": [
+        [
+          "hub_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/hubspot/portals/{hub_id}/disconnect",
+      "name": "hubspot_portal_disconnect",
+      "path_params": [
+        [
+          "hub_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/slack/approval-owners/add",
+      "name": "slack_approval_owner_add",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/slack/approval-owners/remove",
+      "name": "slack_approval_owner_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/connectors/slack/status",
+      "name": "slack_status",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/connectors/slack/workspaces/{team_id}/channels",
+      "name": "slack_channels",
+      "path_params": [
+        [
+          "team_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "q",
+          "str",
+          "''"
+        ],
+        [
+          "limit",
+          "int",
+          "25"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/connectors/slack/workspaces/{team_id}/directory",
+      "name": "slack_directory",
+      "path_params": [
+        [
+          "team_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "q",
+          "str",
+          "''"
+        ],
+        [
+          "limit",
+          "int",
+          "25"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/slack/workspaces/{team_id}/disconnect",
+      "name": "slack_workspace_disconnect",
+      "path_params": [
+        [
+          "team_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/telegram/approval-owners/add",
+      "name": "telegram_approval_owner_add",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/telegram/approval-owners/remove",
+      "name": "telegram_approval_owner_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/accounts/{account_id}/default",
+      "name": "account_default",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ],
+        [
+          "account_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/accounts/{account_id}/disconnect",
+      "name": "account_disconnect",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ],
+        [
+          "account_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/allow",
+      "name": "connector_allow",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/connect",
+      "name": "connector_connect",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/connect-managed",
+      "name": "connector_connect_managed",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict | None",
+          "None"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/delegate",
+      "name": "connector_delegate",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict | None",
+          "None"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/disallow",
+      "name": "connector_disallow",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/disconnect",
+      "name": "connector_disconnect",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/forget-local",
+      "name": "connector_forget_local",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/connectors/{name}/handoff-info",
+      "name": "connector_handoff_info_route",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/handoff-sealed",
+      "name": "connector_handoff_sealed",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/mcp-connect",
+      "name": "connector_mcp_connect",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/connectors/{name}/tools",
+      "name": "connector_tools_patch",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/connectors/{name}/unauthorized/{item_id}",
+      "name": "connector_unauthorized_resolve",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ],
+        [
+          "item_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/health",
+      "name": "health",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/inbox",
+      "name": "inbox",
+      "path_params": [],
+      "query_params": [
+        [
+          "session_id",
+          "str",
+          "''"
+        ],
+        [
+          "state",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/inbox/reconcile",
+      "name": "reconcile_inbox",
+      "path_params": [],
+      "query_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/inbox/routing",
+      "name": "inbox_routing",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/inbox/routing/binding",
+      "name": "set_inbox_binding",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/inbox/{item_id}/resolve",
+      "name": "resolve_inbox_item",
+      "path_params": [
+        [
+          "item_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/machines",
+      "name": "list_machines",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/machines/{machine_id}",
+      "name": "remove_machine",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/machines/{machine_id}",
+      "name": "rename_machine",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/machines/{machine_id}/connectors/{name}/connect-sealed",
+      "name": "connector_connect_sealed",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/machines/{machine_id}/connectors/{name}/managed-grant-sealed",
+      "name": "managed_grant_sealed",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE",
+        "GET",
+        "PATCH",
+        "POST",
+        "PUT"
+      ],
+      "path": "/v1/machines/{machine_id}/p/{path:path}",
+      "name": "proxy",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "path",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/machines/{machine_id}/secrets",
+      "name": "revoke_secrets",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/machines/{machine_id}/secrets",
+      "name": "machine_secrets",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/machines/{machine_id}/secrets",
+      "name": "deploy_secrets",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/machines/{machine_id}/sessions",
+      "name": "machine_sessions",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/machines/{machine_id}/sessions/{session_id}/messages",
+      "name": "machine_transcript",
+      "path_params": [
+        [
+          "machine_id",
+          "str",
+          "required"
+        ],
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/mcp",
+      "name": "mcp_list",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/mcp",
+      "name": "mcp_add",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/mcp/config/reveal",
+      "name": "mcp_config_reveal",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/mcp/reload",
+      "name": "mcp_reload",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/mcp/{name}",
+      "name": "mcp_delete",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/mcp/{name}",
+      "name": "mcp_patch",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/mcp/{name}/connect",
+      "name": "mcp_connect",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/mcp/{name}/signout",
+      "name": "mcp_signout",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/mcp/{name}/tools",
+      "name": "mcp_tools",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/mcp/{name}/trust",
+      "name": "mcp_trust",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/mcp/{name}/trust/convert",
+      "name": "mcp_trust_convert",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/mcp/{name}/trust/{tool}",
+      "name": "mcp_trust_revoke",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ],
+        [
+          "tool",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/memory",
+      "name": "memory_delete_all",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/memory",
+      "name": "memory",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/memory",
+      "name": "add_memory",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/memory/settings",
+      "name": "memory_settings",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PUT"
+      ],
+      "path": "/v1/memory/settings",
+      "name": "memory_settings_put",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/memory/{item_id}",
+      "name": "memory_delete",
+      "path_params": [
+        [
+          "item_id",
+          "int",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/memory/{item_id}",
+      "name": "memory_patch",
+      "path_params": [
+        [
+          "item_id",
+          "int",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/messaging/dm-route",
+      "name": "dm_route_get",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/messaging/dm-route",
+      "name": "dm_route_set",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/personas",
+      "name": "personas",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/personas/install",
+      "name": "install_persona",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/personas/{persona_id}",
+      "name": "persona_delete",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/personas/{persona_id}",
+      "name": "persona_detail",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/personas/{persona_id}",
+      "name": "update_persona",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/personas/{persona_id}/connections",
+      "name": "persona_set_connection",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/personas/{persona_id}/enable",
+      "name": "persona_enable",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/personas/{persona_id}/export",
+      "name": "export_persona",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/personas/{persona_id}/media/{name}",
+      "name": "persona_media",
+      "path_params": [
+        [
+          "persona_id",
+          "str",
+          "required"
+        ],
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/providers",
+      "name": "providers_get",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers",
+      "name": "providers_set",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/openai-codex/signin",
+      "name": "codex_signin",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/openai-codex/signout",
+      "name": "codex_signout",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/providers/openai-codex/status",
+      "name": "codex_status",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/openrouter-account/cancel",
+      "name": "openrouter_cancel",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/openrouter-account/complete",
+      "name": "openrouter_complete",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/openrouter-account/disconnect",
+      "name": "openrouter_disconnect",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/openrouter-account/signin",
+      "name": "openrouter_signin",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/providers/openrouter-account/status",
+      "name": "openrouter_status",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/providers/verify",
+      "name": "providers_verify",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/providers/{name}",
+      "name": "providers_remove",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/providers/{name}/models",
+      "name": "providers_local_models",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/remote/arm",
+      "name": "disarm",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/remote/arm",
+      "name": "arm",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/remote/device",
+      "name": "device_requests",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/remote/device/poll",
+      "name": "device_poll",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/remote/device/start",
+      "name": "device_start",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/remote/device/{user_code}",
+      "name": "device_detail",
+      "path_params": [
+        [
+          "user_code",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/remote/device/{user_code}/approve",
+      "name": "device_approve",
+      "path_params": [
+        [
+          "user_code",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/remote/device/{user_code}/deny",
+      "name": "device_deny",
+      "path_params": [
+        [
+          "user_code",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions",
+      "name": "sessions",
+      "path_params": [],
+      "query_params": [
+        [
+          "workspace",
+          "str | None",
+          "None"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/sessions/{session_id}",
+      "name": "session_delete",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/sessions/{session_id}",
+      "name": "session_patch",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/artifacts",
+      "name": "session_artifacts",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/artifacts/read",
+      "name": "session_artifact_read",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "path",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/artifacts/reveal",
+      "name": "session_artifact_reveal",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "PUT"
+      ],
+      "path": "/v1/sessions/{session_id}/bindings",
+      "name": "put_binding",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/board",
+      "name": "session_board",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/board/attachment",
+      "name": "session_board_attachment",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/board/comment",
+      "name": "session_board_comment",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/board/item",
+      "name": "session_board_item",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "id",
+          "int",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/board/transition",
+      "name": "session_board_transition",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/connections",
+      "name": "session_connections",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "persona",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/connections",
+      "name": "set_session_connection",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/messages",
+      "name": "session_messages",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/model-settings",
+      "name": "session_model_settings",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "model",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/model-settings",
+      "name": "set_session_model_settings",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/project-menu",
+      "name": "project_menu",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "kind",
+          "str",
+          "'memory'"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/project-name",
+      "name": "name_project",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/reviewer-stats",
+      "name": "get_reviewer_stats",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/sessions/{session_id}/roots",
+      "name": "session_remove_root",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "path",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/roots",
+      "name": "session_roots",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/roots",
+      "name": "session_add_root",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/save-as-project",
+      "name": "save_session_as_project",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/sessions/{session_id}/sites",
+      "name": "session_remove_site",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "host",
+          "str",
+          "required"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/sites",
+      "name": "session_sites",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/sites",
+      "name": "session_allow_site",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/skills",
+      "name": "session_skills",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "workspace",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/skills",
+      "name": "set_session_skill",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/sessions/{session_id}/unattended",
+      "name": "get_unattended",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/sessions/{session_id}/unattended",
+      "name": "set_unattended",
+      "path_params": [
+        [
+          "session_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/settings",
+      "name": "settings_get",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/auto-approve",
+      "name": "settings_set_auto_approve",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/auto-approve-shadow",
+      "name": "settings_set_auto_approve_shadow",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/compaction",
+      "name": "settings_set_compaction",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/context-bar",
+      "name": "settings_set_context_bar",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/default-model",
+      "name": "settings_set_default_model",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/experimental-connectors",
+      "name": "settings_set_experimental",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/settings/model-config",
+      "name": "settings_model_config_get",
+      "path_params": [],
+      "query_params": [
+        [
+          "model",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/model-config",
+      "name": "settings_model_config_set",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/model-config/remove",
+      "name": "settings_model_config_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/model-key",
+      "name": "settings_set_model_key",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/models/add",
+      "name": "settings_models_add",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/models/remove",
+      "name": "settings_models_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/nav-layout",
+      "name": "settings_set_nav_layout",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/onboarded",
+      "name": "settings_set_onboarded",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/pdf",
+      "name": "settings_set_pdf",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/settings/sandbox",
+      "name": "settings_get_sandbox",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/sandbox",
+      "name": "settings_set_sandbox",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/settings/sandbox/readiness",
+      "name": "settings_sandbox_readiness",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/settings/sandbox/setup",
+      "name": "settings_sandbox_setup_state",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/sandbox/setup",
+      "name": "settings_sandbox_setup_start",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/sandbox/setup/cancel",
+      "name": "settings_sandbox_setup_cancel",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/sandbox/windows/remove",
+      "name": "settings_sandbox_windows_remove",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/sandbox/windows/setup",
+      "name": "settings_sandbox_windows_setup",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/scratch-base",
+      "name": "settings_set_scratch_base",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/sessions-peek",
+      "name": "settings_set_sessions_peek",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/settings/surfaces",
+      "name": "settings_set_surfaces",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/skills",
+      "name": "skills",
+      "path_params": [],
+      "query_params": [
+        [
+          "workspace",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/skills",
+      "name": "create_skill",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/skills/upload",
+      "name": "stage_skill_upload",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/skills/upload/confirm",
+      "name": "confirm_skill_upload",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/v1/skills/{name}",
+      "name": "delete_skill",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [
+        [
+          "workspace",
+          "str",
+          "''"
+        ]
+      ],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "PATCH"
+      ],
+      "path": "/v1/skills/{name}",
+      "name": "update_skill",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/skills/{name}/move",
+      "name": "move_skill",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/skills/{name}/reveal",
+      "name": "reveal_skill",
+      "path_params": [
+        [
+          "name",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/subscriptions",
+      "name": "subscriptions",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/subscriptions",
+      "name": "subscribe",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/subscriptions/remove",
+      "name": "unsubscribe",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/system",
+      "name": "system_get",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/teams/journal",
+      "name": "teams_journal",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/teams/{team_id}/chat",
+      "name": "team_chat",
+      "path_params": [
+        [
+          "team_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/teams/{team_id}/chat",
+      "name": "team_chat_post",
+      "path_params": [
+        [
+          "team_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/teams/{team_id}/summary",
+      "name": "team_summary",
+      "path_params": [
+        [
+          "team_id",
+          "str",
+          "required"
+        ]
+      ],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/unrouted",
+      "name": "unrouted",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/wallet",
+      "name": "wallet_profiles",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/web-search",
+      "name": "web_search_get",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/web-search",
+      "name": "web_search_set",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/workspaces/open",
+      "name": "open_workspace",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/workspaces/pick",
+      "name": "pick_workspace",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/workspaces/recent",
+      "name": "recent_workspaces",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/workspaces/temp",
+      "name": "provision_temp_workspace",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "POST"
+      ],
+      "path": "/v1/workspaces/trust",
+      "name": "set_workspace_trust",
+      "path_params": [],
+      "query_params": [],
+      "body_params": [
+        [
+          "body",
+          "dict",
+          "required"
+        ]
+      ]
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/v1/workspaces/trusted",
+      "name": "trusted_workspaces",
+      "path_params": [],
+      "query_params": [],
+      "body_params": []
+    }
+  ],
+  "websockets": [
+    {
+      "path": "/ws/cloud/machines/{machine_id}/p/{path:path}",
+      "name": "cloud_ws_bridge"
+    },
+    {
+      "path": "/ws/events",
+      "name": "ws_events"
+    },
+    {
+      "path": "/ws/machine",
+      "name": "ws_machine"
+    },
+    {
+      "path": "/ws/machines/{machine_id}/p/{path:path}",
+      "name": "ws_bridge"
+    },
+    {
+      "path": "/ws/session/{session_id}",
+      "name": "ws_session"
+    }
+  ]
+}
