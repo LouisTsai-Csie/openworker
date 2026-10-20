@@ -11,6 +11,7 @@ import base64
 import datetime as _dt
 import json
 import re
+from dataclasses import dataclass
 from email.message import EmailMessage
 from html.parser import HTMLParser
 from typing import Any
@@ -73,9 +74,27 @@ def _attach(
     return fn
 
 
+@dataclass(frozen=True)
+class ConnectorError:
+    """The tool-error payload a connector helper returns instead of what was asked for.
+
+    These helpers used to return `(value, err)` with both halves optional. Nothing ties
+    the two together for a type checker, so `if err: return err` left `value` typed
+    `dict | None` and every later use of it was an error. Returning one *or* the other
+    lets `isinstance` narrow it, which is what the call sites already mean.
+    """
+
+    payload: dict[str, str]
+
+    @staticmethod
+    def of(message: str) -> ConnectorError:
+        """The shape every connector tool returns for a failure."""
+        return ConnectorError({"error": message})
+
+
 def _profile(
     secrets: SecretStore, name: str, *keys: str
-) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+) -> dict[str, Any] | ConnectorError:
     profile = secrets.get(f"{name}:default") or {}
     if profile.get("managed"):
         # Managed-OAuth profiles renew through the cloud broker just before
@@ -87,26 +106,33 @@ def _profile(
         profile = secrets.get(f"{name}:default") or {}
     missing = [k for k in keys if not profile.get(k)]
     if missing:
-        return None, {"error": f"{name} is not connected; missing {', '.join(missing)}"}
-    return profile, None
+        return ConnectorError.of(f"{name} is not connected; missing {', '.join(missing)}")
+    return profile
+
+
+@dataclass(frozen=True)
+class Account:
+    """A resolved connector account: which one answered, and its profile."""
+
+    id: str
+    profile: dict[str, Any]
 
 
 def _account_profile(
     secrets: SecretStore, connector: str, account: str = "", *keys: str
-) -> tuple[str, dict[str, Any] | None, dict[str, str] | None]:
-    """(account_id, profile, err) for an account-patterned connector (generic
-    accounts.py layer): requested — or default — account, managed tokens
-    refreshed in place. The gmail/gcal/hubspot bespoke helpers predate this."""
+) -> Account | ConnectorError:
+    """The requested — or default — account for an account-patterned connector
+    (generic accounts.py layer), with managed tokens refreshed in place, or the
+    error to return instead. The gmail/gcal/hubspot bespoke helpers predate this."""
     from coworker.connectors import accounts as _accounts
 
     account_id, key, profile = _accounts.resolve(secrets, connector, account)
     if profile is None:
-        hint = (
+        return ConnectorError.of(
             f"no {connector} account matching {account!r}"
             if account
             else f"{connector} is not connected"
         )
-        return "", None, {"error": hint}
     if profile.get("managed"):
         from coworker.cloud import ensure_fresh_connector_token
         from coworker.config import load_config
@@ -115,12 +141,10 @@ def _account_profile(
         profile = secrets.get(key) or profile
     missing = [k for k in keys if not profile.get(k)]
     if missing:
-        return (
-            account_id,
-            None,
-            {"error": f"{connector} is not connected; missing {', '.join(missing)}"},
+        return ConnectorError.of(
+            f"{connector} is not connected; missing {', '.join(missing)}"
         )
-    return account_id, profile, None
+    return Account(account_id, profile)
 
 
 def _acct_result(account_id: str, result: dict[str, Any]) -> dict[str, Any]:
@@ -1468,11 +1492,12 @@ def make_integration_tools(
     def outlook_search_messages(
         query: str = "", max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         params = {"$top": max(1, min(int(max_results or 10), 20))}
         if query:
             params["$search"] = f'"{query}"'
@@ -1507,11 +1532,12 @@ def make_integration_tools(
     def outlook_send_mail(
         to: str, subject: str, body: str, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         payload = {
             "message": {
                 "subject": subject,
@@ -1552,11 +1578,12 @@ def make_integration_tools(
     def outlook_list_events(
         start: str = "", end: str = "", max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         # calendarView expands recurrences and takes a window; /me/events does
         # neither, so a bare call used to return arbitrary (often past) events.
         # Default window: now → +7 days.
@@ -1609,11 +1636,12 @@ def make_integration_tools(
         teams_meeting: bool = False,
         account: str = "",
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         payload: dict[str, Any] = {
             "subject": subject,
             "body": {"contentType": "Text", "content": body},
@@ -1678,11 +1706,12 @@ def make_integration_tools(
         location: str = "",
         account: str = "",
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         # PATCH semantics: only the provided fields change.
         payload: dict[str, Any] = {}
         if subject:
@@ -1731,11 +1760,12 @@ def make_integration_tools(
     )
 
     def outlook_delete_event(event_id: str, account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         return _acct_result(
             aid,
             _request(
@@ -1763,11 +1793,12 @@ def make_integration_tools(
     def outlook_respond_event(
         event_id: str, response: str, comment: str = "", account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "outlook", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         actions = {
             "accept": "accept",
             "decline": "decline",
@@ -1808,9 +1839,9 @@ def make_integration_tools(
     )
 
     def jira_search_issues(jql: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "jira", "base_url", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "jira", "base_url", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_atlassian_base(profile)}/rest/api/3/search",
@@ -1833,9 +1864,9 @@ def make_integration_tools(
     )
 
     def jira_get_issue(issue_key: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "jira", "base_url", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "jira", "base_url", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_atlassian_base(profile)}/rest/api/3/issue/{issue_key}",
@@ -1859,9 +1890,9 @@ def make_integration_tools(
     def jira_create_issue(
         project_key: str, issue_type: str, summary: str, description: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "jira", "base_url", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "jira", "base_url", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         payload = {
             "fields": {
                 "project": {"key": project_key},
@@ -1909,9 +1940,9 @@ def make_integration_tools(
     )
 
     def confluence_search(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "confluence", "base_url", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "confluence", "base_url", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_atlassian_base(profile)}/wiki/rest/api/search",
@@ -1937,9 +1968,9 @@ def make_integration_tools(
     )
 
     def confluence_get_page(page_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "confluence", "base_url", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "confluence", "base_url", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_atlassian_base(profile)}/wiki/rest/api/content/{page_id}",
@@ -1964,9 +1995,9 @@ def make_integration_tools(
     def confluence_create_page(
         space_key: str, title: str, body: str, parent_id: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "confluence", "base_url", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "confluence", "base_url", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         payload: dict[str, Any] = {
             "type": "page",
             "title": title,
@@ -2003,9 +2034,9 @@ def make_integration_tools(
     )
 
     def zendesk_search(query: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "zendesk", "subdomain", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "zendesk", "subdomain", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://{profile['subdomain']}.zendesk.com/api/v2/search.json",
@@ -2028,9 +2059,9 @@ def make_integration_tools(
     )
 
     def zendesk_get_ticket(ticket_id: int) -> dict[str, Any]:
-        profile, err = _profile(secrets, "zendesk", "subdomain", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "zendesk", "subdomain", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://{profile['subdomain']}.zendesk.com/api/v2/tickets/{ticket_id}.json",
@@ -2054,9 +2085,9 @@ def make_integration_tools(
     def zendesk_create_ticket(
         subject: str, body: str, requester_email: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "zendesk", "subdomain", "email", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "zendesk", "subdomain", "email", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         ticket: dict[str, Any] = {"subject": subject, "comment": {"body": body}}
         if requester_email:
             ticket["requester"] = {"email": requester_email}
@@ -2087,9 +2118,9 @@ def make_integration_tools(
     )
 
     def linear_search_issues(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "linear", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "linear", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         gql = (
             "query($term: String!, $first: Int!) {"
             " searchIssues(term: $term, first: $first) {"
@@ -2114,9 +2145,9 @@ def make_integration_tools(
     )
 
     def linear_get_issue(issue_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "linear", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "linear", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         gql = (
             "query($id: String!) { issue(id: $id) {"
             " identifier title description url state { name } assignee { name }"
@@ -2139,9 +2170,9 @@ def make_integration_tools(
     )
 
     def linear_list_teams() -> dict[str, Any]:
-        profile, err = _profile(secrets, "linear", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "linear", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _linear_gql(
             profile["api_key"], "{ teams { nodes { id key name } } }", {}
         )
@@ -2163,9 +2194,9 @@ def make_integration_tools(
     def linear_create_issue(
         team_id: str, title: str, description: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "linear", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "linear", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         gql = (
             "mutation($input: IssueCreateInput!) { issueCreate(input: $input) {"
             " success issue { identifier url } } }"
@@ -2198,9 +2229,9 @@ def make_integration_tools(
     def gitlab_search(
         query: str, scope: str = "issues", max_results: int = 10
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "gitlab", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "gitlab", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         kind = scope if scope in ("projects", "issues", "merge_requests") else "issues"
         return _request(
             "GET",
@@ -2228,9 +2259,9 @@ def make_integration_tools(
     )
 
     def gitlab_get_issue(project: str, issue_iid: int) -> dict[str, Any]:
-        profile, err = _profile(secrets, "gitlab", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "gitlab", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_gitlab_api(profile)}/projects/{quote(project, safe='')}/issues/{issue_iid}",
@@ -2252,9 +2283,9 @@ def make_integration_tools(
     )
 
     def gitlab_get_merge_request(project: str, mr_iid: int) -> dict[str, Any]:
-        profile, err = _profile(secrets, "gitlab", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "gitlab", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_gitlab_api(profile)}/projects/{quote(project, safe='')}/merge_requests/{mr_iid}",
@@ -2278,9 +2309,9 @@ def make_integration_tools(
     def gitlab_create_issue(
         project: str, title: str, description: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "gitlab", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "gitlab", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"{_gitlab_api(profile)}/projects/{quote(project, safe='')}/issues",
@@ -2308,9 +2339,9 @@ def make_integration_tools(
     )
 
     def discord_list_channels(guild_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "discord", "bot_token")
-        if err:
-            return err
+        profile = _profile(secrets, "discord", "bot_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://discord.com/api/v10/guilds/{guild_id}/channels",
@@ -2332,9 +2363,9 @@ def make_integration_tools(
     )
 
     def discord_read_messages(channel_id: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "discord", "bot_token")
-        if err:
-            return err
+        profile = _profile(secrets, "discord", "bot_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://discord.com/api/v10/channels/{channel_id}/messages",
@@ -2357,9 +2388,9 @@ def make_integration_tools(
     )
 
     def discord_send_message(channel_id: str, content: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "discord", "bot_token")
-        if err:
-            return err
+        profile = _profile(secrets, "discord", "bot_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"https://discord.com/api/v10/channels/{channel_id}/messages",
@@ -2383,9 +2414,9 @@ def make_integration_tools(
     )
 
     def stripe_search_customers(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "stripe", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "stripe", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             "https://api.stripe.com/v1/customers/search",
@@ -2410,9 +2441,9 @@ def make_integration_tools(
     def stripe_list_charges(
         customer_id: str = "", max_results: int = 10
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "stripe", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "stripe", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         params: dict[str, Any] = {"limit": _clamp(max_results)}
         if customer_id:
             params["customer"] = customer_id
@@ -2440,9 +2471,9 @@ def make_integration_tools(
     def stripe_list_invoices(
         customer_id: str = "", max_results: int = 10
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "stripe", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "stripe", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         params: dict[str, Any] = {"limit": _clamp(max_results)}
         if customer_id:
             params["customer"] = customer_id
@@ -2468,9 +2499,9 @@ def make_integration_tools(
     )
 
     def asana_list_workspaces() -> dict[str, Any]:
-        profile, err = _profile(secrets, "asana", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "asana", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             "https://app.asana.com/api/1.0/workspaces",
@@ -2494,9 +2525,9 @@ def make_integration_tools(
     def asana_search_tasks(
         workspace_gid: str, query: str, max_results: int = 10
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "asana", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "asana", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://app.asana.com/api/1.0/workspaces/{workspace_gid}/typeahead",
@@ -2527,9 +2558,9 @@ def make_integration_tools(
     )
 
     def asana_get_task(task_gid: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "asana", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "asana", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://app.asana.com/api/1.0/tasks/{task_gid}",
@@ -2553,9 +2584,9 @@ def make_integration_tools(
     def asana_create_task(
         project_gid: str, name: str, notes: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "asana", "token")
-        if err:
-            return err
+        profile = _profile(secrets, "asana", "token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             "https://app.asana.com/api/1.0/tasks",
@@ -2893,9 +2924,9 @@ def make_integration_tools(
         return path
 
     def dropbox_search(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "dropbox", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "dropbox", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             "https://api.dropboxapi.com/2/files/search_v2",
@@ -2918,9 +2949,9 @@ def make_integration_tools(
     )
 
     def dropbox_list_folder(path: str = "") -> dict[str, Any]:
-        profile, err = _profile(secrets, "dropbox", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "dropbox", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             "https://api.dropboxapi.com/2/files/list_folder",
@@ -2943,9 +2974,9 @@ def make_integration_tools(
     )
 
     def dropbox_read_file(path: str, max_chars: int = 20000) -> dict[str, Any]:
-        profile, err = _profile(secrets, "dropbox", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "dropbox", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         out = _request(
             "POST",
             "https://content.dropboxapi.com/2/files/download",
@@ -2975,9 +3006,9 @@ def make_integration_tools(
     )
 
     def box_search(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "box", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "box", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             "https://api.box.com/2.0/search",
@@ -3000,9 +3031,9 @@ def make_integration_tools(
     )
 
     def box_list_folder(folder_id: str = "0") -> dict[str, Any]:
-        profile, err = _profile(secrets, "box", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "box", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"https://api.box.com/2.0/folders/{folder_id}/items",
@@ -3024,9 +3055,9 @@ def make_integration_tools(
     )
 
     def box_read_file(file_id: str, max_chars: int = 20000) -> dict[str, Any]:
-        profile, err = _profile(secrets, "box", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "box", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         out = _request(
             "GET",
             f"https://api.box.com/2.0/files/{file_id}/content",
@@ -3053,9 +3084,9 @@ def make_integration_tools(
     )
 
     def quickbooks_query(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "quickbooks", "access_token", "realm_id")
-        if err:
-            return err
+        profile = _profile(secrets, "quickbooks", "access_token", "realm_id")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         q = query.strip()
         if "maxresults" not in q.lower():
             q = f"{q} MAXRESULTS {_clamp(max_results, ceiling=100)}"
@@ -3082,9 +3113,9 @@ def make_integration_tools(
     )
 
     def quickbooks_list_customers(max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "quickbooks", "access_token", "realm_id")
-        if err:
-            return err
+        profile = _profile(secrets, "quickbooks", "access_token", "realm_id")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_qbo_base(profile)}/query",
@@ -3109,9 +3140,9 @@ def make_integration_tools(
     )
 
     def quickbooks_list_invoices(max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "quickbooks", "access_token", "realm_id")
-        if err:
-            return err
+        profile = _profile(secrets, "quickbooks", "access_token", "realm_id")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_qbo_base(profile)}/query",
@@ -3139,9 +3170,9 @@ def make_integration_tools(
     def quickbooks_get_report(
         report: str, start_date: str = "", end_date: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "quickbooks", "access_token", "realm_id")
-        if err:
-            return err
+        profile = _profile(secrets, "quickbooks", "access_token", "realm_id")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         params: dict[str, Any] = {}
         if start_date:
             params["start_date"] = start_date
@@ -3174,9 +3205,9 @@ def make_integration_tools(
     )
 
     def whatsapp_send_message(to: str, text: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "whatsapp", "access_token", "phone_number_id")
-        if err:
-            return err
+        profile = _profile(secrets, "whatsapp", "access_token", "phone_number_id")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"https://graph.facebook.com/v21.0/{profile['phone_number_id']}/messages",
@@ -3209,9 +3240,9 @@ def make_integration_tools(
     def whatsapp_send_template(
         to: str, template_name: str, language_code: str = "en_US"
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "whatsapp", "access_token", "phone_number_id")
-        if err:
-            return err
+        profile = _profile(secrets, "whatsapp", "access_token", "phone_number_id")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"https://graph.facebook.com/v21.0/{profile['phone_number_id']}/messages",
@@ -3271,9 +3302,10 @@ def make_integration_tools(
     def notion_search(
         query: str, max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "notion", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "notion", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "POST",
             "https://api.notion.com/v1/search",
@@ -3301,9 +3333,10 @@ def make_integration_tools(
     )
 
     def notion_read_page(page_id: str, account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "notion", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "notion", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         page = _request(
             "GET",
             f"https://api.notion.com/v1/pages/{page_id}",
@@ -3352,9 +3385,10 @@ def make_integration_tools(
         max_results: int = 10,
         account: str = "",
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "notion", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "notion", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         body: dict[str, Any] = {"page_size": _clamp(max_results, ceiling=100)}
         if filter_json:
             try:
@@ -3391,9 +3425,10 @@ def make_integration_tools(
     def notion_create_page(
         parent_page_id: str, title: str, content: str = "", account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "notion", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "notion", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         children = [
             {
                 "object": "block",
@@ -3438,9 +3473,10 @@ def make_integration_tools(
     # -- attio (managed OAuth or API key, multi-workspace) --
 
     def attio_list_objects(account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "attio", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "attio", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "GET",
             "https://api.attio.com/v2/objects",
@@ -3468,9 +3504,10 @@ def make_integration_tools(
         max_results: int = 10,
         account: str = "",
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "attio", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "attio", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         body: dict[str, Any] = {"limit": _clamp(max_results, ceiling=100)}
         if filter_json:
             try:
@@ -3508,9 +3545,10 @@ def make_integration_tools(
     def attio_get_record(
         object_type: str, record_id: str, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "attio", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "attio", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "GET",
             f"https://api.attio.com/v2/objects/{object_type}/records/{record_id}",
@@ -3543,9 +3581,10 @@ def make_integration_tools(
         content: str,
         account: str = "",
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "attio", account, "access_token")
-        if err:
-            return err
+        _found = _account_profile(secrets, "attio", account, "access_token")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "POST",
             "https://api.attio.com/v2/notes",
@@ -3589,11 +3628,12 @@ def make_integration_tools(
         return str(profile.get("base_url") or "https://us.posthog.com").rstrip("/")
 
     def posthog_query(hogql: str, account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "posthog", account, "api_key", "project_id"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "POST",
             f"{_posthog_base(profile)}/api/projects/{profile['project_id']}/query",
@@ -3621,11 +3661,12 @@ def make_integration_tools(
     def posthog_list_insights(
         query: str = "", max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "posthog", account, "api_key", "project_id"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         params: dict[str, Any] = {"limit": _clamp(max_results)}
         if query:
             params["search"] = query
@@ -3663,11 +3704,12 @@ def make_integration_tools(
         where: str = "",
         account: str = "",
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "mixpanel", account, "username", "secret", "project_id"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         params = {
             "project_id": profile["project_id"],
             "event": event,
@@ -3710,11 +3752,12 @@ def make_integration_tools(
     )
 
     def mixpanel_top_events(max_results: int = 10, account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "mixpanel", account, "username", "secret", "project_id"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "GET",
             "https://mixpanel.com/api/query/events/top",
@@ -3744,11 +3787,12 @@ def make_integration_tools(
     def amplitude_active_users(
         start: str, end: str, metric: str = "active", account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "amplitude", account, "api_key", "secret_key"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "GET",
             "https://amplitude.com/api/2/users",
@@ -3785,11 +3829,12 @@ def make_integration_tools(
     def amplitude_event_totals(
         event_type: str, start: str, end: str, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "amplitude", account, "api_key", "secret_key"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "GET",
             "https://amplitude.com/api/2/events/segmentation",
@@ -3832,9 +3877,10 @@ def make_integration_tools(
     ) -> dict[str, Any]:
         if not email and not name:
             return {"error": "provide an email, a name, or both"}
-        aid, profile, err = _account_profile(secrets, "apollo", account, "api_key")
-        if err:
-            return err
+        _found = _account_profile(secrets, "apollo", account, "api_key")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         body: dict[str, Any] = {}
         if email:
             body["email"] = email
@@ -3871,9 +3917,10 @@ def make_integration_tools(
     )
 
     def apollo_enrich_company(domain: str, account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "apollo", account, "api_key")
-        if err:
-            return err
+        _found = _account_profile(secrets, "apollo", account, "api_key")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "GET",
             "https://api.apollo.io/api/v1/organizations/enrich",
@@ -3900,9 +3947,10 @@ def make_integration_tools(
     def apollo_search_people(
         query: str, max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "apollo", account, "api_key")
-        if err:
-            return err
+        _found = _account_profile(secrets, "apollo", account, "api_key")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _request(
             "POST",
             "https://api.apollo.io/api/v1/mixed_people/search",
@@ -3942,9 +3990,10 @@ def make_integration_tools(
     def hunter_domain_search(
         domain: str, max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "hunter", account, "api_key")
-        if err:
-            return err
+        _found = _account_profile(secrets, "hunter", account, "api_key")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _hunter_get(
             profile, "domain-search", {"domain": domain, "limit": _clamp(max_results)}
         )
@@ -3971,9 +4020,10 @@ def make_integration_tools(
     def hunter_find_email(
         domain: str, first_name: str, last_name: str, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "hunter", account, "api_key")
-        if err:
-            return err
+        _found = _account_profile(secrets, "hunter", account, "api_key")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         result = _hunter_get(
             profile,
             "email-finder",
@@ -4002,9 +4052,10 @@ def make_integration_tools(
     )
 
     def hunter_verify_email(email: str, account: str = "") -> dict[str, Any]:
-        aid, profile, err = _account_profile(secrets, "hunter", account, "api_key")
-        if err:
-            return err
+        _found = _account_profile(secrets, "hunter", account, "api_key")
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         return _acct_result(
             aid, _hunter_get(profile, "email-verifier", {"email": email})
         )
@@ -4028,9 +4079,9 @@ def make_integration_tools(
     _CLICKUP = "https://api.clickup.com/api/v2"
 
     def clickup_list_teams() -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET", f"{_CLICKUP}/team", headers={"Authorization": profile["api_token"]}
         )
@@ -4050,9 +4101,9 @@ def make_integration_tools(
     )
 
     def clickup_list_spaces(team_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CLICKUP}/team/{quote(team_id)}/space",
@@ -4074,9 +4125,9 @@ def make_integration_tools(
     )
 
     def clickup_list_lists(space_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CLICKUP}/space/{quote(space_id)}/list",
@@ -4100,9 +4151,9 @@ def make_integration_tools(
     def clickup_list_tasks(
         list_id: str, include_closed: bool = False, max_results: int = 10
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CLICKUP}/list/{quote(list_id)}/task",
@@ -4132,9 +4183,9 @@ def make_integration_tools(
     )
 
     def clickup_get_task(task_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CLICKUP}/task/{quote(task_id)}",
@@ -4159,9 +4210,9 @@ def make_integration_tools(
     def clickup_create_task(
         list_id: str, name: str, description: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"{_CLICKUP}/list/{quote(list_id)}/task",
@@ -4191,9 +4242,9 @@ def make_integration_tools(
     def clickup_update_task(
         task_id: str, name: str = "", description: str = "", status: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         body: dict[str, Any] = {}
         if name:
             body["name"] = name
@@ -4231,9 +4282,9 @@ def make_integration_tools(
     )
 
     def clickup_add_comment(task_id: str, text: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "clickup", "api_token")
-        if err:
-            return err
+        profile = _profile(secrets, "clickup", "api_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"{_CLICKUP}/task/{quote(task_id)}/comment",
@@ -4265,9 +4316,9 @@ def make_integration_tools(
         return (str(profile.get("api_key", "")), "")
 
     def close_search_leads(query: str, max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "close", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "close", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CLOSE}/lead/",
@@ -4290,9 +4341,9 @@ def make_integration_tools(
     )
 
     def close_get_lead(lead_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "close", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "close", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET", f"{_CLOSE}/lead/{quote(lead_id)}/", auth=_close_auth(profile)
         )
@@ -4314,9 +4365,9 @@ def make_integration_tools(
     def close_list_opportunities(
         lead_id: str = "", max_results: int = 10
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "close", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "close", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         params: dict[str, Any] = {"_limit": _clamp(max_results)}
         if lead_id:
             params["lead_id"] = lead_id
@@ -4341,9 +4392,9 @@ def make_integration_tools(
     def close_create_lead(
         name: str, contact_name: str = "", contact_email: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "close", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "close", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         body: dict[str, Any] = {"name": name}
         if contact_name or contact_email:
             contact: dict[str, Any] = {"name": contact_name}
@@ -4374,9 +4425,9 @@ def make_integration_tools(
     def close_update_opportunity(
         opportunity_id: str, status_id: str = "", note: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "close", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "close", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         body: dict[str, Any] = {}
         if status_id:
             body["status_id"] = status_id
@@ -4411,9 +4462,9 @@ def make_integration_tools(
     )
 
     def close_log_note(lead_id: str, note: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "close", "api_key")
-        if err:
-            return err
+        profile = _profile(secrets, "close", "api_key")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"{_CLOSE}/activity/note/",
@@ -4457,9 +4508,9 @@ def make_integration_tools(
         return out
 
     def figma_get_file(file_key: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "figma", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "figma", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         result = _request(
             "GET",
             f"{_FIGMA}/files/{quote(file_key)}",
@@ -4493,9 +4544,9 @@ def make_integration_tools(
     )
 
     def figma_get_comments(file_key: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "figma", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "figma", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_FIGMA}/files/{quote(file_key)}/comments",
@@ -4519,9 +4570,9 @@ def make_integration_tools(
     def figma_post_comment(
         file_key: str, message: str, reply_to: str = ""
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "figma", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "figma", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         body: dict[str, Any] = {"message": message}
         if reply_to:
             body["comment_id"] = reply_to
@@ -4554,9 +4605,9 @@ def make_integration_tools(
     def figma_export_images(
         file_key: str, node_ids: str, format: str = "png", scale: int = 2
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "figma", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "figma", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_FIGMA}/images/{quote(file_key)}",
@@ -4600,11 +4651,12 @@ def make_integration_tools(
     def drive_search_files(
         query: str, max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "google_drive", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         q = _drive_quote(query)
         return _acct_result(
             aid,
@@ -4641,11 +4693,12 @@ def make_integration_tools(
     def drive_list_folder(
         folder_id: str = "root", max_results: int = 20, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "google_drive", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         return _acct_result(
             aid,
             _request(
@@ -4681,11 +4734,12 @@ def make_integration_tools(
     def drive_read_file(
         file_id: str, max_chars: int = 20000, account: str = ""
     ) -> dict[str, Any]:
-        aid, profile, err = _account_profile(
+        _found = _account_profile(
             secrets, "google_drive", account, "access_token"
         )
-        if err:
-            return err
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        aid, profile = _found.id, _found.profile
         headers = _google_headers(profile["access_token"])
         meta = _request(
             "GET",
@@ -4791,9 +4845,9 @@ def make_integration_tools(
     def docusign_list_envelopes(
         status: str = "", since_days: int = 30
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "docusign", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "docusign", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         ctx, err = _docusign_ctx(profile)
         if err:
             return err
@@ -4828,9 +4882,9 @@ def make_integration_tools(
     )
 
     def docusign_get_envelope(envelope_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "docusign", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "docusign", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         ctx, err = _docusign_ctx(profile)
         if err:
             return err
@@ -4856,9 +4910,9 @@ def make_integration_tools(
     )
 
     def docusign_list_templates(max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "docusign", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "docusign", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         ctx, err = _docusign_ctx(profile)
         if err:
             return err
@@ -4890,9 +4944,9 @@ def make_integration_tools(
         role_name: str = "Signer",
         subject: str = "",
     ) -> dict[str, Any]:
-        profile, err = _profile(secrets, "docusign", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "docusign", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         ctx, err = _docusign_ctx(profile)
         if err:
             return err
@@ -4942,9 +4996,9 @@ def make_integration_tools(
     _CANVA = "https://api.canva.com/rest/v1"
 
     def canva_list_designs(query: str = "", max_results: int = 10) -> dict[str, Any]:
-        profile, err = _profile(secrets, "canva", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "canva", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         params: dict[str, Any] = {"limit": _clamp(max_results)}
         if query:
             params["query"] = query
@@ -4970,9 +5024,9 @@ def make_integration_tools(
     )
 
     def canva_get_design(design_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "canva", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "canva", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CANVA}/designs/{quote(design_id)}",
@@ -4994,9 +5048,9 @@ def make_integration_tools(
     )
 
     def canva_export_design(design_id: str, format: str = "pdf") -> dict[str, Any]:
-        profile, err = _profile(secrets, "canva", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "canva", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "POST",
             f"{_CANVA}/exports",
@@ -5019,9 +5073,9 @@ def make_integration_tools(
     )
 
     def canva_get_export(export_id: str) -> dict[str, Any]:
-        profile, err = _profile(secrets, "canva", "access_token")
-        if err:
-            return err
+        profile = _profile(secrets, "canva", "access_token")
+        if isinstance(profile, ConnectorError):
+            return profile.payload
         return _request(
             "GET",
             f"{_CANVA}/exports/{quote(export_id)}",
