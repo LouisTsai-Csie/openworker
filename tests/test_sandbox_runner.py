@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from coworker.sandbox.bundle import build_runner_zipapp
+from coworker.sandbox import client as client_mod
 from coworker.sandbox.client import RunnerClient
 from coworker.sandbox.executor import RunnerExecutor
 from coworker.sandbox.providers.runner_local import RunnerLocalProvider
@@ -272,7 +273,16 @@ def test_the_same_request_id_runs_once(runner, tmp_path):
     assert target.read_text() == "x\n"
 
 
-def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_folder(runner, tmp_path):
+def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_folder(
+    runner, tmp_path, monkeypatch
+):
+    # A reconnect attempt waits `_HELLO_TIMEOUT` (60 s in production, sized for a cold VM
+    # whose disk is still warming up) before it gives up and retries. A restart reliably
+    # loses the first attempt or two -- the old workspace is closing, and the new daemon is
+    # not listening yet -- so with the real budget one restart can take minutes, which is
+    # how this test failed in CI with a 30 s join. What is under test is WHICH error the
+    # in-flight command is given, not how patient the client is, so shrink the budget.
+    monkeypatch.setattr(client_mod, "_HELLO_TIMEOUT", 5.0)
     provider, client = runner
     (tmp_path / "work").mkdir()
     ex = RunnerExecutor(client, cwd=str(tmp_path))
@@ -285,7 +295,9 @@ def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_f
     worker.start()
     _await_started(started)
     provider.restart_daemon()  # a new runner instance, as after a sandbox restart
-    worker.join(timeout=30)
+    # 5 attempts x 5 s plus backoff is ~32 s worst case; past that the client has given up
+    # and the assertion below will say so.
+    worker.join(timeout=60)
     assert not worker.is_alive(), "the restarted command never returned"
     assert "outcome of this command is unknown" in box["error"]  # never re-sent by the client
     assert client.restarts == 1
