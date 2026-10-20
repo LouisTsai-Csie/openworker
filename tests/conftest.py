@@ -154,3 +154,20 @@ def gallery_manager(tmp_path, monkeypatch):
         SessionRecord(session_id="lead-sid", workspace=m.default_workspace, model=sonnet, mode="auto-approve", messages=[], agent="swe-lead")
     )
     yield m
+
+
+def ws_until(ws, kind: str, *, limit: int = 500) -> dict:
+    """Read frames from `ws` until one of type `kind` arrives, and return it.
+
+    Bounded on purpose. `while ws.receive_json()["type"] != kind: pass` never ends when
+    the turn dies before sending its terminal frame, and one hung test takes the whole
+    CI job with it: on 2026-10-20 a pytest job reached 41% of the suite in three minutes
+    and was still hanging forty minutes later on exactly that loop. The cap turns a
+    stream that is chatty but wrong into a readable failure; `timeout` in pyproject.toml
+    covers the other case, a stream that simply stops.
+    """
+    for _ in range(limit):
+        frame = ws.receive_json()
+        if frame.get("type") == kind:
+            return frame
+    raise AssertionError(f"no {kind!r} frame in the first {limit} frames")

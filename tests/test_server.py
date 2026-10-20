@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import pytest
-from conftest import assert_user_only
+from conftest import assert_user_only, ws_until
 from fastapi.testclient import TestClient
 
 from coworker.providers import (
@@ -724,8 +724,7 @@ def test_ws_session_persisted_while_parked_on_approval(tmp_path):
     with client.websocket_connect("/ws/session/persist1") as ws:
         assert ws.receive_json()["type"] == "ready"
         ws.send_json({"type": "user_message", "text": "make x.py"})
-        while ws.receive_json()["type"] != "permission_required":
-            pass
+        ws_until(ws, "permission_required")
         # Parked on the approval — nothing approved, turn far from done. Already saved?
         rec = manager.session_store.load("persist1")
         assert rec is not None
@@ -733,8 +732,7 @@ def test_ws_session_persisted_while_parked_on_approval(tmp_path):
         assert "user" in roles  # turn_start checkpoint
         assert "assistant" in roles  # iteration progress checkpoint
         ws.send_json({"type": "approval", "decision": "deny"})
-        while ws.receive_json()["type"] != "turn_done":
-            pass
+        ws_until(ws, "turn_done")
 
 
 def test_ws_disconnect_promotes_parked_prompt_to_inbox(tmp_path):
@@ -751,8 +749,7 @@ def test_ws_disconnect_promotes_parked_prompt_to_inbox(tmp_path):
     with client.websocket_connect("/ws/session/dropped1") as ws:
         assert ws.receive_json()["type"] == "ready"
         ws.send_json({"type": "user_message", "text": "make y.py"})
-        while ws.receive_json()["type"] != "permission_required":
-            pass
+        ws_until(ws, "permission_required")
         # Global Inbox hides attended (inline) prompts while a viewer is present.
         assert client.get("/v1/inbox", params={"state": "pending"}).json()["items"] == []
         parked = manager.inbox.pending("dropped1")
