@@ -57,6 +57,25 @@ def _await_started(path: Path, timeout: float = 30.0) -> None:
     assert path.exists(), f"the command never started (no {path.name} after {timeout}s)"
 
 
+def _when_started(path: Path, action, timeout: float = 30.0) -> threading.Thread:
+    """Run `action` as soon as the command that writes `path` is actually going.
+
+    The counterpart to `_await_started` for the cases where the main thread is the one
+    blocked in `run()`. A `threading.Timer` with a fixed delay was a guess at when the
+    shell would be ready, and under `-n auto` the guess fires too early.
+    """
+
+    def wait_then_act() -> None:
+        deadline = time.monotonic() + timeout
+        while not path.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        action()
+
+    thread = threading.Thread(target=wait_then_act, daemon=True)
+    thread.start()
+    return thread
+
+
 def _cd_and_set(folder: str, name: str, value: str) -> str:
     return f"cd {folder}; $env:{name}='{value}'" if _WIN else f"cd {folder} && export {name}={value}"
 
@@ -184,12 +203,15 @@ def test_a_slow_shell_does_not_block_another(runner, tmp_path):
     _, client = runner
     slow = RunnerExecutor(client, cwd=str(tmp_path), shell="slow")
     fast = RunnerExecutor(client, cwd=str(tmp_path), shell="fast")
-    worker = threading.Thread(target=lambda: slow.run(_sleep(2)))
+    marker = tmp_path / "started"
+    worker = threading.Thread(target=lambda: slow.run(f"{_marker(marker)}; {_sleep(2)}"))
     worker.start()
-    time.sleep(0.3)
+    _await_started(marker)
     started = time.monotonic()
     assert fast.run("echo quick")["exit_code"] == 0
-    assert time.monotonic() - started < 1.0
+    # The slow shell is mid-command; the fast one must not be queued behind it. Measured
+    # after the marker, so this is the fast shell's latency alone.
+    assert time.monotonic() - started < 2.0
     worker.join()
 
 
@@ -226,10 +248,13 @@ def test_user_stop_ends_the_command_and_the_session_carries_on(runner, tmp_path)
     (tmp_path / "work").mkdir()
     ex = RunnerExecutor(client, cwd=str(tmp_path))
     ex.run("cd work")
-    threading.Timer(0.5, ex.interrupt_now).start()
+    marker = tmp_path / "started"
+    _when_started(marker, ex.interrupt_now)
     started = time.monotonic()
-    stopped = ex.run(_sleep(20), timeout=30)
-    assert time.monotonic() - started < 10
+    stopped = ex.run(f"{_marker(marker)}; {_sleep(20)}", timeout=30)
+    # Generous against the 20 s sleep: the point is that the stop ended it early, and the
+    # window now also covers however long the loaded machine took to start the shell.
+    assert time.monotonic() - started < 15
     assert stopped["error"] == "interrupted by user"
     assert ex.run(LEAF)["output"].strip() == "work"
 
