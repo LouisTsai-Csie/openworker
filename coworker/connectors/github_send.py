@@ -22,7 +22,7 @@ def send_github_comment(secrets: SecretStore, chat_id: str, text: str) -> dict[s
     import httpx
 
     from coworker.connectors.github_relay import split_thread
-    from coworker.connectors.integration_tools import _github_auth
+    from coworker.connectors.integration_tools import ConnectorError, _github_auth
 
     owner_repo, number = split_thread(chat_id)
     if number is None:
@@ -31,9 +31,9 @@ def send_github_comment(secrets: SecretStore, chat_id: str, text: str) -> dict[s
     base = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
     def _post(force: bool):
-        headers, err = _github_auth(secrets, owner, force=force)
-        if err:
-            return None, err
+        headers = _github_auth(secrets, owner, force=force)
+        if isinstance(headers, ConnectorError):
+            return None, headers.payload
         try:
             return (
                 httpx.post(

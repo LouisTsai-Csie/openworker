@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass
 from email.message import EmailMessage
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, Protocol, cast
 from collections.abc import Callable
 from urllib.parse import quote
 
@@ -56,6 +56,16 @@ def _schema(
     }
 
 
+class _ToolFunction(Protocol):
+    """A callable carrying the metadata the tool registry reads off it."""
+
+    __coworker_schema__: dict[str, Any]
+    __aisuite_tool_metadata__: Any
+    __doc__: str | None
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
 def _attach(
     fn: Callable[..., Any],
     schema: dict[str, Any],
@@ -68,9 +78,10 @@ def _attach(
     # registered tools — connector READS never gate. The explicit arg only governs
     # tools without a registry entry.
     approval = approval_for_tool(name, default=approval)
-    fn.__coworker_schema__ = schema
-    fn.__aisuite_tool_metadata__ = _meta(name, approval=approval, capabilities=caps)
-    fn.__doc__ = schema["function"]["description"]
+    tool = cast("_ToolFunction", fn)
+    tool.__coworker_schema__ = schema
+    tool.__aisuite_tool_metadata__ = _meta(name, approval=approval, capabilities=caps)
+    tool.__doc__ = schema["function"]["description"]
     return fn
 
 
@@ -414,15 +425,15 @@ def _github_base() -> str:
 
 def _github_auth(
     secrets: SecretStore, install: str = "", *, force: bool = False
-) -> tuple[dict[str, str] | None, dict[str, str] | None]:
-    """(headers, err). A manual PAT (`github:default.token`) wins, untouched;
+) -> dict[str, str] | ConnectorError:
+    """The Authorization headers to use, or the error to return instead. A manual PAT (`github:default.token`) wins, untouched;
     a managed relay profile mints a short-lived installation token instead —
     memory-cached, never stored (github-relay-spec §4). `install` picks the
     installation by account login (pass the repo owner) or id; unknown values
     fall back to the default installation."""
     profile = secrets.get("github:default") or {}
     if profile.get("token"):
-        return _github_headers(profile["token"]), None
+        return _github_headers(profile["token"])
     if profile.get("mode") == "relay":
         from coworker.cloud import github_installation_token
         from coworker.config import load_config
@@ -432,17 +443,17 @@ def _github_auth(
         if not installation_id and install:
             installation_id, _prof = github_installs.resolve(secrets, "")
         if not installation_id:
-            return None, {"error": "github is not connected; no App installation"}
+            return ConnectorError.of("github is not connected; no App installation")
         token = github_installation_token(
             secrets, load_config(), installation_id, force=force
         )
         if not token:
-            return None, {
-                "error": "github installation token unavailable "
+            return ConnectorError.of(
+                "github installation token unavailable "
                 "(sign in to OpenWorker Cloud and retry)"
-            }
-        return _github_headers(token), None
-    return None, {"error": "github is not connected; missing token"}
+            )
+        return _github_headers(token)
+    return ConnectorError.of("github is not connected; missing token")
 
 
 def _github_git_auth_args(secrets: SecretStore, owner: str) -> list[str]:
@@ -452,8 +463,8 @@ def _github_git_auth_args(secrets: SecretStore, owner: str) -> list[str]:
     (public repos clone fine without auth)."""
     import base64
 
-    headers, err = _github_auth(secrets, owner)
-    if err:
+    headers = _github_auth(secrets, owner)
+    if isinstance(headers, ConnectorError):
         return ["-c", "credential.helper="]
     token = headers["Authorization"].split(" ", 1)[1]
     basic = base64.b64encode(f"x-access-token:{token}".encode()).decode()
@@ -496,14 +507,14 @@ def _github_call(
 ) -> dict[str, Any]:
     """A GitHub API call that works on either auth path. A 401 on the managed
     path re-mints once (the cached installation token may have just expired)."""
-    headers, err = _github_auth(secrets, install)
-    if err:
-        return err
+    headers = _github_auth(secrets, install)
+    if isinstance(headers, ConnectorError):
+        return headers.payload
     out = _request(method, _github_base() + path, headers=headers, **kw)
     managed = not (secrets.get("github:default") or {}).get("token")
     if managed and out.get("error") == "HTTP 401":
-        headers, err = _github_auth(secrets, install, force=True)
-        if err:
+        headers = _github_auth(secrets, install, force=True)
+        if isinstance(headers, ConnectorError):
             return out
         out = _request(method, _github_base() + path, headers=headers, **kw)
     return out
@@ -1030,7 +1041,8 @@ def make_integration_tools(
         )
         if out.get("error"):
             return out
-        created = out.get("data") if isinstance(out.get("data"), dict) else {}
+        data = out.get("data")
+        created = data if isinstance(data, dict) else {}
         return {
             "ok": True,
             "number": created.get("number"),
@@ -1499,7 +1511,7 @@ def make_integration_tools(
         if isinstance(_found, ConnectorError):
             return _found.payload
         aid, profile = _found.id, _found.profile
-        params = {"$top": max(1, min(int(max_results or 10), 20))}
+        params: dict[str, Any] = {"$top": max(1, min(int(max_results or 10), 20))}
         if query:
             params["$search"] = f'"{query}"'
         return _acct_result(
@@ -4808,8 +4820,8 @@ def make_integration_tools(
 
     def _docusign_ctx(
         profile: dict[str, Any],
-    ) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
-        """Return {token, base} — discovering and caching account_id + base_uri
+    ) -> dict[str, Any] | ConnectorError:
+        """{token, base}, or the error to return instead — discovering and caching account_id + base_uri
         from the OAuth userinfo endpoint on first use."""
         token = str(profile.get("access_token", ""))
         account_id = profile.get("account_id")
@@ -4821,17 +4833,19 @@ def make_integration_tools(
                 headers=_bearer_headers(token),
             )
             if not info.get("ok"):
-                return None, {
-                    "error": "docusign account discovery failed",
-                    "details": str(info.get("details") or info.get("error")),
-                }
+                return ConnectorError(
+                    {
+                        "error": "docusign account discovery failed",
+                        "details": str(info.get("details") or info.get("error")),
+                    }
+                )
             accounts = (info.get("data") or {}).get("accounts") or []
             chosen = next(
                 (a for a in accounts if a.get("is_default")),
                 accounts[0] if accounts else None,
             )
             if not chosen:
-                return None, {"error": "docusign token has no accounts"}
+                return ConnectorError.of("docusign token has no accounts")
             account_id = chosen.get("account_id")
             base_uri = chosen.get("base_uri")
             secrets.put(
@@ -4841,7 +4855,7 @@ def make_integration_tools(
         return {
             "token": token,
             "base": f"{str(base_uri).rstrip('/')}/restapi/v2.1/accounts/{account_id}",
-        }, None
+        }
 
     def docusign_list_envelopes(
         status: str = "", since_days: int = 30
@@ -4849,9 +4863,9 @@ def make_integration_tools(
         profile = _profile(secrets, "docusign", "access_token")
         if isinstance(profile, ConnectorError):
             return profile.payload
-        ctx, err = _docusign_ctx(profile)
-        if err:
-            return err
+        ctx = _docusign_ctx(profile)
+        if isinstance(ctx, ConnectorError):
+            return ctx.payload
         from datetime import datetime, timedelta, timezone
 
         params: dict[str, Any] = {
@@ -4886,9 +4900,9 @@ def make_integration_tools(
         profile = _profile(secrets, "docusign", "access_token")
         if isinstance(profile, ConnectorError):
             return profile.payload
-        ctx, err = _docusign_ctx(profile)
-        if err:
-            return err
+        ctx = _docusign_ctx(profile)
+        if isinstance(ctx, ConnectorError):
+            return ctx.payload
         return _request(
             "GET",
             f"{ctx['base']}/envelopes/{quote(envelope_id)}",
@@ -4914,9 +4928,9 @@ def make_integration_tools(
         profile = _profile(secrets, "docusign", "access_token")
         if isinstance(profile, ConnectorError):
             return profile.payload
-        ctx, err = _docusign_ctx(profile)
-        if err:
-            return err
+        ctx = _docusign_ctx(profile)
+        if isinstance(ctx, ConnectorError):
+            return ctx.payload
         return _request(
             "GET",
             f"{ctx['base']}/templates",
@@ -4948,9 +4962,9 @@ def make_integration_tools(
         profile = _profile(secrets, "docusign", "access_token")
         if isinstance(profile, ConnectorError):
             return profile.payload
-        ctx, err = _docusign_ctx(profile)
-        if err:
-            return err
+        ctx = _docusign_ctx(profile)
+        if isinstance(ctx, ConnectorError):
+            return ctx.payload
         body: dict[str, Any] = {
             "templateId": template_id,
             "templateRoles": [

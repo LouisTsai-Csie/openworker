@@ -238,10 +238,12 @@ no_implicit_optional = true
 # mypy does not follow when checking on macOS/Linux (54 phantom name-defined errors).
 exclude = ["coworker/sandbox/winsec\\.py"]
 
-# RATCHET — these 70 modules still have errors mypy would report. The list was 71
-# when mypy was switched on (2026-10-19, 534 errors); coworker.tools.todo came off
-# it once its implicit-Optional was fixed. Delete an entry once its module is clean.
-# Only ever shrinks: a new module must be clean on arrival, which is the whole point.
+# RATCHET — these 69 modules still have errors mypy would report. The list was 71 when
+# mypy was switched on (2026-10-19, 534 errors); coworker.tools.todo came off it once its
+# implicit-Optional was fixed, and coworker.connectors.integration_tools once its helpers
+# stopped returning `(value, err)` pairs that no checker can narrow — 143 errors, the
+# largest single block in the codebase, from six function signatures. Delete an entry once
+# its module is clean. Only ever shrinks: a new module must be clean on arrival.
 [[tool.mypy.overrides]]
 ignore_errors = true
 module = [
@@ -258,7 +260,6 @@ module = [
     "coworker.connectors.chat_tools",
     "coworker.connectors.descriptors",
     "coworker.connectors.email_tools",
-    "coworker.connectors.integration_tools",
     "coworker.connectors.machine_poll",
     "coworker.connectors.relay_client",
     "coworker.connectors.setup",
