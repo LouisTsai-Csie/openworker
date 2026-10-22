@@ -161,21 +161,19 @@ _GEN_ACCOUNT_PROP = {
 }
 
 
-def _gmail_profile(
-    secrets: SecretStore, account: str = ""
-) -> tuple[str, dict[str, Any] | None, dict[str, str] | None]:
-    """(email, profile, err) for the requested — or default — mailbox, with the
-    managed token refreshed in place. Multi-account: `gmail:account:<email>`."""
+def _gmail_profile(secrets: SecretStore, account: str = "") -> Account | ConnectorError:
+    """The requested — or default — mailbox with its managed token refreshed in place,
+    or the error to return instead. Multi-account: `gmail:account:<email>`. `Account.id`
+    is the mailbox address."""
     from coworker.connectors import gmail_accounts
 
     email, key, profile = gmail_accounts.resolve(secrets, account)
     if profile is None:
-        hint = (
+        return ConnectorError.of(
             f"no gmail account matching {account!r}"
             if account
             else "gmail is not connected"
         )
-        return "", None, {"error": hint}
     if profile.get("managed"):
         from coworker.cloud import ensure_fresh_connector_token
         from coworker.config import load_config
@@ -183,26 +181,23 @@ def _gmail_profile(
         ensure_fresh_connector_token(secrets, load_config(), "gmail", profile_key=key)
         profile = secrets.get(key) or profile
     if not profile.get("access_token"):
-        return "", None, {"error": f"gmail account {email} has no usable token"}
-    return email, profile, None
+        return ConnectorError.of(f"gmail account {email} has no usable token")
+    return Account(email, profile)
 
 
-def _gcal_profile(
-    secrets: SecretStore, account: str = ""
-) -> tuple[str, dict[str, Any] | None, dict[str, str] | None]:
-    """(email, profile, err) for the requested — or default — Google account,
-    with the managed token refreshed in place. Multi-account:
-    `google_calendar:account:<email>`."""
+def _gcal_profile(secrets: SecretStore, account: str = "") -> Account | ConnectorError:
+    """The requested — or default — Google account with its managed token refreshed in
+    place, or the error to return instead. Multi-account:
+    `google_calendar:account:<email>`. `Account.id` is the account address."""
     from coworker.connectors import gcal_accounts
 
     email, key, profile = gcal_accounts.resolve(secrets, account)
     if profile is None:
-        hint = (
+        return ConnectorError.of(
             f"no google calendar account matching {account!r}"
             if account
             else "google calendar is not connected"
         )
-        return "", None, {"error": hint}
     if profile.get("managed"):
         from coworker.cloud import ensure_fresh_connector_token
         from coworker.config import load_config
@@ -212,12 +207,10 @@ def _gcal_profile(
         )
         profile = secrets.get(key) or profile
     if not profile.get("access_token"):
-        return (
-            "",
-            None,
-            {"error": f"google calendar account {email} has no usable token"},
+        return ConnectorError.of(
+            f"google calendar account {email} has no usable token"
         )
-    return email, profile, None
+    return Account(email, profile)
 
 
 # HubSpot-defined association type ids: note → object (v4 default associations).
@@ -1079,9 +1072,10 @@ def make_integration_tools(
     def gmail_search_messages(
         query: str, max_results: int = 10, account: str = ""
     ) -> dict[str, Any]:
-        email, profile, err = _gmail_profile(secrets, account)
-        if err:
-            return err
+        _found = _gmail_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         token = profile["access_token"]
         result = _request(
             "GET",
@@ -1147,9 +1141,10 @@ def make_integration_tools(
     )
 
     def gmail_get_message(message_id: str, account: str = "") -> dict[str, Any]:
-        email, profile, err = _gmail_profile(secrets, account)
-        if err:
-            return err
+        _found = _gmail_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         token = profile["access_token"]
         result = _request(
             "GET",
@@ -1190,9 +1185,10 @@ def make_integration_tools(
     def gmail_send_email(
         to: str, subject: str, body: str, cc: str = "", account: str = ""
     ) -> dict[str, Any]:
-        email, profile, err = _gmail_profile(secrets, account)
-        if err:
-            return err
+        _found = _gmail_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         msg = EmailMessage()
         msg["To"], msg["Subject"] = to, subject
         if cc:
@@ -1250,9 +1246,10 @@ def make_integration_tools(
         max_results: int = 10,
         account: str = "",
     ) -> dict[str, Any]:
-        email, profile, err = _gcal_profile(secrets, account)
-        if err:
-            return err
+        _found = _gcal_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         params: dict[str, Any] = {
             "singleEvents": True,
             "orderBy": "startTime",
@@ -1299,9 +1296,10 @@ def make_integration_tools(
         timezone: str = "UTC",
         account: str = "",
     ) -> dict[str, Any]:
-        email, profile, err = _gcal_profile(secrets, account)
-        if err:
-            return err
+        _found = _gcal_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         items = [
             {"id": c.strip()}
             for c in str(calendars or "primary").split(",")
@@ -1352,9 +1350,10 @@ def make_integration_tools(
         description: str = "",
         account: str = "",
     ) -> dict[str, Any]:
-        email, profile, err = _gcal_profile(secrets, account)
-        if err:
-            return err
+        _found = _gcal_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         payload = {
             "summary": summary,
             "description": description,
@@ -1404,9 +1403,10 @@ def make_integration_tools(
         description: str = "",
         account: str = "",
     ) -> dict[str, Any]:
-        email, profile, err = _gcal_profile(secrets, account)
-        if err:
-            return err
+        _found = _gcal_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         # PATCH semantics: only the provided fields change.
         payload: dict[str, Any] = {}
         if summary:
@@ -1458,9 +1458,10 @@ def make_integration_tools(
     def gcal_delete_event(
         event_id: str, calendar_id: str = "primary", account: str = ""
     ) -> dict[str, Any]:
-        email, profile, err = _gcal_profile(secrets, account)
-        if err:
-            return err
+        _found = _gcal_profile(secrets, account)
+        if isinstance(_found, ConnectorError):
+            return _found.payload
+        email, profile = _found.id, _found.profile
         return _gcal_result(
             email,
             _request(
