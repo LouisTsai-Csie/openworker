@@ -31,6 +31,7 @@ import time
 import subprocess
 import sys
 import threading
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -39,11 +40,6 @@ from collections.abc import Callable
 from coworker import config as app_config
 from coworker.sandbox.providers import openshell, openshell_policy
 from coworker.sandbox.providers.openshell import PINNED_VERSION
-
-try:
-    import tomllib  # stdlib since 3.11
-except ModuleNotFoundError:  # pragma: no cover - Python 3.10
-    import tomli as tomllib  # type: ignore[no-redef]
 from coworker.sandbox.selection import openshell_problem, select
 
 _INSTALLER = "https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh"

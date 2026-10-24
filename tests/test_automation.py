@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import pytest
 
@@ -63,10 +63,10 @@ def test_task_gets_own_thread_id():
 
 def test_compute_next_run_cron_explicit_utc():
     t = _task(schedule=Schedule(kind="cron", cron="10 19 * * *", timezone="UTC"))
-    after = datetime(2026, 6, 5, 18, 0, tzinfo=timezone.utc).timestamp()
+    after = datetime(2026, 6, 5, 18, 0, tzinfo=UTC).timestamp()
     nxt = compute_next_run(t, after=after)
-    assert datetime.fromtimestamp(nxt, tz=timezone.utc) == datetime(
-        2026, 6, 5, 19, 10, tzinfo=timezone.utc
+    assert datetime.fromtimestamp(nxt, tz=UTC) == datetime(
+        2026, 6, 5, 19, 10, tzinfo=UTC
     )
 
 

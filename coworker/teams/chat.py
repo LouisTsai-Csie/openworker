@@ -18,7 +18,7 @@ import re
 import sqlite3
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -78,7 +78,7 @@ class ChatStore:
                 }
                 for m in members
             ],
-            "created_ts": datetime.now(timezone.utc).isoformat(),
+            "created_ts": datetime.now(UTC).isoformat(),
         }
         with self._lock:
             self._conn.execute(
@@ -127,7 +127,7 @@ class ChatStore:
         )
         message = {
             "group_id": group_id,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "author": author,
             "author_role": author_role,
             "text": text,

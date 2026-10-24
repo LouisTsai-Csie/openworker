@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -68,7 +68,7 @@ def _tz(name: str):
 
 
 def _epoch_now() -> float:
-    return datetime.now(timezone.utc).timestamp()
+    return datetime.now(UTC).timestamp()
 
 
 class TaskStore:

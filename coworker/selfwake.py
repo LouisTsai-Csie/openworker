@@ -15,7 +15,7 @@ import json
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
 KIND_TIMER = "timer"
@@ -29,7 +29,7 @@ STATE_CANCELLED = "cancelled"
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -252,7 +252,7 @@ def selfwake_tools(store: WakeStore, session_id: str) -> list:
         This is an idle check-in deadline, not a persistent appointment."""
         when = datetime.fromisoformat(when_iso)
         if when.tzinfo is None:
-            when = when.replace(tzinfo=timezone.utc)
+            when = when.replace(tzinfo=UTC)
         w = store.add_timer(session_id, when, note=note)
         return {"ok": True, "wake_id": w.id, "fire_at": w.fire_at}
 

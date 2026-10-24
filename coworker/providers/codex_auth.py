@@ -415,7 +415,7 @@ async def sign_in(
             await asyncio.get_running_loop().run_in_executor(None, webbrowser.open, url)
         try:
             code = await asyncio.wait_for(code_future, timeout)
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise CodexAuthError(
                 "Sign-in timed out — the browser window was not completed in "
                 f"{int(timeout) // 60} minutes."

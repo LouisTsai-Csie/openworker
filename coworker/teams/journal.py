@@ -25,7 +25,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -130,7 +130,7 @@ class JournalStore:
             exists = self._case_exists(case)
             if exists:
                 self._check_access(actor, case)
-            ts = datetime.now(timezone.utc).isoformat()
+            ts = datetime.now(UTC).isoformat()
             prev = self._head_hash(case)
             record = {
                 "ts": ts,
@@ -321,7 +321,7 @@ class JournalStore:
                 self._conn.execute(
                     "INSERT INTO journal_meta (case_id, head_hash, created_ts)"
                     " VALUES (?, ?, ?)",
-                    (case, GENESIS, datetime.now(timezone.utc).isoformat()),
+                    (case, GENESIS, datetime.now(UTC).isoformat()),
                 )
                 self._grant_locked(case, creator, source="creator")
                 self._conn.commit()

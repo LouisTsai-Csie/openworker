@@ -18,7 +18,7 @@ that step's observation.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,7 @@ SCHEMA_VERSION = "ATIF-v1.7"
 
 def _iso(ts: Any) -> str | None:
     try:
-        return datetime.fromtimestamp(float(ts), tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(float(ts), tz=UTC).isoformat()
     except (TypeError, ValueError, OverflowError, OSError):
         return None
 

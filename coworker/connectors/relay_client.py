@@ -219,7 +219,7 @@ class RelayHub:
                 )
             try:
                 await asyncio.wait_for(self._progress.wait(), timeout=remaining)
-            except asyncio.TimeoutError as exc:
+            except TimeoutError as exc:
                 raise TimeoutError(
                     f"only {self._dispatched} frames dispatched (< {at_least})"
                 ) from exc

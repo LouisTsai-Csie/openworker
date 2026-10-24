@@ -17,7 +17,7 @@ import hashlib
 import json
 import secrets
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ class BoardTokens:
                 "role": role,
                 "label": label,
                 "prefix": token[:12],
-                "created_ts": datetime.now(timezone.utc).isoformat(),
+                "created_ts": datetime.now(UTC).isoformat(),
             }
             self._save(entries)
         return token

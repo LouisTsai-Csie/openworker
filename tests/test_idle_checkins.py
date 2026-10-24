@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 
 from coworker.selfwake import WakeStore, selfwake_tools
 from coworker.teams import Actor, Role
@@ -11,7 +11,7 @@ from test_team_reader_recovery import create_item
 
 
 def timer(manager, seconds=180, note="Verify Maya's tests"):
-    return manager.wakes.add_timer("lead", datetime.now(timezone.utc) + timedelta(seconds=seconds), note=note)
+    return manager.wakes.add_timer("lead", datetime.now(UTC) + timedelta(seconds=seconds), note=note)
 
 
 def review(manager):
@@ -39,7 +39,7 @@ def test_both_sleep_tools_replace_each_other_without_changing_subscriptions(tmp_
     store = WakeStore(tmp_path / "wakes.json")
     relative, absolute, job, event = selfwake_tools(store, "lead")
     first = relative(180, "Old")
-    second = absolute((datetime.now(timezone.utc) + timedelta(seconds=100)).isoformat(), "New")
+    second = absolute((datetime.now(UTC) + timedelta(seconds=100)).isoformat(), "New")
     job("job"); event("event")
     assert first["wake_id"] not in {w.id for w in store.pending()}
     assert len(store.pending()) == 3
@@ -47,7 +47,7 @@ def test_both_sleep_tools_replace_each_other_without_changing_subscriptions(tmp_
     reloaded = WakeStore(store.path)
     assert {w.kind for w in reloaded.pending()} == {"completion", "event"}
     assert [w.id for w in reloaded.cancelled_context("lead")] == [second["wake_id"]]
-    assert reloaded.due(datetime.now(timezone.utc) + timedelta(days=1)) == []
+    assert reloaded.due(datetime.now(UTC) + timedelta(days=1)) == []
 
 
 def test_reminder_survives_crash_before_input_and_acknowledges_saved_input(manager):

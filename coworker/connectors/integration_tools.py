@@ -1560,7 +1560,7 @@ def make_integration_tools(
         # calendarView expands recurrences and takes a window; /me/events does
         # neither, so a bare call used to return arbitrary (often past) events.
         # Default window: now → +7 days.
-        now = _dt.datetime.now(_dt.timezone.utc)
+        now = _dt.datetime.now(_dt.UTC)
         fmt = "%Y-%m-%dT%H:%M:%SZ"
         return _acct_result(
             aid,
@@ -4797,11 +4797,11 @@ def make_integration_tools(
         ctx, err = _docusign_ctx(profile)
         if err:
             return err
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         params: dict[str, Any] = {
             "from_date": (
-                datetime.now(timezone.utc) - timedelta(days=max(1, int(since_days)))
+                datetime.now(_dt.UTC) - timedelta(days=max(1, int(since_days)))
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
         }
         if status:

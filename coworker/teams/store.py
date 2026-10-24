@@ -27,7 +27,7 @@ import hashlib
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -236,7 +236,7 @@ class TeamStore:
     ) -> dict[str, Any]:
         prev = self._head_hash(space)
         record = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "space": space,
             "kind": kind,
             "actor": actor.id,

@@ -87,7 +87,7 @@ def main() -> int:
     manifest = {
         "version": args.version,
         "notes": args.notes,
-        "pub_date": datetime.datetime.now(datetime.timezone.utc)
+        "pub_date": datetime.datetime.now(datetime.UTC)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
         "platforms": platforms,

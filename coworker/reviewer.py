@@ -410,7 +410,7 @@ class Reviewer:
                 ),
                 timeout=self.timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return self._count(_fail_closed("reviewer timed out", error=True))
         except asyncio.CancelledError:
             raise

@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from collections.abc import Awaitable, Callable
+from datetime import UTC
 
 _OCSF_VERSION = "1.1.0"
 _CLASS_API_ACTIVITY = 6003  # OCSF Application Activity › API Activity
@@ -123,10 +124,10 @@ def to_ocsf(
     try:
         ts = row.get("timestamp") or ""
         # SQLite CURRENT_TIMESTAMP is UTC "YYYY-MM-DD HH:MM:SS".
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         t_ms = int(
-            datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+            datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp()
             * 1000
         )
     except (TypeError, ValueError):
@@ -283,7 +284,7 @@ class AuditExporter:
             try:
                 await send_frame({"type": "audit", "id": frame_id, "events": events})
                 return await asyncio.wait_for(fut, timeout=30.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return False
             finally:
                 self._pending_acks.pop(frame_id, None)
@@ -356,7 +357,7 @@ class AuditExporter:
                 backoff = self._backoff_start
                 try:
                     await asyncio.wait_for(self._wake.wait(), timeout=self.policy.flush_seconds)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
             except ConnectionError:
                 await asyncio.sleep(backoff)

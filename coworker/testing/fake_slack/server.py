@@ -179,7 +179,7 @@ class FakeSlack:
         deadline = asyncio.get_event_loop().time() + timeout
         while self._socket_connections < at_least:
             if asyncio.get_event_loop().time() > deadline:
-                raise asyncio.TimeoutError(
+                raise TimeoutError(
                     f"only {self._socket_connections} socket connects (< {at_least})"
                 )
             await asyncio.sleep(0.02)

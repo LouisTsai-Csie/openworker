@@ -11,11 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-
-try:
-    import tomllib  # stdlib since 3.11
-except ModuleNotFoundError:  # 3.10, the floor requires-python declares
-    import tomli as tomllib  # type: ignore[no-redef]
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any

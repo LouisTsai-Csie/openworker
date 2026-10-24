@@ -140,7 +140,7 @@ class OpenRouterAuth:
                         "OpenRouter authorization was declined. Please try again."
                     )
                     message = "Authorization declined. Return to OpenWorker."
-        except (ValueError, UnicodeError, asyncio.TimeoutError):
+        except (TimeoutError, ValueError, UnicodeError):
             pass
         finally:
             body = message.encode()

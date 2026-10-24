@@ -127,7 +127,7 @@ class MCPManager:
         for task in list(self._tasks.values()):
             try:
                 await asyncio.wait_for(asyncio.shield(task), timeout=5)
-            except (asyncio.TimeoutError, Exception):
+            except (TimeoutError, Exception):
                 task.cancel()
         self._conns.clear()
         self._tasks.clear()

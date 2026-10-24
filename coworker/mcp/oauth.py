@@ -232,7 +232,7 @@ async def _wait_for_callback() -> tuple[str, str | None]:
     _pending = asyncio.get_running_loop().create_future()
     try:
         return await asyncio.wait_for(_pending, timeout=FLOW_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise RuntimeError(
             "sign-in timed out — the browser window was not completed in "
             f"{FLOW_TIMEOUT_SECONDS // 60} minutes"

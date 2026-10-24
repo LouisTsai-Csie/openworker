@@ -648,7 +648,7 @@ def mount_acceptor(
             status, body, _ = await live.rpc.request_frame(
                 {"type": "secret_deploy", "sealed_b64": sealed}
             )
-        except (asyncio.TimeoutError, ConnectionError):
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         if status != 200:
             detail = _safe_json(body)
@@ -716,7 +716,7 @@ def mount_acceptor(
                     "sealed_b64": sealed,
                 }
             )
-        except (asyncio.TimeoutError, ConnectionError):
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         detail = _safe_json(body)
         audit.emit(
@@ -764,7 +764,7 @@ def mount_acceptor(
             status, body, _ = await live.rpc.request_frame(
                 {"type": "managed_grant_sealed", "connector": name, "sealed_b64": sealed}
             )
-        except (asyncio.TimeoutError, ConnectionError):
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         detail = _safe_json(body)
         audit.emit(
@@ -795,7 +795,7 @@ def mount_acceptor(
             status, body, _ = await live.rpc.request_frame(
                 {"type": "secret_revoke", "profiles": names}
             )
-        except (asyncio.TimeoutError, ConnectionError):
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         if status != 200:
             detail = _safe_json(body)
@@ -844,7 +844,7 @@ def mount_acceptor(
                 # header the caller could set.
                 actor=str(tenant.get("actor") or ""),
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return JSONResponse({"error": "machine timed out"}, status_code=504)
         except ConnectionError:
             return JSONResponse({"error": "machine disconnected"}, status_code=503)
@@ -893,7 +893,7 @@ def mount_acceptor(
                     registry.save_transcript(machine_id, session_id, text)
                     data = json.loads(text)
                     return {"messages": data.get("messages", []), "live": True}
-            except (asyncio.TimeoutError, ConnectionError, ValueError):
+            except (TimeoutError, ConnectionError, ValueError):
                 pass  # fall through to the cache
         cached = registry.transcript(machine_id, session_id)
         if cached is None:
@@ -923,7 +923,7 @@ def mount_acceptor(
                     )
                     data = json.loads(payload.decode("utf-8"))
                     return {"sessions": data.get("sessions", []), "live": True}
-            except (asyncio.TimeoutError, ConnectionError, ValueError):
+            except (TimeoutError, ConnectionError, ValueError):
                 pass  # fall through to the snapshot
         snapshot = registry.sessions_snapshot(machine_id)
         if snapshot is None:
@@ -1142,7 +1142,7 @@ def mount_acceptor(
                                     _int(parsed.get("version")) if ok else reported,
                                     "applied" if ok and parsed.get("applied") else ("ignored" if ok else "failed"),
                                 )
-                            except (asyncio.TimeoutError, ConnectionError):
+                            except (TimeoutError, ConnectionError):
                                 _record(policy_status, machine_id, known, reported, "unreachable")
 
                         _policy_task = asyncio.create_task(_send_newer())

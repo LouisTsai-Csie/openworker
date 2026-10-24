@@ -986,7 +986,7 @@ def _run(args: argparse.Namespace) -> int:
             return True
         try:
             await asyncio.wait_for(stop["event"].wait(), timeout=seconds)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
         return True
 
@@ -1104,7 +1104,7 @@ def _run(args: argparse.Namespace) -> int:
 
     try:
         asyncio.run(guarded())
-    except asyncio.TimeoutError:
+    except TimeoutError:
         outcome = "timeout"
         try:
             engine.request_interrupt()
