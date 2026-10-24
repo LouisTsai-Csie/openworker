@@ -132,10 +132,9 @@ def classify(
     )
     if overrides is not None:
         ov = overrides(tool_name)
-        if ov is not None:
-            if base is None or _STRICTNESS[ov] >= _STRICTNESS[base]:
-                return ov
-            # A loosening override on a floored tool is ignored: fall through to the base.
+        if ov is not None and (base is None or _STRICTNESS[ov] >= _STRICTNESS[base]):
+            return ov
+        # A loosening override on a floored tool is ignored: fall through to the base.
     if base is not None:
         return base
     if bool(getattr(metadata, "requires_approval", False)):

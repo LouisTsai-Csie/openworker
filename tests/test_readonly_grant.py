@@ -6,6 +6,8 @@ negative costs one manual approval; a false positive costs an unreviewed side ef
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from coworker.permissions import Mode, PermissionEngine
@@ -140,7 +142,7 @@ def test_engine_grant_gates_on_classifier(tmp_path):
     class Meta:
         category = "shell"
         risk_level = "high"
-        capabilities = ["exec"]
+        capabilities: ClassVar[list[str]] = ["exec"]
 
     # Before the grant: a read-only command still asks.
     d = eng.evaluate("run_shell", {"command": "ls -la"}, Meta())
@@ -159,8 +161,8 @@ def test_grant_persists_via_session_grants(tmp_path):
 
     class FakeEngine:
         class permissions:
-            session_allow_tools = set()
-            session_allow_commands = set()
+            session_allow_tools: ClassVar[set[str]] = set()
+            session_allow_commands: ClassVar[set[str]] = set()
             session_readonly = True
 
     grants = _grants_of(FakeEngine)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, ClassVar
 from collections.abc import Callable
 
 import aisuite as ai
@@ -45,7 +45,7 @@ _SCHEMA = {
 class _TextExtractor(HTMLParser):
     """Collect visible text, skipping script/style/etc."""
 
-    _SKIP = {"script", "style", "noscript", "svg", "head"}
+    _SKIP: ClassVar[set[str]] = {"script", "style", "noscript", "svg", "head"}
 
     def __init__(self) -> None:
         super().__init__()

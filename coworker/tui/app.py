@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from textual import work
 from textual.app import App, ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Static
@@ -32,7 +32,7 @@ def _short(value: Any, limit: int = 80) -> str:
 
 
 class ApprovalScreen(ModalScreen[ApprovalOutcome]):
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("y", "decide('once')", "Approve"),
         Binding("n", "decide('deny')", "Deny"),
         Binding("a", "decide('always_tool')", "Always tool"),
@@ -73,7 +73,7 @@ class CoworkerApp(App):
     #approval-buttons { height: auto; padding-top: 1; }
     #approval-buttons Button { margin-right: 1; }
     """
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+c", "quit", "Quit"),
         Binding("escape", "interrupt", "Interrupt"),
     ]
@@ -196,9 +196,8 @@ class CoworkerApp(App):
             self._write("[red]⏹ interrupted[/red]")
         elif event.type is EventType.ERROR:
             self._write(f"[red]error: {data.get('error')}[/red]")
-        elif event.type is EventType.TURN_END:
-            if data.get("status") == "max_iterations_exceeded":
-                self._write("[red]⚠ stopped: max iterations reached[/red]")
+        elif event.type is EventType.TURN_END and data.get("status") == "max_iterations_exceeded":
+            self._write("[red]⚠ stopped: max iterations reached[/red]")
 
     def _write(self, text: str) -> None:
         self.rendered.append(text)

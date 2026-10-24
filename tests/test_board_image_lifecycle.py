@@ -61,7 +61,8 @@ def test_image_survives_source_deletion_and_actual_worktree_removal(manager, tmp
 def test_agent_attachment_tracks_live_grants_and_resolves_relative_paths(manager, tmp_path):
     _, _, item = create_item(manager)
     workspace, extra = tmp_path / "workspace", tmp_path / "extra"
-    workspace.mkdir(); extra.mkdir()
+    workspace.mkdir()
+    extra.mkdir()
     (workspace / "proof.png").write_bytes(PNG)
     (extra / "proof.png").write_bytes(PNG)
     roots = [RootDir(workspace)]

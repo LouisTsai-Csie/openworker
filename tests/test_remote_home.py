@@ -544,30 +544,29 @@ async def test_device_flow_mints_identity_bound_token(tmp_path):
 
 
 async def test_device_flow_deny(tmp_path):
-    async with _Server(_controller(tmp_path)) as server:
-        async with httpx.AsyncClient() as client:
-            start = (
-                await client.post(
-                    f"{server.base}/v1/remote/device/start",
-                    json={"name": "vm", "fingerprint": "fp"},
-                )
-            ).json()
-            resp = await client.post(
-                f"{server.base}/v1/remote/device/{start['user_code']}/deny"
+    async with _Server(_controller(tmp_path)) as server, httpx.AsyncClient() as client:
+        start = (
+            await client.post(
+                f"{server.base}/v1/remote/device/start",
+                json={"name": "vm", "fingerprint": "fp"},
             )
-            assert resp.status_code == 200
-            poll = (
-                await client.post(
-                    f"{server.base}/v1/remote/device/poll",
-                    json={"device_code": start["device_code"]},
-                )
-            ).json()
-            assert poll["status"] == "denied"
-            # Denied grants can't be resurrected by a late approve.
-            resp = await client.post(
-                f"{server.base}/v1/remote/device/{start['user_code']}/approve"
+        ).json()
+        resp = await client.post(
+            f"{server.base}/v1/remote/device/{start['user_code']}/deny"
+        )
+        assert resp.status_code == 200
+        poll = (
+            await client.post(
+                f"{server.base}/v1/remote/device/poll",
+                json={"device_code": start["device_code"]},
             )
-            assert resp.status_code == 404
+        ).json()
+        assert poll["status"] == "denied"
+        # Denied grants can't be resurrected by a late approve.
+        resp = await client.post(
+            f"{server.base}/v1/remote/device/{start['user_code']}/approve"
+        )
+        assert resp.status_code == 404
 
 
 async def test_auth_join_cli_runs_device_flow(tmp_path, monkeypatch):
@@ -719,35 +718,34 @@ async def test_rename_machine(tmp_path):
 
 
 async def test_join_hint_page_is_tokenless_and_constant(tmp_path):
-    async with _Server(_controller(tmp_path)) as server:
-        async with httpx.AsyncClient() as client:
-            real = await _arm(server.base)
-            _, token = parse_join_url(real)
-            valid = await client.get(f"{server.base}/j/{token}")
-            bogus = await client.get(f"{server.base}/j/definitely-not-a-token")
-            assert valid.status_code == bogus.status_code == 200
-            assert valid.text == bogus.text  # must not confirm token validity
-            # …and looking at the hint page must NOT consume the token: a real
-            # join with it still works.
-            state = tmp_path / "hint-state"
-            state.mkdir()
-            task = asyncio.create_task(
-                run_joined(
-                    state=state,
-                    controller=server.base,
-                    name="hint",
-                    token=token,
-                    app=_box_app(tmp_path, "hint-data"),
-                    once=True,
-                    log=lambda *_: None,
-                )
+    async with _Server(_controller(tmp_path)) as server, httpx.AsyncClient() as client:
+        real = await _arm(server.base)
+        _, token = parse_join_url(real)
+        valid = await client.get(f"{server.base}/j/{token}")
+        bogus = await client.get(f"{server.base}/j/definitely-not-a-token")
+        assert valid.status_code == bogus.status_code == 200
+        assert valid.text == bogus.text  # must not confirm token validity
+        # …and looking at the hint page must NOT consume the token: a real
+        # join with it still works.
+        state = tmp_path / "hint-state"
+        state.mkdir()
+        task = asyncio.create_task(
+            run_joined(
+                state=state,
+                controller=server.base,
+                name="hint",
+                token=token,
+                app=_box_app(tmp_path, "hint-data"),
+                once=True,
+                log=lambda *_: None,
             )
-            try:
-                await _wait_connected(server.base)
-            finally:
-                task.cancel()
-                with pytest.raises(asyncio.CancelledError):
-                    await task
+        )
+        try:
+            await _wait_connected(server.base)
+        finally:
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
 
 
 async def test_offline_machine_serves_session_snapshot(tmp_path):
@@ -1398,32 +1396,31 @@ async def test_cloud_service_token_gate(tmp_path, monkeypatch):
     from coworker.remote.service import create_cloud_app
 
     monkeypatch.setenv("COWORKER_API_TOKEN", "cloud-secret")
-    async with _Server(create_cloud_app(tmp_path / "cloud")) as server:
-        async with httpx.AsyncClient() as client:
-            open_paths = await client.get(f"{server.base}/v1/health")
-            assert open_paths.status_code == 200
-            denied = await client.get(f"{server.base}/v1/machines")
-            assert denied.status_code == 401
-            allowed = await client.get(
-                f"{server.base}/v1/machines",
-                headers={"x-openworker-token": "cloud-secret"},
-            )
-            assert allowed.status_code == 200
-            # Machine-facing device-flow halves are tokenless (a box holds no
-            # dashboard token); approval is not.
-            start = await client.post(
-                f"{server.base}/v1/remote/device/start", json={"name": "vm"}
-            )
-            assert start.status_code == 200
-            poll = await client.post(
-                f"{server.base}/v1/remote/device/poll",
-                json={"device_code": start.json()["device_code"]},
-            )
-            assert poll.status_code == 200 and poll.json()["status"] == "pending"
-            gated = await client.post(
-                f"{server.base}/v1/remote/device/{start.json()['user_code']}/approve"
-            )
-            assert gated.status_code == 401
+    async with _Server(create_cloud_app(tmp_path / "cloud")) as server, httpx.AsyncClient() as client:
+        open_paths = await client.get(f"{server.base}/v1/health")
+        assert open_paths.status_code == 200
+        denied = await client.get(f"{server.base}/v1/machines")
+        assert denied.status_code == 401
+        allowed = await client.get(
+            f"{server.base}/v1/machines",
+            headers={"x-openworker-token": "cloud-secret"},
+        )
+        assert allowed.status_code == 200
+        # Machine-facing device-flow halves are tokenless (a box holds no
+        # dashboard token); approval is not.
+        start = await client.post(
+            f"{server.base}/v1/remote/device/start", json={"name": "vm"}
+        )
+        assert start.status_code == 200
+        poll = await client.post(
+            f"{server.base}/v1/remote/device/poll",
+            json={"device_code": start.json()["device_code"]},
+        )
+        assert poll.status_code == 200 and poll.json()["status"] == "pending"
+        gated = await client.post(
+            f"{server.base}/v1/remote/device/{start.json()['user_code']}/approve"
+        )
+        assert gated.status_code == 401
 
 
 def test_audit_log_ocsf_shape_and_write_failure(tmp_path):

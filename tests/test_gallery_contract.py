@@ -13,6 +13,8 @@ No network, no LLM."""
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import asyncio
 import json
 from pathlib import Path
@@ -132,7 +134,7 @@ def test_approval_prompt_data_matches_the_gallery(gallery_manager, contract):
 
     class Request:
         tool_name = "run_shell"
-        arguments = {"command": "ls"}
+        arguments: ClassVar[dict[str, str]] = {"command": "ls"}
         metadata = None
 
     canonical, states = _inbox_data(card)
@@ -167,7 +169,7 @@ def test_lead_decision_payload_matches_the_gallery(gallery_manager, contract):
 
     class Request:
         tool_name = "decide_worker_call"
-        arguments = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
+        arguments: ClassVar[dict[str, str]] = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
         metadata = None
 
     data = gallery_manager.approval_prompt_data("lead-sid", Request())

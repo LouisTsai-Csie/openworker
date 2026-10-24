@@ -6,6 +6,8 @@ the human to connect a service (request_connector). No network, no LLM."""
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from coworker.agents.base import Agent
@@ -486,7 +488,8 @@ def test_worker_model_prefers_the_human_then_the_recommendation_then_the_lead(ma
     # A human pick this machine cannot run is ignored, not obeyed into a dead worker.
     assert manager.resolve_worker_model("swe-worker", human_pick="google:gemini-x", lead_model=sonnet) == (opus, "")
     # Nothing recommended can run here: the lead's model, with a warning that says why.
-    runnable.clear(); runnable.add(sonnet)
+    runnable.clear()
+    runnable.add(sonnet)
     model, warning = manager.resolve_worker_model("swe-worker", lead_model=sonnet)
     assert model == sonnet
     assert "lead's model" in warning and "Neither is set up on this machine" in warning
@@ -497,7 +500,9 @@ def test_team_card_payload_carries_models_for_the_machine_the_workers_run_on(man
     monkeypatch.setattr(manager, "model_selectable", lambda m: m == sonnet)
     monkeypatch.setattr(manager, "_curated_models", lambda: [sonnet, opus])
     _lead(manager)
-    lead = manager.session_store.load("lead-sid"); lead.model = sonnet; manager.session_store.save(lead)
+    lead = manager.session_store.load("lead-sid")
+    lead.model = sonnet
+    manager.session_store.save(lead)
     extras = manager.team_card_extras("lead-sid", [{"persona": "swe-worker", "name": "nia"}, {"persona": "test-worker", "name": "checks"}])
     assert extras["lead_model"] == sonnet
     assert extras["model_options"] == {"swe-worker": [], "test-worker": []}
@@ -569,7 +574,7 @@ def test_the_leads_approval_card_carries_the_workers_call(manager):
 
     class Request:
         tool_name = "decide_worker_call"
-        arguments = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
+        arguments: ClassVar[dict[str, str]] = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
         metadata = None
 
     data = manager.approval_prompt_data("lead-sid", Request())

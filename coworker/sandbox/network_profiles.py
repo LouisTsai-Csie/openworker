@@ -54,7 +54,7 @@ def clean_host(item: str) -> str:
         host, port = text, "443"
     name = host[2:] if host.startswith("*.") else host
     labels = name.split(".")
-    if not port.isdigit() or not 0 < int(port) < 65536 or len(labels) < 2 or not all(l and all(c.isalnum() or c == "-" for c in l) for l in labels):
+    if not port.isdigit() or not 0 < int(port) < 65536 or len(labels) < 2 or not all(label and all(c.isalnum() or c == "-" for c in label) for label in labels):
         raise ValueError(f"not a host name: {item!r} (for example api.example.com:443)")
     return f"{host}:{int(port)}"
 

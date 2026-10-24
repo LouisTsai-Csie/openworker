@@ -301,7 +301,7 @@ def make_summary(manager, team, now):
         )
         item["last_event"] = activity[-1]["kind"] if activity else "item_created"
         item["waiting"] = waits.get(item["id"])
-        blockers = [l for l in item.get("links", []) if l["kind"] == "blocked_by"]
+        blockers = [link for link in item.get("links", []) if link["kind"] == "blocked_by"]
         item["group"] = (
             "waiting"
             if item["waiting"] or (item["state"] == "blocked" and not blockers)

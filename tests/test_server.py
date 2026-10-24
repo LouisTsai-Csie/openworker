@@ -471,15 +471,14 @@ def test_ws_rate_limits_inbound_frames(tmp_path):
     from starlette.websockets import WebSocketDisconnect
 
     client = _client(tmp_path, [])
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/session/rate") as ws:
-            assert ws.receive_json()["type"] == "ready"
-            for _ in range(app_mod._WS_RATE_LIMIT_COUNT):
-                ws.send_json({"type": "unknown"})
-                assert ws.receive_json()["type"] == "input_rejected"
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/session/rate") as ws:
+        assert ws.receive_json()["type"] == "ready"
+        for _ in range(app_mod._WS_RATE_LIMIT_COUNT):
             ws.send_json({"type": "unknown"})
             assert ws.receive_json()["type"] == "input_rejected"
-            ws.receive_json()
+        ws.send_json({"type": "unknown"})
+        assert ws.receive_json()["type"] == "input_rejected"
+        ws.receive_json()
 
 
 def test_server_sets_explicit_websocket_frame_limit(tmp_path, monkeypatch):
@@ -670,9 +669,8 @@ def test_sidecar_token_gates_rest_and_websockets(tmp_path, monkeypatch):
     assert rejected.status_code == 401
     assert not global_mcp_path().exists()
 
-    with pytest.raises(WSD) as denied:
-        with client.websocket_connect("/ws/session/tokenless") as ws:
-            ws.receive_json()
+    with pytest.raises(WSD) as denied, client.websocket_connect("/ws/session/tokenless") as ws:
+        ws.receive_json()
     assert denied.value.code == 1008
 
     with client.websocket_connect(

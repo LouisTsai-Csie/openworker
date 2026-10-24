@@ -20,7 +20,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from coworker import model_config as _model_config
 from coworker.agent import build_engine
@@ -1911,9 +1911,8 @@ class SessionManager:
                 answered_by_session[item.session_id] = {
                     m.get("tool_call_id") for m in messages if m.get("role") == "tool"
                 }
-            if item.tool_call_id in answered_by_session[item.session_id]:
-                if self.inbox.resolve(item.id, "interrupted", by="system:obsolete-prompt"):
-                    retired += 1
+            if item.tool_call_id in answered_by_session[item.session_id] and self.inbox.resolve(item.id, "interrupted", by="system:obsolete-prompt"):
+                retired += 1
         return retired
 
     async def resolve_inbox(self, item_id: str, resolution: str, by: str = "") -> bool:
@@ -4149,7 +4148,7 @@ class SessionManager:
 
     # Suggestions for the OpenAI-compatible vendor providers (checked against vendor docs
     # 2026-07-04; refresh alongside `recommended_model` in providers/registry.py).
-    COMPAT_MODELS = {
+    COMPAT_MODELS: ClassVar[dict[str, list[str]]] = {
         "zai": ["glm-5.2", "glm-4.6"],
         "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
         "kimi": ["kimi-k2.6", "kimi-k2.5"],
@@ -5307,7 +5306,7 @@ class SessionManager:
     # Protected item kinds: resolving one runs a consequential action / grants a filesystem
     # root / commits a plan, so only an authorized owner may resolve it — never a bare
     # allow-listed chat member. Questions and free-text answers are NOT protected.
-    _PROTECTED_ITEM_KINDS = {"approval", "directory", "plan"}
+    _PROTECTED_ITEM_KINDS: ClassVar[set[str]] = {"approval", "directory", "plan"}
 
     def _actor_owns_protected_item(
         self,
@@ -6534,31 +6533,30 @@ class SessionManager:
         item = self.inbox.get(item_id)
         if item is None:
             return
-        if item.kind in self._PROTECTED_ITEM_KINDS:
-            if not self._actor_owns_protected_item(
-                item,
-                platform=str(getattr(event, "platform", "") or ""),
-                actor_id=str(getattr(event, "user_id", "") or ""),
-                chat_id=getattr(event, "chat_id", "") or "",
-                team_id=getattr(event, "team_id", None),
-            ):
-                platform = str(getattr(event, "platform", "") or "")
-                if self.gateway is not None:
-                    # Slack answers with an ephemeral; everywhere else the gateway's
-                    # reject path is a no-op, so send the same sentence as a plain reply.
-                    await self.gateway.reject_interaction(event)
-                    if platform != "slack":
-                        from coworker.connectors.base import format_target
-                        from coworker.connectors.gateway import APPROVAL_OWNER_REQUIRED
+        if item.kind in self._PROTECTED_ITEM_KINDS and not self._actor_owns_protected_item(
+            item,
+            platform=str(getattr(event, "platform", "") or ""),
+            actor_id=str(getattr(event, "user_id", "") or ""),
+            chat_id=getattr(event, "chat_id", "") or "",
+            team_id=getattr(event, "team_id", None),
+        ):
+            platform = str(getattr(event, "platform", "") or "")
+            if self.gateway is not None:
+                # Slack answers with an ephemeral; everywhere else the gateway's
+                # reject path is a no-op, so send the same sentence as a plain reply.
+                await self.gateway.reject_interaction(event)
+                if platform != "slack":
+                    from coworker.connectors.base import format_target
+                    from coworker.connectors.gateway import APPROVAL_OWNER_REQUIRED
 
-                        try:
-                            await self.gateway.deliver(
-                                format_target(platform, str(getattr(event, "chat_id", "") or "")),
-                                APPROVAL_OWNER_REQUIRED,
-                            )
-                        except Exception:
-                            logger.debug("refusal reply failed", exc_info=True)
-                return
+                    try:
+                        await self.gateway.deliver(
+                            format_target(platform, str(getattr(event, "chat_id", "") or "")),
+                            APPROVAL_OWNER_REQUIRED,
+                        )
+                    except Exception:
+                        logger.debug("refusal reply failed", exc_info=True)
+            return
         already = item is not None and item.state != "pending"
         resolved = await self.resolve_inbox(item_id, resolution)
         if not resolved and not already:
@@ -6597,20 +6595,19 @@ class SessionManager:
             # consuming them into a silent refusal.
             if item.kind in {"plan", "directory"}:
                 return False
-            if item.kind in self._PROTECTED_ITEM_KINDS:
-                if not self._actor_owns_protected_item(
-                    item,
-                    platform=str(getattr(event.source, "platform", "") or ""),
-                    actor_id=str(getattr(event.source, "user_id", "") or ""),
-                    chat_id=getattr(event.source, "chat_id", "") or "",
-                    team_id=getattr(event.source, "team_id", None),
-                ):
-                    self._notify_refused_reply(
-                        str(getattr(event.source, "platform", "") or ""),
-                        getattr(event.source, "chat_id", "") or "",
-                        getattr(event.source, "thread_id", None),
-                    )
-                    return False
+            if item.kind in self._PROTECTED_ITEM_KINDS and not self._actor_owns_protected_item(
+                item,
+                platform=str(getattr(event.source, "platform", "") or ""),
+                actor_id=str(getattr(event.source, "user_id", "") or ""),
+                chat_id=getattr(event.source, "chat_id", "") or "",
+                team_id=getattr(event.source, "team_id", None),
+            ):
+                self._notify_refused_reply(
+                    str(getattr(event.source, "platform", "") or ""),
+                    getattr(event.source, "chat_id", "") or "",
+                    getattr(event.source, "thread_id", None),
+                )
+                return False
             return self.inbox.resolve(item_id, resolution)
 
         return resolve_from_reply(text, _resolve) is not None
@@ -6730,10 +6727,9 @@ class SessionManager:
             return False  # user/board activity won the scheduled-task race
         if board_delivery and session_id in self.wakes.stopped_sessions:
             return False
-        if board_delivery and not self._pending_board_context(session_id)[0]:
-            # Backstop messages are not feed deliveries.
-            if (source or {}).get("board", {}).get("rows"):
-                return False
+        # Backstop messages are not feed deliveries.
+        if board_delivery and not self._pending_board_context(session_id)[0] and (source or {}).get("board", {}).get("rows"):
+            return False
         if not self.try_mark_running(session_id):
             if board_delivery or wake is not None:
                 return False  # defer; never inject routine wakes into a running turn

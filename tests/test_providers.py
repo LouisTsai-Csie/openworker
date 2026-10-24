@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 from types import SimpleNamespace
 
@@ -218,7 +220,7 @@ def test_max_tokens_rejection_retries_as_max_completion_tokens():
 
 def test_unrelated_400s_are_not_retried():
     class _AlwaysRejects:
-        calls: list = []
+        calls: ClassVar[list] = []
 
         def create(self, **kwargs):
             self.calls.append(kwargs)

@@ -40,7 +40,8 @@ def test_both_sleep_tools_replace_each_other_without_changing_subscriptions(tmp_
     relative, absolute, job, event = selfwake_tools(store, "lead")
     first = relative(180, "Old")
     second = absolute((datetime.now(UTC) + timedelta(seconds=100)).isoformat(), "New")
-    job("job"); event("event")
+    job("job")
+    event("event")
     assert first["wake_id"] not in {w.id for w in store.pending()}
     assert len(store.pending()) == 3
     store.cancel_sleep("lead", "board activity")

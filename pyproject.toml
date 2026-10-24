@@ -185,14 +185,8 @@ ignore = [
                # Untangling those cycles is the real fix and is its own piece of work.
     "A002",    #  14x a parameter named `id` / `type` / `input`. These are public tool
                # and HTTP signatures; renaming them changes the wire API.
-    "RUF012",  #  13x mutable-class-default wants ClassVar on every dataclass default.
-    "SIM102",  #   9x collapsible if. Readability preference.
-    "SIM117",  #   7x nested with. Readability preference.
-    "E702",    #   5x semicolon. Style.
-    "E741",    #   4x `l` / `I` as a name. Style.
     "B017",    #   4x assertRaises(Exception) in tests, where broad IS the assertion.
     "B008",    #   2x function-call-in-default-argument: that IS FastAPI's Depends().
-    "SIM112",  #   1x uncapitalised environment variable.
     "RUF001", "RUF002", "RUF003",  # 27x "ambiguous" unicode — the em dashes and arrows
                # running through these comments and strings are intentional.
 ]

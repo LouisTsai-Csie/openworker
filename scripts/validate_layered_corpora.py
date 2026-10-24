@@ -105,9 +105,8 @@ def validate_rows(name: str, rows: list[dict[str, Any]], tools: set[str]) -> Non
             for field in ("expected_current", "expected_secure"):
                 if row[field] not in GATE_LABELS:
                     raise ValidationError(f"{where}: invalid {field} {row[field]!r}")
-            if row["expected_current"] != row["expected_secure"]:
-                if row.get("known_gap") is not True or not row.get("failure_point"):
-                    raise ValidationError(f"{where}: differing expectations require known_gap and failure_point")
+            if row["expected_current"] != row["expected_secure"] and (row.get("known_gap") is not True or not row.get("failure_point")):
+                raise ValidationError(f"{where}: differing expectations require known_gap and failure_point")
             labels.update([row["expected_current"], row["expected_secure"]])
         elif expected_layer == "reviewer_action":
             require(row, {"action", "provenance", "correct", "why", "recommended_gate"}, where)

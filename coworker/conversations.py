@@ -198,10 +198,9 @@ class ConversationStore:
         for i, m in enumerate(messages):
             if m.get("role") == "tool":
                 call_id = m.get("tool_call_id")
-                if call_id and call_id in pending_calls:
-                    # Only keep the first result for each call.
-                    if call_id not in found_results:
-                        found_results[call_id] = i
+                # Only keep the first result for each call.
+                if call_id and call_id in pending_calls and call_id not in found_results:
+                    found_results[call_id] = i
 
         # Determine which calls are "trailing" — the assistant block is the
         # last message in the thread (nothing after it).  These are pending

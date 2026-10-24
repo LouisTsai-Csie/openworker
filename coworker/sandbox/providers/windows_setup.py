@@ -38,7 +38,7 @@ from coworker.sandbox import netproxy
 OPEN, CLOSED = "open", "closed"
 ACCOUNTS = {OPEN: "OWSandboxOpenNet", CLOSED: "OWSandboxClosedNet"}  # 20 characters at most
 LEGACY_ACCOUNTS = ("OpenWorkerSandbox", "OwSandbox")  # the first build and the spike
-ROOT = Path(os.environ.get("ProgramData", r"C:\ProgramData")) / "OpenWorker" / "sandbox"
+ROOT = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "OpenWorker" / "sandbox"
 SANDBOXES = ROOT / "sandboxes"
 CRED_FILE = ROOT / "account.cred"
 STATE_FILE = ROOT / "setup.json"
