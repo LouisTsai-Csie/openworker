@@ -187,9 +187,13 @@ ignore = [
                # and HTTP signatures; renaming them changes the wire API.
     "B017",    #   4x assertRaises(Exception) in tests, where broad IS the assertion.
     "B008",    #   2x function-call-in-default-argument: that IS FastAPI's Depends().
-    "RUF001", "RUF002", "RUF003",  # 27x "ambiguous" unicode — the em dashes and arrows
-               # running through these comments and strings are intentional.
 ]
+
+# RUF001/2/3 stay ON; these fifteen characters are the ones this codebase means. Each was
+# read at every site (2026-10-24): math (− ∪ × ∗ ⨯ ⟋ α), numeric ranges (–), prose and UI
+# placeholders (‹ › ‘ ’), and a fullwidth comma inside a Chinese test fixture (，). Anything
+# NOT on this list — a Cyrillic `а`, a Greek `ο` — still fails CI, which is the point.
+allowed-confusables = ["−", "–", "×", "∗", "⨯", "⟋", "∪", "α", "‹", "›", "‘", "’", "，"]
 
 [tool.ruff.lint.per-file-ignores]
 # DELIBERATE at these sites. Read and confirmed, not deferred. Anything that was
