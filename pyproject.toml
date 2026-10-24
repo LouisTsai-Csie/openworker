@@ -167,20 +167,24 @@ select = [
 
 ignore = [
     # Every entry here is a rule the codebase still violates, with the count measured
-    # 2026-10-20. Rules that have been burned down are deleted from this list, not left
+    # 2026-10-24. Rules that have been burned down are deleted from this list, not left
     # behind: the list is the remaining debt, not a history of it.
 
     # --- The formatter's job, not a manual sweep -------------------------------
-    "E501",    # 7396x line-too-long. `ruff format` reflows code; the residue is long
+    "E501",    # 7482x line-too-long. `ruff format` reflows code; the residue is long
                # string literals, URLs and comments. Adopt the formatter in its own PR.
 
     # --- Disagrees with a deliberate choice here -------------------------------
+    "SIM105",  # 129x try/except/pass -> contextlib.suppress. Measured on this 3.12 floor
+               # (2026-10-24): the bare form costs 38ns a pass, `suppress` 420ns — 11x, for
+               # a construct that buys nothing but the linter's approval. The spread is 105
+               # straight-line sites to 24 inside a loop, so this is NOT about hot paths; it
+               # is that the slower spelling is not an improvement anywhere.
+
     "BLE001",  # 258x blind `except Exception`. This is an agent runtime: one bad
                # connector must not take the server down. Most sites carry a trailing
                # comment naming what must survive. Narrowing each one needs a per-site
                # judgement about what the try block can raise — real work, not a sweep.
-    "SIM105",  # 129x try/except/pass -> contextlib.suppress: slower, and the explicit
-               # form reads better in the hot paths where most of these sit.
 ]
 
 # RUF001/2/3 stay ON; these fifteen characters are the ones this codebase means. Each was
