@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -124,7 +125,7 @@ def test_load_credentials_blank_means_adc():
 
 
 def test_load_credentials_bad_json_raises():
-    with pytest.raises(Exception):
+    with pytest.raises(json.JSONDecodeError):
         load_credentials('{"type": "service_account"')  # malformed JSON
 
 

@@ -300,7 +300,8 @@ async def test_stdio_startup_crash_captures_stderr_tail(tmp_path, monkeypatch):
         command="/bin/sh",
         args=["-c", "echo 'usage: doomed --flag' >&2; exit 7"],
     )
-    with pytest.raises(Exception):
+    # The SDK's anyio transport surfaces a failed launch as a group, not a bare error.
+    with pytest.raises(ExceptionGroup):
         await mgr.ensure(server)
     tail = mgr.last_stderr("doomed")
     assert tail is not None and "usage: doomed --flag" in tail

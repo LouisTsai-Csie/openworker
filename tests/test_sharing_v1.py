@@ -104,9 +104,9 @@ def test_zip_slip_and_garbage_are_rejected(tmp_path):
     evil = io.BytesIO()
     with zipfile.ZipFile(evil, "w") as zf:
         zf.writestr("../../outside.md", "nope")
-    with pytest.raises(Exception):
+    with pytest.raises(FileNotFoundError, match="unsafe path in archive"):
         reg.install_from_zip(evil.getvalue(), "evil.zip")
-    with pytest.raises(Exception):
+    with pytest.raises(FileNotFoundError, match="not a valid bundle archive"):
         reg.install_from_zip(b"not a zip", "garbage.zip")
 
 

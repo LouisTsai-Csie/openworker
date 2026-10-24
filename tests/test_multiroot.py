@@ -30,8 +30,8 @@ def _bare_engine(**kw):
     )
 
 
-async def _collect(aiter):
-    return [e async for e in aiter]
+async def _collect(events):
+    return [e async for e in events]
 
 
 def _roots(tmp_path):

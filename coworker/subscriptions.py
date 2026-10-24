@@ -57,15 +57,15 @@ class SubscriptionStore:
 
     # -- mutations --------------------------------------------------------------
     def subscribe(
-        self, session_id: str, channel: str, *, filter: str = "all"
+        self, session_id: str, channel: str, *, filter_mode: str = "all"
     ) -> Subscription:
         with self._lock:
             for s in self._subs:
                 if s.session_id == session_id and s.channel == channel:
-                    s.filter = filter
+                    s.filter = filter_mode
                     self._save()
                     return s
-            sub = Subscription(session_id=session_id, channel=channel, filter=filter)
+            sub = Subscription(session_id=session_id, channel=channel, filter=filter_mode)
             self._subs.append(sub)
             self._save()
             return sub

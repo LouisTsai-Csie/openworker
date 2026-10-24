@@ -112,7 +112,7 @@ class PersonaRegistry:
     # -- loading ----------------------------------------------------------------
     def _register_builder(
         self,
-        id,
+        persona_id,
         name,
         icon,
         tagline,
@@ -125,8 +125,8 @@ class PersonaRegistry:
         default_enabled=True,
         group="general",
     ) -> None:
-        self._entries[id] = PersonaEntry(
-            id=id,
+        self._entries[persona_id] = PersonaEntry(
+            id=persona_id,
             name=name,
             icon=icon,
             tagline=tagline,

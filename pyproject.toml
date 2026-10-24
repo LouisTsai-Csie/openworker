@@ -183,10 +183,6 @@ ignore = [
                # form reads better in the hot paths where most of these sit.
     "E402",    #  33x import-not-at-top. Deliberate late imports break import cycles.
                # Untangling those cycles is the real fix and is its own piece of work.
-    "A002",    #  14x a parameter named `id` / `type` / `input`. These are public tool
-               # and HTTP signatures; renaming them changes the wire API.
-    "B017",    #   4x assertRaises(Exception) in tests, where broad IS the assertion.
-    "B008",    #   2x function-call-in-default-argument: that IS FastAPI's Depends().
 ]
 
 # RUF001/2/3 stay ON; these fifteen characters are the ones this codebase means. Each was
@@ -216,6 +212,21 @@ allowed-confusables = ["−", "–", "×", "∗", "⨯", "⟋", "∪", "α", "�
 # B027: `interrupt()` / `close()` are optional no-op hooks on the Executor base.
 # @abstractmethod would force every executor to implement a method most do not need.
 "coworker/sandbox/runner/executor.py" = ["B027"]
+
+# A002: `id` / `format` is a name on a wire, not a local choice. Renaming it changes the
+# tool schema the model is shown (automation/tools.py, integration_tools.py), the HTTP
+# query string (server/app.py), or the Slack payload the fake server mirrors. The four
+# sites where the name WAS local — a test helper, an argparse helper, a private registry
+# method and a keyword nobody passes — were renamed instead of listed here.
+"coworker/automation/tools.py" = ["A002"]
+"coworker/connectors/integration_tools.py" = ["A002"]
+"coworker/server/app.py" = ["A002"]
+"coworker/testing/fake_slack/server.py" = ["A002"]
+
+# B008: two lambda default arguments that bind the current `creds` value at definition
+# time — the standard late-binding guard, and the whole reason they are written there.
+# (This is NOT FastAPI's Depends(), which the repo-wide ignore used to claim it was.)
+"coworker/connectors/descriptors.py" = ["B008"]
 
 # Test fixtures open files and zip fixed-length literals; neither is a leak.
 "tests/test_toolchain.py" = ["SIM115"]

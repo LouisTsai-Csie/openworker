@@ -53,8 +53,8 @@ def _parser() -> argparse.ArgumentParser:
     board = sub.add_parser("board", help="work-item board verbs")
     board_sub = board.add_subparsers(dest="cmd")
 
-    def cmd(name: str, func, help: str, parent=board_sub):
-        p = parent.add_parser(name, help=help)
+    def cmd(name: str, func, help_text: str, parent=board_sub):
+        p = parent.add_parser(name, help=help_text)
         _backing_args(p)
         p.set_defaults(func=func, cmd=name)
         return p
