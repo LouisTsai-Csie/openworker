@@ -407,7 +407,9 @@ class OpenShellProvider:
             log.warning("sandbox create failed for %s: %s", self.sandbox_name, exc)
             if "bind" in str(exc).lower() and "enable" in str(exc).lower():
                 raise OpenShellUnavailable(
-                    "The OpenShell gateway does not allow bind mounts, so it cannot give a sandbox your folders. Set `enable_bind_mounts = true` under `[openshell.drivers.docker]` in the gateway config (`openworker machine sandbox setup` does this)."
+                    "The OpenShell gateway does not allow bind mounts, so it cannot give a sandbox your "
+                    "folders. Set `enable_bind_mounts = true` under `[openshell.drivers.docker]` in the "
+                    "gateway config (`openworker machine sandbox setup` does this)."
                 ) from exc
             if "ContainerExited" in str(exc) and sys.platform == "darwin":
                 # The container's own log says why; the CLI does not. The usual reason on a

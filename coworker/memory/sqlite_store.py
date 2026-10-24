@@ -108,10 +108,11 @@ class SQLiteMemoryStore(MemoryStore):
     def delete_all(self, *, scope: Scope | None = None) -> int:
         """Delete every memory (optionally one scope). Returns the number removed."""
         with self._lock:
-            if scope is not None:
-                cursor = self._conn.execute("DELETE FROM memories WHERE scope = ?", (Scope(scope).value,))
-            else:
-                cursor = self._conn.execute("DELETE FROM memories")
+            cursor = (
+                self._conn.execute("DELETE FROM memories WHERE scope = ?", (Scope(scope).value,))
+                if scope is not None
+                else self._conn.execute("DELETE FROM memories")
+            )
             self._conn.commit()
         return cursor.rowcount
 

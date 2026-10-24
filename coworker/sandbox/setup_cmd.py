@@ -703,7 +703,9 @@ def setup(
     if not rows[ROWS["openshell"]]:
         command = installer_command()
         print_fn(
-            f"OpenShell {PINNED_VERSION} is not installed. NVIDIA's installer downloads a package from their GitHub release,\nchecks its checksum and installs it (it will ask for sudo itself):\n  {command}\nGuide: {GUIDE_URL}"
+            f"OpenShell {PINNED_VERSION} is not installed. NVIDIA's installer downloads a package from "
+            f"their GitHub release,\nchecks its checksum and installs it (it will ask for sudo itself):"
+            f"\n  {command}\nGuide: {GUIDE_URL}"
         )
         if not confirm("Run NVIDIA's installer now?"):
             return 1

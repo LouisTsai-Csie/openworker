@@ -129,7 +129,9 @@ class AuditStore:
             self._conn.execute(
                 """
                 INSERT INTO audit_events
-                    (session_id, agent, workspace, connector, tool, stage, status, approval, args, result_preview, reason, resource, call_id, tokens_in, tokens_out, cache_read, cache_write, actor, approved_by)
+                    (session_id, agent, workspace, connector, tool, stage, status, approval, args,
+                     result_preview, reason, resource, call_id, tokens_in, tokens_out, cache_read,
+                     cache_write, actor, approved_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (

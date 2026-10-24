@@ -175,10 +175,6 @@ ignore = [
     # 2026-10-24. Rules that have been burned down are deleted from this list, not left
     # behind: the list is the remaining debt, not a history of it.
 
-    # --- The formatter's job, not a manual sweep -------------------------------
-    "E501",    # 7482x line-too-long. `ruff format` reflows code; the residue is long
-               # string literals, URLs and comments. Adopt the formatter in its own PR.
-
     # --- Disagrees with a deliberate choice here -------------------------------
     "SIM105",  # 129x try/except/pass -> contextlib.suppress. Measured on this 3.12 floor
                # (2026-10-24): the bare form costs 38ns a pass, `suppress` 420ns — 11x, for
@@ -197,6 +193,15 @@ ignore = [
 # placeholders (‹ › ‘ ’), and a fullwidth comma inside a Chinese test fixture (，). Anything
 # NOT on this list — a Cyrillic `а`, a Greek `ο` — still fails CI, which is the point.
 allowed-confusables = ["−", "–", "×", "∗", "⨯", "⟋", "∪", "α", "‹", "›", "‘", "’", "，"]
+
+# E501 is live, but against 200 rather than the 120 the formatter wraps code at. The
+# formatter cannot reflow a string literal, and at 120 the residue was 144 lines that are
+# long because their CONTENT is long: tool descriptions and prompts the model reads, SQL,
+# embedded JavaScript, HTTP wire strings. Rewrapping those edits what the model is shown.
+# 200 catches the genuinely runaway line while leaving that text alone; the six that did
+# exceed it were split with implicit concatenation, byte-for-byte unchanged.
+[tool.ruff.lint.pycodestyle]
+max-line-length = 200
 
 [tool.ruff.lint.per-file-ignores]
 # DELIBERATE at these sites. Read and confirmed, not deferred. Anything that was
@@ -234,6 +239,12 @@ allowed-confusables = ["−", "–", "×", "∗", "⨯", "⟋", "∪", "α", "�
 # time — the standard late-binding guard, and the whole reason they are written there.
 # (This is NOT FastAPI's Depends(), which the repo-wide ignore used to claim it was.)
 "coworker/connectors/descriptors.py" = ["B008"]
+
+# E501 over 200, in the two places a line break would change the content itself: the
+# compaction summariser's prompt (a triple-quoted block, so not even splittable without
+# putting a real newline into what the model reads) and an embedded PowerShell one-liner.
+"coworker/compaction.py" = ["E501"]
+"coworker/sandbox/providers/windows_setup.py" = ["E501"]
 
 # Test fixtures open files and zip fixed-length literals; neither is a leak.
 "tests/test_toolchain.py" = ["SIM115"]

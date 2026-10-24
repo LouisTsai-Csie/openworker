@@ -59,7 +59,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
         if d.experimental and not show_experimental:
             continue
         profile = secrets.get(f"{d.name}:default") or {}
-        if d.mcp_url and profile.get("mode") == "mcp":
+        if d.mcp_url and profile.get("mode") == "mcp":  # noqa: SIM108 — the branch carries a comment
             # MCP-backed connect: the profile is just a marker — connected-ness
             # lives with the OAuth tokens (mcp-oauth:<name> in the SecretStore).
             connected = _mcp_tokens_present(secrets, d.name)

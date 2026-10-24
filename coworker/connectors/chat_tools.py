@@ -259,7 +259,9 @@ def make_chat_tools(
             slack_post_message,
             _schema(
                 "slack_post_message",
-                "Post a message to a Slack channel or thread. To answer a message you received, pass the workspace, channel and thread_ts it came with — that reply is pre-approved for the thread the session was started for. Plain assistant text is not delivered anywhere.",
+                "Post a message to a Slack channel or thread. To answer a message you received, pass the "
+                "workspace, channel and thread_ts it came with — that reply is pre-approved for the thread "
+                "the session was started for. Plain assistant text is not delivered anywhere.",
                 {
                     "workspace": workspace_prop,
                     "channel": channel_prop,
@@ -274,7 +276,10 @@ def make_chat_tools(
             slack_upload_file,
             _schema(
                 "slack_upload_file",
-                "Upload a file from the session's folders into a Slack channel or thread. Slack previews pdf/csv/images itself — send the actual file. For .html set as_screenshot=true to send a rendered PNG. Uploads always ask for approval, even in a thread where text replies are pre-approved.",
+                "Upload a file from the session's folders into a Slack channel or thread. Slack previews "
+                "pdf/csv/images itself — send the actual file. For .html set as_screenshot=true to send a "
+                "rendered PNG. Uploads always ask for approval, even in a thread where text replies are "
+                "pre-approved.",
                 {
                     "workspace": workspace_prop,
                     "channel": channel_prop,
