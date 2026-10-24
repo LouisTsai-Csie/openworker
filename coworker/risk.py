@@ -11,12 +11,12 @@ to its aisuite metadata (``requires_approval`` → external) or is treated as re
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Optional
 from collections.abc import Callable
 
 
-class RiskClass(str, Enum):
+class RiskClass(StrEnum):
     READ = "read"  # no side effects — always allowed
     EGRESS = "egress"  # reaches the network — the request itself can carry data off-machine
     WRITE_LOCAL = "write_local"  # mutates the workspace — path-scoped + mode-gated

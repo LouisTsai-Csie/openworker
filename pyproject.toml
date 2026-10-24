@@ -186,10 +186,6 @@ ignore = [
     "A002",    #  14x a parameter named `id` / `type` / `input`. These are public tool
                # and HTTP signatures; renaming them changes the wire API.
     "RUF012",  #  13x mutable-class-default wants ClassVar on every dataclass default.
-    "UP042",   #  10x `class X(str, Enum)` -> StrEnum, surfaced by the 3.12 floor.
-               # Not a rename: StrEnum.__str__ returns the value, Enum.__str__
-               # returns "X.MEMBER", so every site that reaches JSON, a log line or
-               # the wire has to be read before it moves. Burned down next.
     "SIM102",  #   9x collapsible if. Readability preference.
     "SIM117",  #   7x nested with. Readability preference.
     "E702",    #   5x semicolon. Style.

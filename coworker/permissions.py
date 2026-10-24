@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import shlex
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from collections.abc import Callable, Sequence
@@ -244,7 +244,7 @@ MODE_LABELS = {
 }
 
 
-class Mode(str, Enum):
+class Mode(StrEnum):
     DISCUSS = "discuss"  # read-only conversation: no edits, no planning workflow
     PLAN = (
         "plan"  # read-only + the planning contract (explore → propose_plan → execute)

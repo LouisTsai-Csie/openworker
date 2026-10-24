@@ -7,11 +7,11 @@ No token streaming in v1, so granularity is per-message/per-tool. Streaming late
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     TURN_START = "turn_start"
     ASSISTANT_DELTA = "assistant_delta"
     REASONING_DELTA = "reasoning_delta"  # model thinking text (display-only, never replayed)

@@ -10,12 +10,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from collections.abc import Awaitable, Callable
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     TEXT = "text"
     COMMAND = "command"
     MEDIA = "media"

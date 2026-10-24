@@ -19,7 +19,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, replace
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -69,7 +69,7 @@ from coworker.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
-class ApprovalOutcome(str, Enum):
+class ApprovalOutcome(StrEnum):
     ONCE = "once"
     ALWAYS_TOOL = "always_tool"
     ALWAYS_COMMAND = "always_command"
