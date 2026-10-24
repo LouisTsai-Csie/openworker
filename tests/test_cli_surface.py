@@ -6,6 +6,12 @@ import pytest
 
 from coworker import cli as ow_cli
 from coworker.remote import joiner
+import argparse
+import json
+import plistlib
+from pathlib import Path
+import shutil
+import subprocess
 
 
 def test_no_arguments_prints_help_that_lists_every_public_command(capsys):
@@ -102,11 +108,6 @@ def test_keys_stores_a_key_and_never_prints_it(tmp_path, monkeypatch, capsys):
 
 
 # -- status --json, logs, and the macOS service ---------------------------------------
-
-import argparse
-import json
-import plistlib
-from pathlib import Path
 
 
 def _joined(tmp_path: Path, name: str = "mini") -> Path:
@@ -206,8 +207,6 @@ def test_service_needs_a_joined_machine_and_a_supported_platform(tmp_path, capsy
 
 # -- packaging/install.sh --------------------------------------------------------------
 
-import shutil
-import subprocess
 
 INSTALL_SH = Path(__file__).resolve().parents[1] / "packaging" / "install.sh"
 

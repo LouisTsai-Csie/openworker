@@ -24,6 +24,22 @@ from typing import Any
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from coworker.attachments import (
+    MAX_ATTACHMENTS as _MAX_ATTACHMENTS,
+    MAX_IMAGE_CHARS,
+    MAX_PDF_CHARS,
+    MAX_TEXT_CHARS,
+    build_user_content,
+)
+from coworker.engine import ApprovalOutcome
+from coworker.inbox import VIS_INBOX, VIS_INLINE, args_preview
+from coworker.permissions import Mode
+from coworker.providers import AssistantTurn
+from coworker import toolchain
+from coworker.teams.model import AuthorityError as TeamsAuthorityError
+from coworker.teams.model import BoardError as TeamsBoardError
+from coworker.teams.model import BoardNotFoundError as TeamsBoardNotFoundError
+from coworker.server.manager import SessionManager, _approval_body
 
 logger = logging.getLogger("coworker.server.app")
 
@@ -169,19 +185,6 @@ _CONNECT_FAILED_DETAIL = (
     "Close this tab and try again from OpenWorker."
 )
 
-from coworker.attachments import (
-    MAX_ATTACHMENTS as _MAX_ATTACHMENTS,
-    MAX_IMAGE_CHARS,
-    MAX_PDF_CHARS,
-    MAX_TEXT_CHARS,
-    build_user_content,
-)
-from coworker.engine import ApprovalOutcome
-from coworker.inbox import VIS_INBOX, VIS_INLINE, args_preview
-from coworker.permissions import Mode
-from coworker.providers import AssistantTurn
-from coworker import toolchain
-
 
 def _session_sandbox(engine: Any) -> dict[str, Any]:
     """The session's sandbox, for its header chip. Never raises: a header must not break
@@ -192,10 +195,6 @@ def _session_sandbox(engine: Any) -> dict[str, Any]:
         return session_sandbox(engine)
     except Exception:
         return {"state": "off"}
-from coworker.teams.model import AuthorityError as TeamsAuthorityError
-from coworker.teams.model import BoardError as TeamsBoardError
-from coworker.teams.model import BoardNotFoundError as TeamsBoardNotFoundError
-from coworker.server.manager import SessionManager, _approval_body
 
 
 def create_app(manager: SessionManager) -> FastAPI:

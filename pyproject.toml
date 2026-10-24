@@ -181,8 +181,6 @@ ignore = [
                # judgement about what the try block can raise — real work, not a sweep.
     "SIM105",  # 129x try/except/pass -> contextlib.suppress: slower, and the explicit
                # form reads better in the hot paths where most of these sit.
-    "E402",    #  33x import-not-at-top. Deliberate late imports break import cycles.
-               # Untangling those cycles is the real fix and is its own piece of work.
 ]
 
 # RUF001/2/3 stay ON; these fifteen characters are the ones this codebase means. Each was

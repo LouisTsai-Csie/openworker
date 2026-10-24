@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from coworker.skills import SkillLoader, SkillStore, validate_name
+from coworker.skills import save_skill_tool
 
 
 @pytest.fixture()
@@ -312,9 +313,6 @@ def test_corrupt_settings_json_treated_as_empty(store):
 
 
 # -- save_skill tool (SKILLS-SPEC §5.2 — the worker-authors door) -------------------
-
-
-from coworker.skills import save_skill_tool
 
 
 @pytest.fixture()

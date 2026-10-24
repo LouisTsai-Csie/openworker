@@ -16,6 +16,14 @@ from pathlib import Path
 from typing import Any
 from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
+from coworker.risk import (  # re-exported for back-compat (manager.py imports WRITE_TOOLS)
+    SHELL_TOOL,  # noqa: F401  — re-export, no local use
+    WRITE_TOOLS,  # noqa: F401  — re-export, imported by server/manager.py
+    RiskClass,
+    RiskOverrides,
+    classify,
+    is_consequential,
+)
 
 # Constructs whose *contents* we cannot evaluate, so a command carrying one is never
 # eligible for prefix auto-run: command/process substitution, redirection (writes anywhere
@@ -210,15 +218,6 @@ def write_paths(tool_name: str, arguments: dict[str, Any]) -> tuple[list[str], b
     # Unknown write tool (e.g. one promoted to write via a user override): we cannot locate
     # its path, so it cannot be auto-scoped.
     return ([], False)
-
-from coworker.risk import (  # re-exported for back-compat (manager.py imports WRITE_TOOLS)
-    SHELL_TOOL,  # noqa: F401  — re-export, no local use
-    WRITE_TOOLS,  # noqa: F401  — re-export, imported by server/manager.py
-    RiskClass,
-    RiskOverrides,
-    classify,
-    is_consequential,
-)
 
 
 # The transcript's full Auto-Approve explainer (owner copy 2026-08-24). Persisted as a

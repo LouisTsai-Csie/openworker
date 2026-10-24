@@ -33,11 +33,11 @@ import httpx
 
 from coworker.config import Config
 from coworker.secrets import SecretStore
+from coworker import __version__ as APP_VERSION
 
 CLOUD_AUTH_PROFILE = "cloud:auth"
 LOGIN_SCOPES = "openid profile email offline_access"
 
-from coworker import __version__ as APP_VERSION
 
 # connector id (canonical, = descriptor name) -> broker provider key
 PROVIDER_FOR_CONNECTOR = {

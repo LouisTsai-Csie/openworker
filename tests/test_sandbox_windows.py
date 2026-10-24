@@ -12,11 +12,10 @@ import os
 import sys
 
 import pytest
-
-pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="the Windows sandbox exists only on Windows")
-
 from coworker.sandbox.bundle import build_runner_zipapp
 from coworker.sandbox.workspace import RunnerWorkspace
+
+pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="the Windows sandbox exists only on Windows")
 
 
 def _has_setup() -> bool:
@@ -25,8 +24,6 @@ def _has_setup() -> bool:
     from coworker.sandbox.providers import windows_setup
 
     return windows_setup.account("open") is not None and windows_setup.account("closed") is not None
-
-
 
 
 def _open(tmp_path, *, extra_roots=(), network=False, profile="allowlist"):

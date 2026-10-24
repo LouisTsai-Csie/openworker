@@ -14,9 +14,6 @@ import zipfile
 from pathlib import Path
 
 import pytest
-
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the tool runner needs Unix sockets")
-
 from coworker.agents.base import AgentContext
 from coworker import catalog
 from coworker.roots import RootDir
@@ -24,6 +21,9 @@ from coworker.sandbox.bundle import build_runner_zipapp
 from coworker.sandbox.providers.runner_local import RunnerLocalProvider
 from coworker.sandbox.workspace import RunnerWorkspace
 from coworker.tools import ToolRegistry
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the tool runner needs Unix sockets")
+
 
 CAPABILITIES = ["code_files", "git", "search"]
 

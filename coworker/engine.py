@@ -31,6 +31,11 @@ from coworker import toolchain as _toolchain
 from coworker import toolresult
 from coworker import unattended as _attendance
 from coworker.events import Event, EventType
+from coworker.permissions import CLEARED_BY_MODE, Mode, PermissionEngine
+from coworker.providers import AssistantTurn, ProviderClient, ToolCall
+from coworker.providers.errors import friendly_model_error
+from coworker.providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
+from coworker.tools import ToolRegistry
 
 # §8.4 retry guard: the reviewer pauses for the rest of the turn after this many denials
 # IN A ROW (2→5 + streak semantics, owner ruling 2026-08-24 — a cumulative 2 silently
@@ -60,11 +65,6 @@ _REVIEWER_PAUSED_TEXT = (
     "Auto-approve is paused for the rest of this turn — the reviewer blocked "
     f"{_REVIEWER_TRIP} actions in a row, so approvals now come to you."
 )
-from coworker.permissions import CLEARED_BY_MODE, Mode, PermissionEngine
-from coworker.providers import AssistantTurn, ProviderClient, ToolCall
-from coworker.providers.errors import friendly_model_error
-from coworker.providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
-from coworker.tools import ToolRegistry
 
 
 logger = logging.getLogger(__name__)
