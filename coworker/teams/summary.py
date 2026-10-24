@@ -101,14 +101,8 @@ def waiting_items(events, inbox, items):
 
 def breakdown(intervals, start, end):
     """Partition wall time; overlapping parallel calls count once, not N times."""
-    clipped = [
-        (max(start, a), min(end, b), kind)
-        for a, b, kind in intervals
-        if b > start and a < end and b > a
-    ]
-    edges = sorted(
-        {start, end, *(a for a, _, _ in clipped), *(b for _, b, _ in clipped)}
-    )
+    clipped = [(max(start, a), min(end, b), kind) for a, b, kind in intervals if b > start and a < end and b > a]
+    edges = sorted({start, end, *(a for a, _, _ in clipped), *(b for _, b, _ in clipped)})
     out = {"model_ms": 0, "tool_ms": 0, "waited_ms": 0, "queued_ms": 0}
     for a, b in pairwise(edges):
         active = {kind for x, y, kind in clipped if x < b and y > a}
@@ -147,20 +141,14 @@ def make_summary(manager, team, now):
     actors = {team.lead_actor, *(w.actor for w in team.workers)}
     # A project board can be shared. A team view includes its filings/assignments,
     # not another lead's unrelated backlog (the board itself remains unchanged).
-    items = [
-        i for i in board["items"] if i["creator"] in actors or i["assignee"] in actors
-    ]
+    items = [i for i in board["items"] if i["creator"] in actors or i["assignee"] in actors]
     by_item = {i["id"]: [] for i in items}
     for e in events:
         if e.get("item_id") in by_item:
             by_item[e["item_id"]].append(e)
     waits = waiting_items(events, manager.inbox, items)
     session_ids = {team.lead_session, *(w.session_id for w in team.workers)}
-    prompts = [
-        p
-        for p in manager.inbox.list()
-        if p.session_id in session_ids and p.kind != "notification"
-    ]
+    prompts = [p for p in manager.inbox.list() if p.session_id in session_ids and p.kind != "notification"]
     # The lead decision and the original worker approval are one human interruption.
     pending_ids = {p.id for p in prompts if p.state == "pending"}
     forwarded = {
@@ -187,11 +175,7 @@ def make_summary(manager, team, now):
                 else (
                     "questions"
                     if p.kind == "question"
-                    else (
-                        "grants"
-                        if p.kind in ("connector", "directory", "tool")
-                        else "approvals"
-                    )
+                    else ("grants" if p.kind in ("connector", "directory", "tool") else "approvals")
                 )
             )
         )
@@ -202,19 +186,26 @@ def make_summary(manager, team, now):
                 "state": p.state,
                 "waited_s": max(
                     0,
-                    (stamp(p.resolved_at) if p.resolved_at else now)
-                    - stamp(p.created_at),
+                    (stamp(p.resolved_at) if p.resolved_at else now) - stamp(p.created_at),
                 ),
             }
         )
         if p.state == "pending":
-            original = manager.inbox.get((p.data.get("arguments") or {}).get("call_id", "")) if p.data.get("tool") == "decide_worker_call" else p
-            pending_requests.append({
-                "id": p.id, "session_id": p.session_id,
-                "worker": by_session.get(original.session_id if original else p.session_id, team.lead_actor),
-                "title": p.title, "kind": kind,
-                "represented_by_task": bool(original and original.id in represented),
-            })
+            original = (
+                manager.inbox.get((p.data.get("arguments") or {}).get("call_id", ""))
+                if p.data.get("tool") == "decide_worker_call"
+                else p
+            )
+            pending_requests.append(
+                {
+                    "id": p.id,
+                    "session_id": p.session_id,
+                    "worker": by_session.get(original.session_id if original else p.session_id, team.lead_actor),
+                    "title": p.title,
+                    "kind": kind,
+                    "represented_by_task": bool(original and original.id in represented),
+                }
+            )
     ask_groups = {
         k: {
             "answered": sum(a["kind"] == k and a["state"] == "resolved" for a in asks),
@@ -230,21 +221,13 @@ def make_summary(manager, team, now):
     for actor, role, sid in members:
         record = manager.session_store.load(sid)
         engine = manager._engines.get(sid)
-        messages = (
-            list(engine.messages)
-            if engine is not None
-            else (record.messages if record else [])
-        )
+        messages = list(engine.messages) if engine is not None else (record.messages if record else [])
         records[actor] = messages
         usage = [
-            tokens(m["usage"])
-            for m in messages
-            if m.get("role") == "assistant" and isinstance(m.get("usage"), dict)
+            tokens(m["usage"]) for m in messages if m.get("role") == "assistant" and isinstance(m.get("usage"), dict)
         ]
         # A persisted session's usage may be available before its full transcript.
-        total = add_tokens(
-            usage or [tokens(u) for u in (record.usage if record else {}).values()]
-        )
+        total = add_tokens(usage or [tokens(u) for u in (record.usage if record else {}).values()])
         step = None
         for m in messages:
             if m.get("role") == "assistant" and isinstance(m.get("usage"), dict):
@@ -264,11 +247,7 @@ def make_summary(manager, team, now):
                         todos = a.get("todos", a.get("items", []))
                         if isinstance(todos, list) and todos:
                             step = {
-                                "done": sum(
-                                    x.get("status") == "done"
-                                    for x in todos
-                                    if isinstance(x, dict)
-                                ),
+                                "done": sum(x.get("status") == "done" for x in todos if isinstance(x, dict)),
                                 "total": len(todos),
                             }
                     except (TypeError, ValueError):
@@ -282,10 +261,7 @@ def make_summary(manager, team, now):
                 "workspace": record.workspace if record else "",
                 "running": manager.is_running(sid),
                 "tokens": total,
-                "usage_partial": any(
-                    m.get("role") == "assistant" and not m.get("usage")
-                    for m in messages
-                ),
+                "usage_partial": any(m.get("role") == "assistant" and not m.get("usage") for m in messages),
                 "step": step,
                 "items": [i["id"] for i in items if i["assignee"] == actor],
             }
@@ -296,9 +272,7 @@ def make_summary(manager, team, now):
     for item in items:
         story = by_item[item["id"]]
         activity = [e for e in story if e["kind"] != ITEM_STATUS]
-        item["updated"] = (
-            stamp(activity[-1]["ts"]) if activity else stamp(item["created_ts"])
-        )
+        item["updated"] = stamp(activity[-1]["ts"]) if activity else stamp(item["created_ts"])
         item["last_event"] = activity[-1]["kind"] if activity else "item_created"
         item["waiting"] = waits.get(item["id"])
         blockers = [link for link in item.get("links", []) if link["kind"] == "blocked_by"]
@@ -312,9 +286,7 @@ def make_summary(manager, team, now):
                     "working"
                     if item["state"] == "in_progress"
                     else (
-                        "done"
-                        if item["state"] == "done"
-                        else "canceled" if item["state"] == "canceled" else "queued"
+                        "done" if item["state"] == "done" else "canceled" if item["state"] == "canceled" else "queued"
                     )
                 )
             )
@@ -322,22 +294,11 @@ def make_summary(manager, team, now):
         worker = worker_by_actor.get(item["assignee"])
         item["worker_session"] = worker["session_id"] if worker else None
         active_assigned = [
-            i
-            for i in items
-            if i["assignee"] == item["assignee"]
-            and i["state"] not in ("review", "done", "canceled")
+            i for i in items if i["assignee"] == item["assignee"] and i["state"] not in ("review", "done", "canceled")
         ]
-        item["step"] = (
-            worker["step"]
-            if worker and len(active_assigned) == 1 and item in active_assigned
-            else None
-        )
+        item["step"] = worker["step"] if worker and len(active_assigned) == 1 and item in active_assigned else None
         item["pr"] = next(
-            (
-                ref
-                for ref in item["refs"]
-                if ref.startswith(("https://", "http://")) and "/pull/" in ref
-            ),
+            (ref for ref in item["refs"] if ref.startswith(("https://", "http://")) and "/pull/" in ref),
             None,
         )
         started = stamp(item["created_ts"])
@@ -345,8 +306,7 @@ def make_summary(manager, team, now):
             (
                 stamp(e["ts"])
                 for e in reversed(story)
-                if e["kind"] == "item_transitioned"
-                and e["payload"].get("to") in ("done", "canceled")
+                if e["kind"] == "item_transitioned" and e["payload"].get("to") in ("done", "canceled")
             ),
             now,
         )
@@ -383,22 +343,12 @@ def make_summary(manager, team, now):
                             {
                                 max(a, start),
                                 min(b, stop),
-                                *(
-                                    max(a, start, x)
-                                    for x, y in overlaps
-                                    if x < min(b, stop) and y > max(a, start)
-                                ),
-                                *(
-                                    min(b, stop, y)
-                                    for x, y in overlaps
-                                    if x < min(b, stop) and y > max(a, start)
-                                ),
+                                *(max(a, start, x) for x, y in overlaps if x < min(b, stop) and y > max(a, start)),
+                                *(min(b, stop, y) for x, y in overlaps if x < min(b, stop) and y > max(a, start)),
                             }
                         )
                         for x, y in pairwise(cuts):
-                            if x < y and not any(
-                                ox < y and oy > x for ox, oy in overlaps
-                            ):
+                            if x < y and not any(ox < y and oy > x for ox, oy in overlaps):
                                 intervals.append((x, y, kind))
         for event in story:
             if event["kind"] == WORKER_WAITING:
@@ -428,10 +378,7 @@ def make_summary(manager, team, now):
     lead = workers[0]
     workers = workers[1:]
     by_kind = add_tokens([lead["tokens"], *(w["tokens"] for w in workers)])
-    counts = {
-        g: sum(i["group"] == g for i in items)
-        for g in ("waiting", "review", "working", "queued", "done")
-    }
+    counts = {g: sum(i["group"] == g for i in items) for g in ("waiting", "review", "working", "queued", "done")}
     active = [i for i in items if i["group"] != "canceled"]
     end = (
         max((stamp(i["created_ts"]) + i["elapsed_s"] for i in active), default=now)
@@ -439,10 +386,7 @@ def make_summary(manager, team, now):
         else now
     )
     elapsed = max(0, end - stamp(team.created_at))
-    timing = {
-        k: sum(v[k] for v in all_item_times)
-        for k in ("model_ms", "tool_ms", "waited_ms", "queued_ms")
-    }
+    timing = {k: sum(v[k] for v in all_item_times) for k in ("model_ms", "tool_ms", "waited_ms", "queued_ms")}
     return {
         "team_id": team.team_id,
         "space": team.space,
@@ -464,9 +408,7 @@ def make_summary(manager, team, now):
         "timing": timing if all_item_times else None,
         "timing_partial": any(i["timing_partial"] for i in items),
         "usage_partial": any(
-            m.get("role") == "assistant" and not m.get("usage")
-            for messages in records.values()
-            for m in messages
+            m.get("role") == "assistant" and not m.get("usage") for messages in records.values() for m in messages
         ),
         "asks": ask_groups,
         "median_answer_s": median(answered) if answered else None,

@@ -1,4 +1,5 @@
 """Schema, coverage, and production-tool parity for the layered security corpora."""
+
 from __future__ import annotations
 
 from scripts.validate_layered_corpora import validate_all

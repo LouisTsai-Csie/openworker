@@ -134,7 +134,13 @@ class SetupJob:
 
     def _progress(self, line: str, **more: Any) -> None:
         with self._lock:
-            self.progress = {"layers_total": 0, "layers_done": 0, "last_line": line, "elapsed_s": int(time.time() - self.started_at), **more}
+            self.progress = {
+                "layers_total": 0,
+                "layers_done": 0,
+                "last_line": line,
+                "elapsed_s": int(time.time() - self.started_at),
+                **more,
+            }
 
     def _fix(self, step: setup_cmd.Step) -> str | None:
         if step.key == "bind_mounts":

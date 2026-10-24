@@ -107,7 +107,15 @@ class Step:
     docs: str = ""  # a page that explains this requirement
 
     def as_dict(self) -> dict[str, Any]:
-        return {"key": self.key, "what": self.what, "ok": self.ok, "hint": self.hint, "fixable": self.fixable, "command": self.command, "docs": self.docs}
+        return {
+            "key": self.key,
+            "what": self.what,
+            "ok": self.ok,
+            "hint": self.hint,
+            "fixable": self.fixable,
+            "command": self.command,
+            "docs": self.docs,
+        }
 
 
 def _run(argv: list[str], timeout: float = 600) -> subprocess.CompletedProcess:
@@ -218,7 +226,9 @@ def docker_host_network() -> bool | None:
     if _host_network_ok_at and time.monotonic() - _host_network_ok_at < 600:
         return True
     probe = f"import socket; socket.create_connection(('127.0.0.1', {port}), 4).close()"
-    done = _run(["docker", "run", "--rm", "--network", "host", "--entrypoint", openshell_policy.PYTHON, image, "-c", probe], 90)
+    done = _run(
+        ["docker", "run", "--rm", "--network", "host", "--entrypoint", openshell_policy.PYTHON, image, "-c", probe], 90
+    )
     _host_network_ok_at = time.monotonic() if done.returncode == 0 else 0.0
     return done.returncode == 0
 
@@ -229,7 +239,9 @@ def image_store_free_gb() -> float | None:
         tool = openshell.image_tool()
         if tool is None:
             return None
-        root = _run([tool, "info", "--format", "{{.DockerRootDir}}" if tool == "docker" else "{{.Store.GraphRoot}}"], 30).stdout.strip()
+        root = _run(
+            [tool, "info", "--format", "{{.DockerRootDir}}" if tool == "docker" else "{{.Store.GraphRoot}}"], 30
+        ).stdout.strip()
         if not root or not os.path.isdir(root):
             # Docker Desktop's storage lives in its VM: the host's disk is the next best guess.
             root = str(Path.home())
@@ -243,14 +255,38 @@ def steps() -> list[Step]:
     out: list[Step] = []
     docker = shutil.which("docker")
     docker_ok = bool(docker) and _run(["docker", "info", "--format", "{{.ServerVersion}}"], 30).returncode == 0
-    out.append(Step("docker", ROWS["docker"], docker_ok, "" if docker_ok else "install Docker, then add this user to the `docker` group and log in again", docs="" if docker_ok else DOCKER_INSTALL_URL))
+    out.append(
+        Step(
+            "docker",
+            ROWS["docker"],
+            docker_ok,
+            "" if docker_ok else "install Docker, then add this user to the `docker` group and log in again",
+            docs="" if docker_ok else DOCKER_INSTALL_URL,
+        )
+    )
     if docker_ok:
         kernel = docker_landlock()
         if kernel is not None:
-            out.append(Step("docker_landlock", ROWS["docker_landlock"], kernel, "" if kernel else DOCKER_LANDLOCK_FIX, docs="" if kernel else DOCKER_DESKTOP_URL))
+            out.append(
+                Step(
+                    "docker_landlock",
+                    ROWS["docker_landlock"],
+                    kernel,
+                    "" if kernel else DOCKER_LANDLOCK_FIX,
+                    docs="" if kernel else DOCKER_DESKTOP_URL,
+                )
+            )
         reaches = docker_host_network()
         if reaches is not None:
-            out.append(Step("docker_host_network", ROWS["docker_host_network"], reaches, "" if reaches else DOCKER_HOST_NETWORK_FIX, docs="" if reaches else DOCKER_HOST_NETWORK_URL))
+            out.append(
+                Step(
+                    "docker_host_network",
+                    ROWS["docker_host_network"],
+                    reaches,
+                    "" if reaches else DOCKER_HOST_NETWORK_FIX,
+                    docs="" if reaches else DOCKER_HOST_NETWORK_URL,
+                )
+            )
     exe = shutil.which("openshell")
     version = (_run([exe, "--version"], 15).stdout.split() or [""])[-1] if exe else ""
     openshell_ok = version == PINNED_VERSION
@@ -271,10 +307,25 @@ def steps() -> list[Step]:
         linger = _run(["loginctl", "show-user", getpass.getuser(), "-p", "Linger"], 15).stdout.strip() == "Linger=yes"
         # Fixable: `enable_linger` tries as the user, then as an administrator; when both
         # are refused the job hands this command over and goes on.
-        out.append(Step("linger", ROWS["linger"], linger, fixable=True, command="" if linger else f"sudo loginctl enable-linger {getpass.getuser()}"))
+        out.append(
+            Step(
+                "linger",
+                ROWS["linger"],
+                linger,
+                fixable=True,
+                command="" if linger else f"sudo loginctl enable-linger {getpass.getuser()}",
+            )
+        )
         landlock = landlock_available()
         if landlock is not None:
-            out.append(Step("landlock", ROWS["landlock"], landlock, "" if landlock else "update the kernel (on WSL: run `wsl --update` from Windows)"))
+            out.append(
+                Step(
+                    "landlock",
+                    ROWS["landlock"],
+                    landlock,
+                    "" if landlock else "update the kernel (on WSL: run `wsl --update` from Windows)",
+                )
+            )
     problem = openshell_problem(fresh=True) if exe else "OpenShell is not installed"
     # A missing image is not a gateway problem: it gets its own row below.
     image_missing = openshell.is_image_problem(problem)
@@ -286,10 +337,16 @@ def steps() -> list[Step]:
         grpc_ok = True
     except ImportError:
         grpc_ok = False
-    out.append(Step("grpcio", ROWS["grpcio"], grpc_ok, command="" if grpc_ok else "pip install 'openworker[openshell]'"))
+    out.append(
+        Step("grpcio", ROWS["grpcio"], grpc_ok, command="" if grpc_ok else "pip install 'openworker[openshell]'")
+    )
     configured = app_config.load_config().sandbox_provider
     # The hint reads as a sentence: "not set" or "set to X", never Python's None.
-    config_hint = "" if configured == "openshell" else (f"set to {configured!r}" if configured else "not set") + " (`setup` sets it)"
+    config_hint = (
+        ""
+        if configured == "openshell"
+        else (f"set to {configured!r}" if configured else "not set") + " (`setup` sets it)"
+    )
     out.append(Step("config", ROWS["config"], configured == "openshell", config_hint, fixable=True))
     if gateway_ok and exe:
         present = openshell.image_present()
@@ -297,8 +354,23 @@ def steps() -> list[Step]:
             if not present:
                 free = image_store_free_gb()
                 if free is not None:
-                    out.append(Step("disk", ROWS["disk"], free >= IMAGE_FREE_GB, "" if free >= IMAGE_FREE_GB else f"{free:.1f} GB free; free up space before the download"))
-            out.append(Step("image", IMAGE_ROW, present, fixable=True, command="" if present else f"{openshell.image_tool() or 'docker'} pull {openshell.sandbox_image()}"))
+                    out.append(
+                        Step(
+                            "disk",
+                            ROWS["disk"],
+                            free >= IMAGE_FREE_GB,
+                            "" if free >= IMAGE_FREE_GB else f"{free:.1f} GB free; free up space before the download",
+                        )
+                    )
+            out.append(
+                Step(
+                    "image",
+                    IMAGE_ROW,
+                    present,
+                    fixable=True,
+                    command="" if present else f"{openshell.image_tool() or 'docker'} pull {openshell.sandbox_image()}",
+                )
+            )
     return out
 
 
@@ -367,7 +439,11 @@ def _allows_bind_mounts(config: Path | None) -> bool:
     except (OSError, tomllib.TOMLDecodeError, AttributeError):
         return False
     admission = docker.get("resource_admission") or {}
-    return docker.get("allow_driver_config") is True and docker.get("enable_bind_mounts") is True and admission.get("enabled") is False
+    return (
+        docker.get("allow_driver_config") is True
+        and docker.get("enable_bind_mounts") is True
+        and admission.get("enabled") is False
+    )
 
 
 def gateway_config_in_use() -> Path | None:
@@ -421,14 +497,18 @@ class PullProgress:
         return {"layers_total": self.layers_total, "layers_done": self.layers_done, "last_line": self.last_line}
 
 
-def pull_image(on_progress: Callable[[PullProgress], None] | None = None, cancel: threading.Event | None = None) -> str | None:
+def pull_image(
+    on_progress: Callable[[PullProgress], None] | None = None, cancel: threading.Event | None = None
+) -> str | None:
     """`docker pull` (or podman), streaming its per-layer lines into a PullProgress.
     No time limit: on a slow link this is the 20-minute step. Returns an error text on
     failure or cancellation, None when the image is there."""
     tool, image = openshell.image_tool() or "docker", openshell.sandbox_image()
     progress = PullProgress()
     try:
-        proc = subprocess.Popen([tool, "pull", image], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        proc = subprocess.Popen(
+            [tool, "pull", image], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
     except OSError as exc:
         return f"could not run {tool}: {exc}"
     assert proc.stdout is not None
@@ -447,7 +527,9 @@ def pull_image(on_progress: Callable[[PullProgress], None] | None = None, cancel
             if len(layer) == 12 and layer.isalnum():
                 progress.layers[layer] = status
                 progress.layers_total = len(progress.layers)
-                progress.layers_done = sum(1 for s in progress.layers.values() if s.startswith(("Pull complete", "Already exists")))
+                progress.layers_done = sum(
+                    1 for s in progress.layers.values() if s.startswith(("Pull complete", "Already exists"))
+                )
         if on_progress is not None:
             on_progress(progress)
     code = proc.wait()
@@ -481,7 +563,9 @@ def windows_rows(print_fn: Callable[[str], None]) -> None:
     elif app_config.load_config().sandbox_provider == "windows":
         print_fn("       the Windows sandbox is ready, and this machine is set to use it")
     else:
-        print_fn(f"       the Windows sandbox is ready; to use it: set `sandbox_provider = \"windows\"` in {app_config.global_config_path()}")
+        print_fn(
+            f'       the Windows sandbox is ready; to use it: set `sandbox_provider = "windows"` in {app_config.global_config_path()}'
+        )
     print_fn("\nOpenShell on this machine:")
 
 
@@ -495,7 +579,7 @@ def windows_setup_command(*, confirm: Callable[[str], bool], print_fn: Callable[
         "The full Windows sandbox runs agents' commands as a hidden local account. Setup asks for administrator rights once and:\n"
         f"  - creates two accounts with random passwords nobody sees, hidden from the sign-in screen, with remote and network\n"
         f"    logon denied: `{windows_setup.ACCOUNTS['open']}` (network open) and `{windows_setup.ACCOUNTS['closed']}` (allow list only)\n"
-        f"  - adds one Windows Firewall rule, \"{windows_setup.FIREWALL_RULE}\", that blocks every outbound connection for the\n"
+        f'  - adds one Windows Firewall rule, "{windows_setup.FIREWALL_RULE}", that blocks every outbound connection for the\n'
         f"    closed account, and four loopback filters that leave it only the proxy's ports {ports.start}-{ports.stop - 1}\n"
         f"  - stores the passwords in {windows_setup.CRED_FILE}, readable by you and administrators only\n"
         f"  - removes the account and rules of an earlier setup, and records what it changed in {windows_setup.STATE_FILE}"
@@ -508,7 +592,9 @@ def windows_setup_command(*, confirm: Callable[[str], bool], print_fn: Callable[
         return 1
     configured = app_config.load_config().sandbox_provider
     if configured != "windows":
-        print_fn(f"Set this machine to run agents in the Windows sandbox:\n  sandbox_provider = \"windows\" in {app_config.global_config_path()}")
+        print_fn(
+            f'Set this machine to run agents in the Windows sandbox:\n  sandbox_provider = "windows" in {app_config.global_config_path()}'
+        )
         if confirm("Make this change?"):
             app_config.set_global_value("sandbox_provider", "windows")
     print_fn("")
@@ -530,7 +616,9 @@ def windows_remove_command(*, confirm: Callable[[str], bool], print_fn: Callable
     return 0 if ok else 1
 
 
-def remove(*, yes: bool = False, ask: Callable[[str], bool] | None = None, print_fn: Callable[[str], None] = print) -> int:
+def remove(
+    *, yes: bool = False, ask: Callable[[str], bool] | None = None, print_fn: Callable[[str], None] = print
+) -> int:
     confirm = ask or (lambda question: yes or input(f"{question} [y/N] ").strip().lower() in ("y", "yes"))
     if sys.platform == "win32":
         return windows_remove_command(confirm=confirm, print_fn=print_fn)
@@ -544,14 +632,17 @@ def status(print_fn: Callable[[str], None] = print) -> int:
     if sys.platform == "darwin":
         what, ok, detail = seatbelt_check()
         print_fn(f"  [{'ok' if ok else '--'}] {what}" + (f"  ({detail})" if detail else ""))
-        print_fn("       to use it: set `sandbox_provider = \"seatbelt\"` in " + str(app_config.global_config_path()))
+        print_fn('       to use it: set `sandbox_provider = "seatbelt"` in ' + str(app_config.global_config_path()))
         print_fn("\nOpenShell on this machine:")
     rows = checks()
     for what, ok, detail in rows:
         print_fn(f"  [{'ok' if ok else '--'}] {what}" + (f"  ({detail})" if detail and not ok else ""))
     try:
         chosen = select(app_config.load_config().sandbox_provider, headless=True)
-        print_fn(f"\nsessions on this machine run: {chosen.provider}" + (" (set explicitly)" if chosen.explicit else " (default rule)"))
+        print_fn(
+            f"\nsessions on this machine run: {chosen.provider}"
+            + (" (set explicitly)" if chosen.explicit else " (default rule)")
+        )
         if chosen.warning:
             print_fn(chosen.warning)
     except Exception as exc:
@@ -559,13 +650,17 @@ def status(print_fn: Callable[[str], None] = print) -> int:
     return 0 if all(ok for _, ok, _ in rows) else 1
 
 
-def _offer_image_download(rows: dict[str, bool], confirm: Callable[[str], bool], print_fn: Callable[[str], None]) -> int | None:
+def _offer_image_download(
+    rows: dict[str, bool], confirm: Callable[[str], bool], print_fn: Callable[[str], None]
+) -> int | None:
     """When the base image is missing: show the command, ask, and run the pull with Docker's
     own progress and no time limit. Returns an exit code to stop with, or None to go on."""
     if rows.get(IMAGE_ROW, True):
         return None
     image, tool = openshell.sandbox_image(), openshell.image_tool() or "docker"
-    print_fn(f"The sandbox base image is not on this machine. It is about 5 GB and is downloaded once;\nuntil then the first session cannot start:\n  {tool} pull {image}")
+    print_fn(
+        f"The sandbox base image is not on this machine. It is about 5 GB and is downloaded once;\nuntil then the first session cannot start:\n  {tool} pull {image}"
+    )
     if not confirm("Download it now? (10 to 20 minutes on a slow connection)"):
         return 1
     if subprocess.run([tool, "pull", image], stdin=subprocess.DEVNULL).returncode != 0:
@@ -574,24 +669,32 @@ def _offer_image_download(rows: dict[str, bool], confirm: Callable[[str], bool],
     return None
 
 
-def setup(*, yes: bool = False, ask: Callable[[str], bool] | None = None, print_fn: Callable[[str], None] = print) -> int:
+def setup(
+    *, yes: bool = False, ask: Callable[[str], bool] | None = None, print_fn: Callable[[str], None] = print
+) -> int:
     confirm = ask or (lambda question: yes or input(f"{question} [y/N] ").strip().lower() in ("y", "yes"))
     if sys.platform == "win32":
         return windows_setup_command(confirm=confirm, print_fn=print_fn)
     if not sys.platform.startswith("linux"):
-        print_fn("`sandbox setup` configures a Linux machine. On a Mac, install OpenShell yourself and use `openworker machine sandbox status`.")
+        print_fn(
+            "`sandbox setup` configures a Linux machine. On a Mac, install OpenShell yourself and use `openworker machine sandbox status`."
+        )
         # The one step that is the same on a Mac with Docker Desktop: the image download.
         rows = {what: ok for what, ok, _ in checks()}
         stop = _offer_image_download(rows, confirm, print_fn)
         return 2 if stop is None else stop
     rows = {what: ok for what, ok, _ in checks()}
     if not rows[ROWS["docker"]]:
-        print_fn("Docker is needed first, and installing it needs an administrator:\n  https://docs.docker.com/engine/install/\n  sudo usermod -aG docker $USER   (then log in again)")
+        print_fn(
+            "Docker is needed first, and installing it needs an administrator:\n  https://docs.docker.com/engine/install/\n  sudo usermod -aG docker $USER   (then log in again)"
+        )
         return 1
     if not rows.get(ROWS["linger"], True):
         # Before the installer: it starts the gateway through the user's systemd manager,
         # which on WSL and on a headless box only runs once linger is on.
-        print_fn(f"The gateway is a user service and stops when you log out. Keeping it running needs an administrator:\n  sudo loginctl enable-linger {getpass.getuser()}")
+        print_fn(
+            f"The gateway is a user service and stops when you log out. Keeping it running needs an administrator:\n  sudo loginctl enable-linger {getpass.getuser()}"
+        )
         if not confirm("Run it now (sudo will ask for your password)?"):
             return 1
         if subprocess.run(["sudo", "loginctl", "enable-linger", getpass.getuser()]).returncode != 0:
@@ -599,7 +702,9 @@ def setup(*, yes: bool = False, ask: Callable[[str], bool] | None = None, print_
             return 1
     if not rows[ROWS["openshell"]]:
         command = installer_command()
-        print_fn(f"OpenShell {PINNED_VERSION} is not installed. NVIDIA's installer downloads a package from their GitHub release,\nchecks its checksum and installs it (it will ask for sudo itself):\n  {command}\nGuide: {GUIDE_URL}")
+        print_fn(
+            f"OpenShell {PINNED_VERSION} is not installed. NVIDIA's installer downloads a package from their GitHub release,\nchecks its checksum and installs it (it will ask for sudo itself):\n  {command}\nGuide: {GUIDE_URL}"
+        )
         if not confirm("Run NVIDIA's installer now?"):
             return 1
         if subprocess.run(["sh", "-c", command]).returncode != 0:
@@ -614,7 +719,9 @@ def setup(*, yes: bool = False, ask: Callable[[str], bool] | None = None, print_
             print_fn(problem)
             return 1
     if not rows[ROWS["config"]]:
-        print_fn(f"Set this machine to run agents in OpenShell sandboxes, and to REFUSE sessions when OpenShell is not running:\n  sandbox_provider = \"openshell\" in {app_config.global_config_path()}")
+        print_fn(
+            f'Set this machine to run agents in OpenShell sandboxes, and to REFUSE sessions when OpenShell is not running:\n  sandbox_provider = "openshell" in {app_config.global_config_path()}'
+        )
         if confirm("Make this change?"):
             apply_config()
     # Last, because it is the slow one: the image the gateway builds sandboxes from. The

@@ -123,10 +123,7 @@ def build_trajectory(
                 # The four raw counts and the serving host travel too, so a consumer can
                 # price the call itself (cache reads and writes are billed differently,
                 # and a router's upstream host decides which rate applies).
-                extra = {
-                    k: int(usage.get(k, 0) or 0)
-                    for k in ("input", "output", "cache_read", "cache_write")
-                }
+                extra = {k: int(usage.get(k, 0) or 0) for k in ("input", "output", "cache_read", "cache_write")}
                 if msg.get("served_by"):
                     extra["served_by"] = str(msg["served_by"])
                 metrics["extra"] = extra
@@ -146,9 +143,7 @@ def build_trajectory(
         if role == "tool":
             result = {"content": _text(msg.get("content"))}
             call_id = msg.get("tool_call_id")
-            if pending is not None and any(
-                tc["tool_call_id"] == call_id for tc in pending.get("tool_calls") or []
-            ):
+            if pending is not None and any(tc["tool_call_id"] == call_id for tc in pending.get("tool_calls") or []):
                 result["source_call_id"] = str(call_id)
                 pending.setdefault("observation", {"results": []})["results"].append(result)
             else:
@@ -160,11 +155,7 @@ def build_trajectory(
         # carry their wording in `text` (not `content`); a compacted notice also carries
         # the compaction record, so the trajectory shows what the model's memory was
         # replaced with, not just that it was.
-        text = (
-            _text(msg.get("content"))
-            or str(msg.get("text") or "")
-            or str(msg.get("kind") or role or "")
-        )
+        text = _text(msg.get("content")) or str(msg.get("text") or "") or str(msg.get("kind") or role or "")
         compaction = msg.get("compaction") if role == "notice" else None
         if isinstance(compaction, dict):
             summary = str(compaction.get("summary_text") or "")

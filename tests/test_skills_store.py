@@ -277,9 +277,7 @@ def test_upload_zip_slip_rejected(store, tmp_path):
 
 
 def test_upload_confirm_saves_previewed_content(store):
-    preview = store.stage_upload(
-        _zip_bytes({"greet/SKILL.md": SKILL_MD, "greet/notes.txt": "extra"})
-    )
+    preview = store.stage_upload(_zip_bytes({"greet/SKILL.md": SKILL_MD, "greet/notes.txt": "extra"}))
     saved = store.confirm_upload(preview["token"], scope="global")
     assert saved["name"] == "greet"
     loader = SkillLoader([store.global_dir])

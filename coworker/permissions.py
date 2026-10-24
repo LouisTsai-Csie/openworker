@@ -39,14 +39,44 @@ _SEPARATORS = ("&&", "||", ";", "|&", "|", "&", "\n", "\r")
 # Programs that run *another* program named in their arguments. A prefix rule on the outer
 # program can never vouch for the inner one, so these always fall through to approval.
 _ARG_EXECUTORS = {
-    "xargs", "env", "nohup", "nice", "stdbuf", "timeout", "watch", "sudo", "doas",
-    "ssh", "docker", "podman", "kubectl", "npx", "pnpx", "bunx", "uvx",
+    "xargs",
+    "env",
+    "nohup",
+    "nice",
+    "stdbuf",
+    "timeout",
+    "watch",
+    "sudo",
+    "doas",
+    "ssh",
+    "docker",
+    "podman",
+    "kubectl",
+    "npx",
+    "pnpx",
+    "bunx",
+    "uvx",
 }
 # Interpreters carrying inline code, e.g. `python -c "..."`, `node -e "..."`.
 _INLINE_CODE_FLAGS = {"-c", "-e", "--eval", "--command", "-Command", "-EncodedCommand"}
 _INTERPRETERS = {
-    "sh", "bash", "zsh", "dash", "ksh", "fish", "powershell", "pwsh", "cmd",
-    "python", "python3", "node", "deno", "bun", "ruby", "perl", "php",
+    "sh",
+    "bash",
+    "zsh",
+    "dash",
+    "ksh",
+    "fish",
+    "powershell",
+    "pwsh",
+    "cmd",
+    "python",
+    "python3",
+    "node",
+    "deno",
+    "bun",
+    "ruby",
+    "perl",
+    "php",
 }
 # Flags that turn a search/list tool into an execution, deletion, or file-writing tool.
 # The fprint family writes find's output to an arbitrary path; omitting it let a bare
@@ -166,9 +196,7 @@ _PROTECTED_IN_PROJECT = (
 def _is_protected_in_project(candidate: Path) -> bool:
     posix = candidate.as_posix()
     return any(
-        (f"/{marker}" in posix or posix.startswith(marker))
-        if marker.endswith("/")
-        else posix.endswith("/" + marker)
+        (f"/{marker}" in posix or posix.startswith(marker)) if marker.endswith("/") else posix.endswith("/" + marker)
         for marker in _PROTECTED_IN_PROJECT
     )
 
@@ -188,9 +216,7 @@ def _host_of(url_or_domain: str) -> str:
 # Patch/diff tools carry their paths inside the blob instead — extracted in `write_paths`.
 _PATH_ARG: dict[str, str] = {"write_file": "path", "replace_in_file": "path"}
 # apply_patch (Codex format) file headers, and unified-diff `+++ b/<path>` headers.
-_APPLY_PATCH_FILE = re.compile(
-    r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", re.MULTILINE
-)
+_APPLY_PATCH_FILE = re.compile(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", re.MULTILINE)
 _APPLY_PATCH_MOVE = re.compile(r"^\*\*\* Move to: (.+)$", re.MULTILINE)
 _UNIFIED_DIFF_FILE = re.compile(r"^\+\+\+ (?:b/)?(.+?)\s*$", re.MULTILINE)
 
@@ -245,9 +271,7 @@ MODE_LABELS = {
 
 class Mode(StrEnum):
     DISCUSS = "discuss"  # read-only conversation: no edits, no planning workflow
-    PLAN = (
-        "plan"  # read-only + the planning contract (explore → propose_plan → execute)
-    )
+    PLAN = "plan"  # read-only + the planning contract (explore → propose_plan → execute)
     INTERACTIVE = "interactive"  # ask for approval (default)
     # Renamed from "auto" (spec §1.5, 2026-08-12): "bypass" names the action — switching a
     # safety system off — and can't be confused with AUTO_APPROVE in a picker. Deliberately
@@ -422,9 +446,7 @@ class PermissionEngine:
             out.append((Path(p).expanduser().resolve(), w))
         return out
 
-    def evaluate(
-        self, tool_name: str, arguments: dict[str, Any], metadata: Any = None
-    ) -> Decision:
+    def evaluate(self, tool_name: str, arguments: dict[str, Any], metadata: Any = None) -> Decision:
         arguments = arguments or {}
         is_connector = getattr(metadata, "category", "") == "connector"
         risk = classify(tool_name, metadata, self.risk_overrides)
@@ -438,9 +460,7 @@ class PermissionEngine:
         # this"; the OPE-136 gate-order pin caught that the class-based check alone
         # didn't deliver it (save_skill in Discuss reached the human-only card).
         consequential = (
-            is_consequential(risk)
-            or tool_name in PERSISTENT_AUTHORITY_TOOLS
-            or tool_name == NETWORK_ACCESS_TOOL
+            is_consequential(risk) or tool_name in PERSISTENT_AUTHORITY_TOOLS or tool_name == NETWORK_ACCESS_TOOL
         )
 
         # SELF-PROTECTION FLOOR — runs before mode, allowlists and every auto-approve path,
@@ -458,9 +478,7 @@ class PermissionEngine:
 
         # Discuss / plan modes: read-only.
         if self.mode in READ_ONLY_MODES and consequential:
-            return Decision(
-                False, f"{self.mode.value} mode is read-only", needs_user=False
-            )
+            return Decision(False, f"{self.mode.value} mode is read-only", needs_user=False)
 
         # The dangerous mode clears every floor below that would otherwise reach a person.
         # Each clearance keeps its own reason so the record says which floor was crossed.
@@ -490,9 +508,7 @@ class PermissionEngine:
                         # paths against the session's roots by construction, so this
                         # mostly matters for tools that write wherever they are pointed.
                         return _cleared(f"write outside the session's directories: {path}")
-                    return Decision(
-                        False, f"path is not in a writable directory: {path}"
-                    )
+                    return Decision(False, f"path is not in a writable directory: {path}")
                 # In-project files that run on a later action (git hooks, CI configs) may be
                 # edited, but never by an auto-approve path — a human must see it.
                 if _is_protected_in_project(self._candidate(path)):
@@ -572,11 +588,7 @@ class PermissionEngine:
             command = str(arguments.get("command", ""))
             if self._command_allowed(command):
                 return Decision(True, "command on allowlist")
-            if (
-                honor_session_grants
-                and command
-                and command in self.session_allow_commands
-            ):
+            if honor_session_grants and command and command in self.session_allow_commands:
                 return Decision(True, "command allowed for session")
             # Also a session grant, so §1.5 applies: in Auto-Approve the reviewer judges
             # these rather than the classifier waving them through.
@@ -588,9 +600,7 @@ class PermissionEngine:
                 # asking about my project files" also covers ~/.aws/credentials, another
                 # repo's history, and OpenWorker's own secrets file — none of which the
                 # self-protection floor catches, since that guards writes, not reads.
-                if is_readonly_command(command) and all(
-                    self._under_root(t) for t in read_targets(command)
-                ):
+                if is_readonly_command(command) and all(self._under_root(t) for t in read_targets(command)):
                     return Decision(True, "read-only command (session grant)")
         if on_site_wall:
             return Decision(True, "site on the allowed sites")
@@ -606,12 +616,7 @@ class PermissionEngine:
             url = str(arguments.get("url", ""))
             if self._domain_allowed(url, include_session=honor_session_grants):
                 return Decision(True, "domain on allowlist")
-        if (
-            honor_session_grants
-            and tool_name in self.session_allow_tools
-            and not is_connector
-            and not is_shell
-        ):
+        if honor_session_grants and tool_name in self.session_allow_tools and not is_connector and not is_shell:
             return Decision(True, "tool allowed for session")
         # Run grant (OPE-136 "Allow for this request"): same checkpoint, shorter life —
         # and no connector exclusion, because EXTERNAL is exactly who it exists for.
@@ -629,10 +634,7 @@ class PermissionEngine:
         # Deliberately NOT honored in AUTO_APPROVE: v1 keeps §1.5 conservative — the
         # reviewer judges trusted MCP calls (falling through to needs_user routes
         # there); only hand-authored config allowlists skip the judge.
-        if (
-            getattr(metadata, "category", "") == "mcp"
-            and self.mode is not Mode.AUTO_APPROVE
-        ):
+        if getattr(metadata, "category", "") == "mcp" and self.mode is not Mode.AUTO_APPROVE:
             if self.trust_overrides is not None and self.trust_overrides(tool_name):
                 return Decision(True, "trusted MCP tool (user trust rule)")
             if not bool(getattr(metadata, "requires_approval", True)):
@@ -644,9 +646,7 @@ class PermissionEngine:
         # (candidate extraction is external-risk-only), and additive on top of the mode:
         # read-only modes already returned before this point.
         if tool_name in self.task_rules:
-            target = standing_rule_candidate(
-                tool_name, arguments, metadata, self.risk_overrides
-            )
+            target = standing_rule_candidate(tool_name, arguments, metadata, self.risk_overrides)
             if target and target in self.task_rules[tool_name]:
                 rule = f"{tool_name} → {target}"
                 return Decision(True, f"allowed by standing rule: {rule}", rule=rule)
@@ -701,7 +701,7 @@ class PermissionEngine:
             self.session_allow_domains.add(host)
 
     def allow_site_always(self, url_or_domain: str) -> None:
-        """"Always allow <site>" on the allowed-sites card: the site joins the machine's
+        """ "Always allow <site>" on the allowed-sites card: the site joins the machine's
         list (Settings > Sandbox), for commands and web tools alike. Without a store wired
         (ephemeral engines in tests) it degrades to this session."""
         host = _host_of(url_or_domain)
@@ -718,7 +718,7 @@ class PermissionEngine:
         self._open(host)
 
     def allow_site_for_session(self, url_or_domain: str) -> None:
-        """"Allow for this session" on the allowed-sites card: the web tools and, through the
+        """ "Allow for this session" on the allowed-sites card: the web tools and, through the
         running sandbox, the commands of this session reach the site; nothing is stored."""
         host = _host_of(url_or_domain)
         if not host:
@@ -810,7 +810,8 @@ class PermissionEngine:
             return Decision(
                 False,
                 f"give `hosts` as one to {NETWORK_ACCESS_MAX_HOSTS} exact host names, such as registry.npmjs.org "
-                "or db.example.com:5432 (no wildcards, no IP addresses)" + (f"; not accepted: {', '.join(bad)}" if bad else ""),
+                "or db.example.com:5432 (no wildcards, no IP addresses)"
+                + (f"; not accepted: {', '.join(bad)}" if bad else ""),
                 needs_user=False,
             )
         pending = [entry for entry in wanted if not self._entry_allowed(entry)]
@@ -824,7 +825,8 @@ class PermissionEngine:
             )
         return Decision(
             False,
-            "asks to let this session's commands reach " + ", ".join(e[:-4] if e.endswith(":443") else e for e in pending),
+            "asks to let this session's commands reach "
+            + ", ".join(e[:-4] if e.endswith(":443") else e for e in pending),
             needs_user=True,
             human_only=True,
             network_hosts=tuple(pending),
@@ -896,9 +898,7 @@ class PermissionEngine:
                 continue
         return False
 
-    def _touches_protected(
-        self, tool_name: str, arguments: dict[str, Any], is_shell: bool
-    ) -> str | None:
+    def _touches_protected(self, tool_name: str, arguments: dict[str, Any], is_shell: bool) -> str | None:
         """The protected settings path this call would modify, or None.
 
         For writes we resolve the real target. For shell we can only inspect the command

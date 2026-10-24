@@ -60,7 +60,7 @@ def run(proxy_host: str, proxy_port: int, host: str, port: int) -> int:
                     break
                 view = memoryview(data)
                 while view:
-                    view = view[os.write(1, view):]
+                    view = view[os.write(1, view) :]
         except OSError:
             pass
         done.set()

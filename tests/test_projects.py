@@ -23,7 +23,9 @@ from coworker.teams.model import Actor, Role
 def _git(cwd: Path, *args: str) -> None:
     subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
-        cwd=cwd, check=True, capture_output=True,
+        cwd=cwd,
+        check=True,
+        capture_output=True,
     )
 
 
@@ -94,10 +96,7 @@ class TestProjectNames:
     def test_mru_order_and_limit(self, names):
         for i, n in enumerate(["a", "b", "c"]):
             names.name_current("memory", n, f"/k{i}")
-        names._conn.execute(
-            "UPDATE project_names SET last_used_at = datetime('now', '-1 hour') "
-            "WHERE name != 'a'"
-        )
+        names._conn.execute("UPDATE project_names SET last_used_at = datetime('now', '-1 hour') WHERE name != 'a'")
         listed = names.list("memory", limit=2)
         assert [x["name"] for x in listed] == ["a", "b"]
 

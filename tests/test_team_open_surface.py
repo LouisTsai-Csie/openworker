@@ -27,9 +27,7 @@ def store(tmp_path):
 
 
 def seed(store, space="proj", case=None):
-    return store.create_item(
-        space, LEAD, title="Build the API", criteria="routes pass tests", case=case
-    )
+    return store.create_item(space, LEAD, title="Build the API", criteria="routes pass tests", case=case)
 
 
 # ------------------------------------------------------------------ claim verb
@@ -136,9 +134,7 @@ def test_local_dialect_binds_identity(tmp_path):
 
 def test_local_dialect_full_worker_loop(tmp_path):
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
-    item = lead.create_item(
-        "proj", title="Build it", criteria="tests pass", case="case-b"
-    )
+    item = lead.create_item("proj", title="Build it", criteria="tests pass", case="case-b")
     worker = LocalDialect(lead.store, lead.journal, NIA)
     claimed = worker.claim("proj", item["id"])
     assert claimed["assignee"] == "nia"
@@ -147,9 +143,7 @@ def test_local_dialect_full_worker_loop(tmp_path):
     worker.transition("proj", item["id"], "review", comment="branch ready")
     shown = worker.get_item("proj", item["id"])
     assert shown["state"] == "review"
-    assert [e["body"] for e in worker.journal_read("case-b")] == [
-        "found the flaky fixture"
-    ]
+    assert [e["body"] for e in worker.journal_read("case-b")] == ["found the flaky fixture"]
 
 
 # ------------------------------------------------------------- HTTP board API
@@ -244,9 +238,7 @@ def test_token_binds_identity_and_store_enforces_authority(api):
     assert denied.status_code == 403
 
     # but it can claim, then work the item
-    claimed = client.post(
-        "/v1/board/items/claim", headers=nia, json={"space": "proj", "id": item_id}
-    )
+    claimed = client.post("/v1/board/items/claim", headers=nia, json={"space": "proj", "id": item_id})
     assert claimed.status_code == 200
     assert claimed.json()["assignee"] == "nia"
 
@@ -289,9 +281,7 @@ def test_board_item_reads_hide_foreign_worker_items(api):
         assert response.status_code == 200
         return response.json()
 
-    created = create(
-        "Webb private investigation", description="credential rotation details"
-    )
+    created = create("Webb private investigation", description="credential rotation details")
     assigned_response = client.post(
         "/v1/board/items/assign",
         headers=lead,
@@ -300,23 +290,29 @@ def test_board_item_reads_hide_foreign_worker_items(api):
     assert assigned_response.status_code == 200
 
     mine = create("Nia task")
-    assert client.post(
-        "/v1/board/items/assign",
-        headers=lead,
-        json={"space": "proj", "id": mine["id"], "assignee": "nia"},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/v1/board/items/assign",
+            headers=lead,
+            json={"space": "proj", "id": mine["id"], "assignee": "nia"},
+        ).status_code
+        == 200
+    )
     claimable = create("Available")
     linked = create("Linked dependency")
-    assert client.post(
-        "/v1/board/link",
-        headers=lead,
-        json={
-            "space": "proj",
-            "src": linked["id"],
-            "kind": "blocks",
-            "dst": mine["id"],
-        },
-    ).status_code == 200
+    assert (
+        client.post(
+            "/v1/board/link",
+            headers=lead,
+            json={
+                "space": "proj",
+                "src": linked["id"],
+                "kind": "blocks",
+                "dst": mine["id"],
+            },
+        ).status_code
+        == 200
+    )
 
     denied = client.get(
         "/v1/board/item",
@@ -328,39 +324,57 @@ def test_board_item_reads_hide_foreign_worker_items(api):
     assert "credential rotation details" not in denied.text
 
     for item_id in (mine["id"], claimable["id"], linked["id"]):
-        assert client.get(
+        assert (
+            client.get(
+                "/v1/board/item",
+                headers=nia,
+                params={"space": "proj", "id": item_id},
+            ).status_code
+            == 200
+        )
+
+    assert (
+        client.post(
+            "/v1/board/items/claim",
+            headers=webb,
+            json={"space": "proj", "id": claimable["id"]},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
             "/v1/board/item",
             headers=nia,
-            params={"space": "proj", "id": item_id},
-        ).status_code == 200
-
-    assert client.post(
-        "/v1/board/items/claim",
-        headers=webb,
-        json={"space": "proj", "id": claimable["id"]},
-    ).status_code == 200
-    assert client.get(
-        "/v1/board/item",
-        headers=nia,
-        params={"space": "proj", "id": claimable["id"]},
-    ).status_code == 404
+            params={"space": "proj", "id": claimable["id"]},
+        ).status_code
+        == 404
+    )
 
     held = create("Held")
-    assert client.post(
-        "/v1/board/policy",
-        headers=lead,
-        json={"space": "proj", "claims": "lead-only"},
-    ).status_code == 200
-    assert client.get(
-        "/v1/board/item",
-        headers=nia,
-        params={"space": "proj", "id": held["id"]},
-    ).status_code == 404
-    assert client.get(
-        "/v1/board/item",
-        headers=nia,
-        params={"space": "proj", "id": mine["id"]},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/v1/board/policy",
+            headers=lead,
+            json={"space": "proj", "claims": "lead-only"},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            "/v1/board/item",
+            headers=nia,
+            params={"space": "proj", "id": held["id"]},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            "/v1/board/item",
+            headers=nia,
+            params={"space": "proj", "id": mine["id"]},
+        ).status_code
+        == 200
+    )
 
     allowed = client.get(
         "/v1/board/item",
@@ -403,11 +417,14 @@ def test_board_item_create_hides_missing_and_foreign_parents(api):
     )
     assert hidden_response.status_code == 200
     hidden = hidden_response.json()
-    assert client.post(
-        "/v1/board/items/assign",
-        headers=lead,
-        json={"space": "proj", "id": hidden["id"], "assignee": "webb"},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/v1/board/items/assign",
+            headers=lead,
+            json={"space": "proj", "id": hidden["id"], "assignee": "webb"},
+        ).status_code
+        == 200
+    )
     before = manager.team_store.event_count("proj")
 
     for parent in (hidden["id"], 999):
@@ -443,9 +460,7 @@ def test_remote_dialect_round_trip(api):
         client=TestClient(app, base_url="http://board.test"),
     )
 
-    item = lead.create_item(
-        "proj", title="Remote item", criteria="works over the wire", case="case-r"
-    )
+    item = lead.create_item("proj", title="Remote item", criteria="works over the wire", case="case-r")
     assert lead.policy("proj") == {"claims": "open"}
     claimed = nia.claim("proj", item["id"])
     assert claimed["assignee"] == "nia"
@@ -466,9 +481,7 @@ def test_remote_dialect_round_trip(api):
     with pytest.raises(BoardError, match="only open items"):
         nia.claim("proj", item["id"])
 
-    foreign = lead.create_item(
-        "proj", title="Webb-only task", criteria="visible only to webb"
-    )
+    foreign = lead.create_item("proj", title="Webb-only task", criteria="visible only to webb")
     lead.assign("proj", foreign["id"], "webb")
     with pytest.raises(BoardError, match="no visible item"):
         nia.get_item("proj", foreign["id"])
@@ -556,9 +569,7 @@ def test_attach_over_the_wire_and_fetch(api):
     )
     item = lead.create_item("proj", title="With screenshot", criteria="c")
     nia.claim("proj", item["id"])
-    result = nia.attach(
-        "proj", item["id"], PNG, "after.png", caption="statements page, dark mode"
-    )
+    result = nia.attach("proj", item["id"], PNG, "after.png", caption="statements page, dark mode")
     assert result["ref"].startswith("attachment://")
 
     # the ref lands on the item as a comment with the caption
@@ -600,11 +611,14 @@ def test_board_attachment_read_hides_foreign_worker_reference(api):
     )
     assert item_response.status_code == 200
     item = item_response.json()
-    assert client.post(
-        "/v1/board/items/assign",
-        headers=lead,
-        json={"space": "proj", "id": item["id"], "assignee": "webb"},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/v1/board/items/assign",
+            headers=lead,
+            json={"space": "proj", "id": item["id"], "assignee": "webb"},
+        ).status_code
+        == 200
+    )
     attached = client.post(
         "/v1/board/items/attach",
         headers=lead,
@@ -651,9 +665,7 @@ def test_board_attachment_read_requires_token(api):
 
 def test_board_attachment_read_rejects_malformed_name(api):
     client, manager, _ = api
-    lead = {
-        "Authorization": f"Bearer {_tokens(manager).mint('lead-1', 'lead')}"
-    }
+    lead = {"Authorization": f"Bearer {_tokens(manager).mint('lead-1', 'lead')}"}
 
     response = client.get(
         "/v1/board/attachment",
@@ -669,9 +681,7 @@ def test_board_attachment_read_hides_unreferenced_blob(api):
     client, manager, _ = api
     from coworker.teams.attachments import stored_name
 
-    lead = {
-        "Authorization": f"Bearer {_tokens(manager).mint('lead-1', 'lead')}"
-    }
+    lead = {"Authorization": f"Bearer {_tokens(manager).mint('lead-1', 'lead')}"}
     ref = manager.attachment_store.put(PNG, "orphan.png")
 
     response = client.get(
@@ -688,9 +698,7 @@ def test_board_attachment_read_hides_missing_referenced_blob(api):
     client, manager, _ = api
     from coworker.teams.attachments import stored_name
 
-    lead = {
-        "Authorization": f"Bearer {_tokens(manager).mint('lead-1', 'lead')}"
-    }
+    lead = {"Authorization": f"Bearer {_tokens(manager).mint('lead-1', 'lead')}"}
     item = client.post(
         "/v1/board/items",
         headers=lead,
@@ -723,9 +731,7 @@ def test_local_attachment_read_tracks_worker_visibility(tmp_path):
     from coworker.teams.attachments import stored_name
 
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
-    worker = LocalDialect(
-        lead.store, lead.journal, NIA, attachments=lead.attachments
-    )
+    worker = LocalDialect(lead.store, lead.journal, NIA, attachments=lead.attachments)
     claimable = lead.create_item("proj", title="Available", criteria="c")
     result = lead.attach("proj", claimable["id"], PNG, "available.png")
     stored = stored_name(result["payload"]["refs"][0])
@@ -738,9 +744,7 @@ def test_local_attachment_read_tracks_worker_visibility(tmp_path):
 
     assigned = lead.create_item("proj", title="Assigned", criteria="c")
     lead.assign("proj", assigned["id"], "nia")
-    assigned_ref = lead.attach(
-        "proj", assigned["id"], PNG, "assigned.png"
-    )["payload"]["refs"][0]
+    assigned_ref = lead.attach("proj", assigned["id"], PNG, "assigned.png")["payload"]["refs"][0]
     assert worker.attachment("proj", stored_name(assigned_ref)) == (
         PNG,
         "image/png",
@@ -754,21 +758,15 @@ def test_local_attachment_read_allows_a_visible_deduplicated_reference(tmp_path)
     from coworker.teams.attachments import stored_name
 
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
-    worker = LocalDialect(
-        lead.store, lead.journal, NIA, attachments=lead.attachments
-    )
+    worker = LocalDialect(lead.store, lead.journal, NIA, attachments=lead.attachments)
     foreign = lead.create_item("proj", title="Webb evidence", criteria="c")
     lead.assign("proj", foreign["id"], "webb")
-    foreign_ref = lead.attach("proj", foreign["id"], PNG, "foreign.png")["payload"][
-        "refs"
-    ][0]
+    foreign_ref = lead.attach("proj", foreign["id"], PNG, "foreign.png")["payload"]["refs"][0]
     with pytest.raises(BoardError, match="attachment not found"):
         worker.attachment("proj", stored_name(foreign_ref))
 
     mine = worker.create_item("proj", title="Nia evidence", criteria="c")
-    own_ref = worker.attach("proj", mine["id"], PNG, "mine.png")["payload"]["refs"][
-        0
-    ]
+    own_ref = worker.attach("proj", mine["id"], PNG, "mine.png")["payload"]["refs"][0]
 
     assert stored_name(own_ref) == stored_name(foreign_ref)
     assert worker.attachment("proj", stored_name(own_ref)) == (PNG, "image/png")
@@ -784,17 +782,13 @@ def test_local_attachment_read_rejects_forged_comment_and_transition_refs(tmp_pa
     from coworker.teams.attachments import stored_name
 
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
-    worker = LocalDialect(
-        lead.store, lead.journal, NIA, attachments=lead.attachments
-    )
+    worker = LocalDialect(lead.store, lead.journal, NIA, attachments=lead.attachments)
     foreign = lead.create_item("proj", title="Webb evidence", criteria="c")
     lead.assign("proj", foreign["id"], "webb")
-    comment_ref = lead.attach(
-        "proj", foreign["id"], PNG, "foreign-comment.png"
-    )["payload"]["refs"][0]
-    transition_ref = lead.attach(
-        "proj", foreign["id"], PNG + b"transition", "foreign-transition.png"
-    )["payload"]["refs"][0]
+    comment_ref = lead.attach("proj", foreign["id"], PNG, "foreign-comment.png")["payload"]["refs"][0]
+    transition_ref = lead.attach("proj", foreign["id"], PNG + b"transition", "foreign-transition.png")["payload"][
+        "refs"
+    ][0]
 
     mine = lead.create_item("proj", title="Nia task", criteria="c")
     lead.assign("proj", mine["id"], "nia")
@@ -828,9 +822,7 @@ def test_legacy_attachment_refs_are_grandfathered_across_rebuild(tmp_path):
     with sqlite3.connect(db_path) as connection:
         # Simulate an old DB—or an interrupted upgrade whose projection table
         # exists but whose atomic migration marker was never committed.
-        connection.execute(
-            "DELETE FROM team_migrations WHERE name = 'attachment_refs_v1'"
-        )
+        connection.execute("DELETE FROM team_migrations WHERE name = 'attachment_refs_v1'")
 
     reopened = TeamStore(db_path)
     lead = LocalDialect(reopened, None, LEAD, attachments=attachments)
@@ -839,9 +831,7 @@ def test_legacy_attachment_refs_are_grandfathered_across_rebuild(tmp_path):
     assert lead.attachment("proj", stored) == (PNG, "image/png")
     later = reopened.create_item("proj", LEAD, title="Later", criteria="c")
     forged_ref = attachments.put(PNG + b"later", "later.png")
-    reopened.comment(
-        "proj", LEAD, later["id"], "ordinary ref", refs=[forged_ref]
-    )
+    reopened.comment("proj", LEAD, later["id"], "ordinary ref", refs=[forged_ref])
     reopened.close()
 
     reopened = TeamStore(db_path)
@@ -859,16 +849,12 @@ def test_local_attachment_read_allows_a_directly_linked_item(tmp_path):
     from coworker.teams.attachments import stored_name
 
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
-    worker = LocalDialect(
-        lead.store, lead.journal, NIA, attachments=lead.attachments
-    )
+    worker = LocalDialect(lead.store, lead.journal, NIA, attachments=lead.attachments)
     mine = lead.create_item("proj", title="Nia task", criteria="c")
     lead.assign("proj", mine["id"], "nia")
     dependency = lead.create_item("proj", title="Dependency", criteria="c")
     lead.assign("proj", dependency["id"], "webb")
-    ref = lead.attach("proj", dependency["id"], PNG, "dependency.png")["payload"][
-        "refs"
-    ][0]
+    ref = lead.attach("proj", dependency["id"], PNG, "dependency.png")["payload"]["refs"][0]
 
     with pytest.raises(BoardError, match="attachment not found"):
         worker.attachment("proj", stored_name(ref))
@@ -924,12 +910,8 @@ def test_mcp_tool_surface_is_role_scoped(tmp_path):
 
     from coworker.teams.mcp_server import build
 
-    worker = build(
-        local_dialect(tmp_path, actor="nia", role="worker"), space="proj"
-    )
-    lead = build(
-        local_dialect(tmp_path, actor="lead-1", role="lead"), space="proj"
-    )
+    worker = build(local_dialect(tmp_path, actor="nia", role="worker"), space="proj")
+    lead = build(local_dialect(tmp_path, actor="lead-1", role="lead"), space="proj")
 
     def names(server):
         return {tool.name for tool in anyio.run(server.list_tools)}
@@ -951,9 +933,7 @@ def test_mcp_worker_loop_through_call_tool(tmp_path):
 
     lead_dialect = local_dialect(tmp_path, actor="lead-1", role="lead")
     item = lead_dialect.create_item("proj", title="Via MCP", criteria="c")
-    worker = build(
-        LocalDialect(lead_dialect.store, lead_dialect.journal, NIA), space="proj"
-    )
+    worker = build(LocalDialect(lead_dialect.store, lead_dialect.journal, NIA), space="proj")
 
     def call(name, arguments):
         return anyio.run(lambda: worker.call_tool(name, arguments))
@@ -972,15 +952,11 @@ def test_mcp_board_show_does_not_return_a_foreign_item(tmp_path):
     from coworker.teams.mcp_server import build
 
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
-    foreign = lead.create_item(
-        "proj", title="Private Webb task", criteria="not visible to nia"
-    )
+    foreign = lead.create_item("proj", title="Private Webb task", criteria="not visible to nia")
     lead.assign("proj", foreign["id"], "webb")
     worker = build(LocalDialect(lead.store, lead.journal, NIA), space="proj")
 
-    result = anyio.run(
-        lambda: worker.call_tool("board_show", {"item": foreign["id"]})
-    )
+    result = anyio.run(lambda: worker.call_tool("board_show", {"item": foreign["id"]}))
     payload = json.loads(result[0].text)
 
     assert "error" in payload
@@ -994,35 +970,28 @@ def test_cli_headless_flow(tmp_path, capsys):
     from coworker.teams.cli import main
 
     space_args = ["--db", str(tmp_path), "--space", "proj"]
-    assert main(
-        ["board", "create", "CLI item", "--criteria", "prints", *space_args,
-         "--actor", "lead-1", "--role", "lead"]
-    ) == 0
+    assert (
+        main(
+            ["board", "create", "CLI item", "--criteria", "prints", *space_args, "--actor", "lead-1", "--role", "lead"]
+        )
+        == 0
+    )
     capsys.readouterr()
-    assert main(
-        ["board", "claim", "1", *space_args, "--actor", "nia", "--role", "worker"]
-    ) == 0
+    assert main(["board", "claim", "1", *space_args, "--actor", "nia", "--role", "worker"]) == 0
     assert "claimed #1" in capsys.readouterr().out
-    assert main(
-        ["board", "show", "1", *space_args, "--actor", "nia", "--role", "worker"]
-    ) == 0
+    assert main(["board", "show", "1", *space_args, "--actor", "nia", "--role", "worker"]) == 0
     assert "CLI item" in capsys.readouterr().out
     assert main(["board", "list", *space_args, "--json"]) == 0
     items = json.loads(capsys.readouterr().out)
     assert [(i["id"], i["assignee"]) for i in items] == [(1, "nia")]
     # a losing claim exits 1 with the store's message on stderr
-    assert main(
-        ["board", "claim", "1", *space_args, "--actor", "webb", "--role", "worker"]
-    ) == 1
+    assert main(["board", "claim", "1", *space_args, "--actor", "webb", "--role", "worker"]) == 1
     assert "already claimed by nia" in capsys.readouterr().err
     # policy knob round-trips
     assert main(["board", "policy", "--claims", "lead-only", *space_args]) == 0
     assert "lead-only" in capsys.readouterr().out
     # journal append + read
-    assert main(
-        ["journal", "append", "case-cli", "found it", "--kind", "finding",
-         *space_args]
-    ) == 0
+    assert main(["journal", "append", "case-cli", "found it", "--kind", "finding", *space_args]) == 0
     capsys.readouterr()
     assert main(["journal", "read", "case-cli", *space_args]) == 0
     assert "found it" in capsys.readouterr().out
@@ -1035,9 +1004,7 @@ def test_cli_worker_cannot_show_a_foreign_item(tmp_path, capsys):
     lead_args = [*space_args, "--actor", "lead-1", "--role", "lead"]
     worker_args = [*space_args, "--actor", "nia", "--role", "worker"]
 
-    assert main(
-        ["board", "create", "Private Webb task", "--criteria", "c", *lead_args]
-    ) == 0
+    assert main(["board", "create", "Private Webb task", "--criteria", "c", *lead_args]) == 0
     capsys.readouterr()
     assert main(["board", "assign", "1", "webb", *lead_args]) == 0
     capsys.readouterr()
@@ -1056,9 +1023,7 @@ def test_cli_worker_cannot_download_a_foreign_attachment(tmp_path, capsys):
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
     foreign = lead.create_item("proj", title="Private Webb task", criteria="c")
     lead.assign("proj", foreign["id"], "webb")
-    ref = lead.attach("proj", foreign["id"], PNG, "private.png")["payload"]["refs"][
-        0
-    ]
+    ref = lead.attach("proj", foreign["id"], PNG, "private.png")["payload"]["refs"][0]
     output = tmp_path / "stolen.png"
 
     result = main(
@@ -1090,9 +1055,7 @@ def test_cli_authorized_attachment_download(tmp_path, capsys):
 
     lead = local_dialect(tmp_path, actor="lead-1", role="lead")
     item = lead.create_item("proj", title="Evidence", criteria="c")
-    ref = lead.attach("proj", item["id"], PNG, "evidence.png")["payload"]["refs"][
-        0
-    ]
+    ref = lead.attach("proj", item["id"], PNG, "evidence.png")["payload"]["refs"][0]
     output = tmp_path / "downloaded.png"
 
     result = main(
@@ -1121,10 +1084,12 @@ def test_cli_authorized_attachment_download(tmp_path, capsys):
 def test_cli_token_mint_and_list(tmp_path, capsys):
     from coworker.teams.cli import main
 
-    assert main(
-        ["board", "token", "mint", "--actor", "nia", "--role", "worker",
-         "--label", "laptop", "--db", str(tmp_path)]
-    ) == 0
+    assert (
+        main(
+            ["board", "token", "mint", "--actor", "nia", "--role", "worker", "--label", "laptop", "--db", str(tmp_path)]
+        )
+        == 0
+    )
     token = capsys.readouterr().out.strip()
     assert token.startswith("owb_")
     assert main(["board", "token", "list", "--db", str(tmp_path)]) == 0

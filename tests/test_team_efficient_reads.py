@@ -23,9 +23,11 @@ def test_mutation_receipts_do_not_grow_with_history(board):
         store.comment("acme", lead, item, "Detailed findings " * 200)
     full = store.get_item("acme", item, actor=lead)
     assert len(json.dumps(full)) > 100000
-    for args in [("transition", {"item": item, "to": "in_progress"}),
-                 ("transition", {"item": item, "to": "review", "comment": "verified"}),
-                 ("transition", {"item": item, "to": "done", "comment": "Accepted"})]:
+    for args in [
+        ("transition", {"item": item, "to": "in_progress"}),
+        ("transition", {"item": item, "to": "review", "comment": "verified"}),
+        ("transition", {"item": item, "to": "done", "comment": "Accepted"}),
+    ]:
         result = tools[args[0]](**args[1])
         assert "error" not in result
         assert len(json.dumps(result)) < 300
@@ -65,6 +67,7 @@ def test_oversized_comment_is_explicit_and_fully_retrievable(board):
     while True:
         part = tools["get_item_comment"](item, seq, offset, 12000)
         from coworker.toolresult import bound_tool_result
+
         delivered = bound_tool_result(part, max_bytes=10000, spill_dir=None, step=1, tool_name="get_item_comment")
         assert delivered["text"] == part["text"]  # cursor never skips a head/tail omission
         text += part["text"]
@@ -110,6 +113,7 @@ def test_listing_pages_without_full_descriptions(board):
 
 def test_shared_proposal_remains_explicitly_readable_without_repetition(board):
     from proposal_fixtures import work_proposal
+
     store, lead, _, tools = board
     plan = work_proposal()
     result = store.create_proposal("acme", lead, plan)

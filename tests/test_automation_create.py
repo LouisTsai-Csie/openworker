@@ -66,8 +66,6 @@ def test_create_automation_missing_instructions(tmp_path, monkeypatch):
 
 def test_create_automation_requires_schedule(tmp_path, monkeypatch):
     manager = _manager(tmp_path, monkeypatch)
-    out = manager.create_automation(
-        {"title": "No schedule", "instructions": "do something"}
-    )
+    out = manager.create_automation({"title": "No schedule", "instructions": "do something"})
     assert out["ok"] is False
     assert manager.task_store.list() == []

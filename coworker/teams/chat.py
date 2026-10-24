@@ -82,8 +82,7 @@ class ChatStore:
         }
         with self._lock:
             self._conn.execute(
-                "INSERT INTO chat_groups (group_id, name, members, created_ts)"
-                " VALUES (?, ?, ?, ?)",
+                "INSERT INTO chat_groups (group_id, name, members, created_ts) VALUES (?, ?, ?, ?)",
                 (
                     group["group_id"],
                     group["name"],
@@ -96,9 +95,7 @@ class ChatStore:
 
     def get_group(self, group_id: str) -> dict[str, Any] | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM chat_groups WHERE group_id = ?", (group_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM chat_groups WHERE group_id = ?", (group_id,)).fetchone()
         if row is None:
             return None
         group = dict(row)
@@ -107,9 +104,7 @@ class ChatStore:
 
     # -------------------------------------------------------------------- messages
 
-    def post(
-        self, group_id: str, author: str, text: str, *, author_role: str = "worker"
-    ) -> dict[str, Any]:
+    def post(self, group_id: str, author: str, text: str, *, author_role: str = "worker") -> dict[str, Any]:
         """Append one message. Mentions are parsed against member handles —
         `@name` anywhere in the text — so tagging needs no separate parameter."""
         group = self.get_group(group_id)
@@ -118,13 +113,7 @@ class ChatStore:
         if not (text or "").strip():
             raise BoardError("message text is required")
         handles = {m["name"] for m in group["members"]}
-        mentions = sorted(
-            {
-                m.group(1)
-                for m in re.finditer(r"@([\w.-]+)", text)
-                if m.group(1) in handles
-            }
-        )
+        mentions = sorted({m.group(1) for m in re.finditer(r"@([\w.-]+)", text) if m.group(1) in handles})
         message = {
             "group_id": group_id,
             "ts": datetime.now(UTC).isoformat(),
@@ -150,13 +139,10 @@ class ChatStore:
             self._conn.commit()
         return {**message, "seq": cursor.lastrowid}
 
-    def messages(
-        self, group_id: str, *, since_seq: int = 0, limit: int = 200
-    ) -> list[dict[str, Any]]:
+    def messages(self, group_id: str, *, since_seq: int = 0, limit: int = 200) -> list[dict[str, Any]]:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT * FROM chat_messages WHERE group_id = ? AND seq > ?"
-                " ORDER BY seq LIMIT ?",
+                "SELECT * FROM chat_messages WHERE group_id = ? AND seq > ? ORDER BY seq LIMIT ?",
                 (group_id, since_seq, max(1, min(int(limit or 200), 2000))),
             ).fetchall()
         return [_row_to_message(row) for row in rows]
@@ -179,8 +165,7 @@ class ChatStore:
         sidebar badge for the USER, whose 'member' key is "user"."""
         with self._lock:
             row = self._conn.execute(
-                "SELECT COUNT(*) AS n FROM chat_messages WHERE group_id = ?"
-                " AND seq > ? AND author != ?",
+                "SELECT COUNT(*) AS n FROM chat_messages WHERE group_id = ? AND seq > ? AND author != ?",
                 (group_id, self._cursor(group_id, member), member),
             ).fetchone()
         return int(row["n"])

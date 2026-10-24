@@ -15,11 +15,18 @@ from test_team_reader_recovery import create_item
 
 def tools_for(m, tmp_path, *, who="sam", team_id=None, membership=None):
     team = m.teams.for_lead_session("lead")
-    return {t.__name__: t for t in artifact_tools(
-        m.team_store, m.attachment_store, space=team.space,
-        actor=Actor(id=who, role=Role.LEAD if who == "lead" else Role.WORKER),
-        roots=lambda: [RootDir(tmp_path)],
-        team_identity=membership or (lambda: team_id or team.team_id), taint=lambda: True)}
+    return {
+        t.__name__: t
+        for t in artifact_tools(
+            m.team_store,
+            m.attachment_store,
+            space=team.space,
+            actor=Actor(id=who, role=Role.LEAD if who == "lead" else Role.WORKER),
+            roots=lambda: [RootDir(tmp_path)],
+            team_identity=membership or (lambda: team_id or team.team_id),
+            taint=lambda: True,
+        )
+    }
 
 
 def test_publication_versions_shared_with_sibling_not_assigned_item(manager, tmp_path):
@@ -44,13 +51,15 @@ def test_publication_versions_shared_with_sibling_not_assigned_item(manager, tmp
     outsider = tools_for(manager, tmp_path, team_id="unrelated-team")
     assert outsider["list_team_artifacts"]()["artifacts"] == []
     assert "error" in outsider["read_team_artifact"](first["artifact_id"])
-    detail = manager.team_store.get_item(manager.teams.for_lead_session("lead").space, item["id"],
-                                       actor=Actor(id="lead", role=Role.LEAD))
+    detail = manager.team_store.get_item(
+        manager.teams.for_lead_session("lead").space, item["id"], actor=Actor(id="lead", role=Role.LEAD)
+    )
     assert first["ref"] in detail["refs"] and second["ref"] in detail["refs"]
     manager.team_store.rebuild(manager.teams.for_lead_session("lead").space)
     assert tools_for(manager, tmp_path)["read_team_artifact"](first["artifact_id"], 1)["text"].startswith("Version one")
-    response = TestClient(create_app(manager)).get("/v1/sessions/lead/board/attachment",
-                                                   params={"name": stored_name(first["ref"])})
+    response = TestClient(create_app(manager)).get(
+        "/v1/sessions/lead/board/attachment", params={"name": stored_name(first["ref"])}
+    )
     assert response.status_code == 200 and response.content.startswith(b"Version one")
     assert response.headers["x-content-type-options"] == "nosniff"
 
@@ -78,8 +87,10 @@ def test_text_pages_pin_version_and_replay(manager, tmp_path):
 def test_publication_authority_before_read_and_after_copy(manager, tmp_path, monkeypatch):
     _, _, item = create_item(manager, "maya")
     sam = tools_for(manager, tmp_path)
+
     def forbidden(*a, **kw):
         pytest.fail("must check item authority before reading")
+
     with monkeypatch.context() as patch:
         patch.setattr("coworker.teams.artifacts.read_attachment_file", forbidden)
         assert "error" in sam["attach_file"](item["id"], "missing.md")
@@ -89,10 +100,12 @@ def test_publication_authority_before_read_and_after_copy(manager, tmp_path, mon
     current = [team.team_id]
     tool = tools_for(manager, tmp_path, membership=lambda: current[0])
     put = manager.attachment_store.put
+
     def revoke(*args):
         result = put(*args)
         current[0] = ""
         return result
+
     monkeypatch.setattr(manager.attachment_store, "put", revoke)
     assert "error" in tool["attach_file"](mine["id"], "report.md")
     assert tools_for(manager, tmp_path)["list_team_artifacts"]()["artifacts"] == []
@@ -104,8 +117,11 @@ def test_revisions_are_serialized_without_overwrite(manager, tmp_path):
     tools = tools_for(manager, tmp_path)
     first = tools["attach_file"](item["id"], "report.md")
     with ThreadPoolExecutor(max_workers=4) as pool:
-        versions = list(pool.map(lambda _: tools["attach_file"](item["id"], "report.md",
-                            artifact_id=first["artifact_id"]), range(8)))
+        versions = list(
+            pool.map(
+                lambda _: tools["attach_file"](item["id"], "report.md", artifact_id=first["artifact_id"]), range(8)
+            )
+        )
     assert sorted(v["version"] for v in versions) == list(range(2, 10))
     assert all(v["ref"] == first["ref"] for v in versions)  # deduplicated bytes, distinct versions
     p = tools["list_team_artifacts"](limit=3)
@@ -113,8 +129,16 @@ def test_revisions_are_serialized_without_overwrite(manager, tmp_path):
     assert tools["list_team_artifacts"](p["next_after_seq"])["artifacts"][0]["version"] == 4
 
 
-@pytest.mark.parametrize("name,data", [("bad.md", b"\xff\x00"), ("run.html", b"<script>alert(1)</script>"),
-                                      ("run.sh", b"echo hi"), (".env", b"SECRET=private"), ("bad.pdf", b"not pdf")])
+@pytest.mark.parametrize(
+    "name,data",
+    [
+        ("bad.md", b"\xff\x00"),
+        ("run.html", b"<script>alert(1)</script>"),
+        ("run.sh", b"echo hi"),
+        (".env", b"SECRET=private"),
+        ("bad.pdf", b"not pdf"),
+    ],
+)
 def test_unsupported_or_binary_reports_fail_closed(manager, tmp_path, name, data):
     _, _, item = create_item(manager)
     (tmp_path / name).write_bytes(data)
@@ -148,6 +172,7 @@ def test_corruption_and_forged_refs_are_not_readable(manager, tmp_path):
 
 def test_pdf_reads_are_paged_and_do_not_pretend_scans_have_text(manager, tmp_path):
     from pypdf import PdfWriter
+
     _, _, item = create_item(manager)
     writer = PdfWriter()
     writer.add_blank_page(width=100, height=100)
@@ -173,5 +198,7 @@ def test_comment_http_cursor_keeps_actor_scope(manager):
     assert response.status_code == 200 and response.json()["next_after_seq"] == event["seq"]
     hidden_response = client.get("/v1/board/comments", params={"space": space, "id": hidden["id"]}, headers=headers)
     assert hidden_response.status_code in (400, 403, 404)
-    body = client.get("/v1/board/comment", params={"space": space, "id": mine["id"], "seq": event["seq"]}, headers=headers)
+    body = client.get(
+        "/v1/board/comment", params={"space": space, "id": mine["id"], "seq": event["seq"]}, headers=headers
+    )
     assert body.json()["text"] == "New finding"

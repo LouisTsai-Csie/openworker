@@ -62,6 +62,5 @@ def proxy_tool(tool: Callable[..., Any], workspace: Any, *, root: str, roots: li
 def proxy_tools(tools: list, workspace: Any, *, root: str, roots: list | None = None) -> list:
     """Proxies for the tools the runner can execute; any other tool is returned as it is."""
     return [
-        proxy_tool(t, workspace, root=root, roots=roots) if getattr(t, "__name__", "") in TOOLS else t
-        for t in tools
+        proxy_tool(t, workspace, root=root, roots=roots) if getattr(t, "__name__", "") in TOOLS else t for t in tools
     ]

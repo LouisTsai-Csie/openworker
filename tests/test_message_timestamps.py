@@ -139,9 +139,7 @@ def test_provider_adapters_drop_ts():
 
 
 def test_messages_endpoint_returns_ts(tmp_path):
-    manager = SessionManager(
-        workspace=tmp_path, provider=CapturingProvider([_text("hi there")])
-    )
+    manager = SessionManager(workspace=tmp_path, provider=CapturingProvider([_text("hi there")]))
     client = TestClient(create_app(manager))
     with client.websocket_connect("/ws/session/ts1") as ws:
         assert ws.receive_json()["type"] == "ready"

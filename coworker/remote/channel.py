@@ -172,9 +172,7 @@ class AsgiDispatcher:
             body = decode_body(frame.get("body_b64"))
             headers = {}
             if body:
-                headers["content-type"] = str(
-                    frame.get("content_type") or "application/json"
-                )
+                headers["content-type"] = str(frame.get("content_type") or "application/json")
             # The controller-verified actor becomes a header only HERE — the box
             # has no listener, so nothing else can present one.
             if frame.get("actor"):
@@ -190,18 +188,14 @@ class AsgiDispatcher:
                 "id": rpc_id,
                 "status": response.status_code,
                 "body_b64": encode_body(response.content),
-                "content_type": response.headers.get(
-                    "content-type", "application/json"
-                ),
+                "content_type": response.headers.get("content-type", "application/json"),
             }
         except Exception as exc:  # a broken dispatch must answer, not wedge the channel
             return {
                 "type": "rpc_result",
                 "id": rpc_id,
                 "status": 502,
-                "body_b64": encode_body(
-                    json.dumps({"error": f"dispatch failed: {exc}"}).encode()
-                ),
+                "body_b64": encode_body(json.dumps({"error": f"dispatch failed: {exc}"}).encode()),
                 "content_type": "application/json",
             }
 
@@ -244,9 +238,7 @@ class AsgiWsBridge:
             "raw_path": path.encode(),
             "query_string": query.encode(),
             "root_path": "",
-            "headers": (
-                [(ACTOR_HEADER.encode(), self._actor.encode())] if self._actor else []
-            ),
+            "headers": ([(ACTOR_HEADER.encode(), self._actor.encode())] if self._actor else []),
             "client": ("channel", 0),
             "server": ("joined-box", 0),
             "subprotocols": [],
@@ -273,9 +265,7 @@ class AsgiWsBridge:
             if text is None and message.get("bytes") is not None:
                 text = bytes(message["bytes"]).decode("utf-8", "replace")
             if text is not None and not self._closed:
-                await self._send_frame(
-                    {"type": "ws_msg", "stream": self.stream_id, "text": text}
-                )
+                await self._send_frame({"type": "ws_msg", "stream": self.stream_id, "text": text})
         elif kind == "websocket.close":
             await self._close_out()
 

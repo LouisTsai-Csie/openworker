@@ -18,9 +18,7 @@ def store(tmp_path):
 
 
 def seed(store, space="proj"):
-    return store.create_item(
-        space, LEAD, title="Review api", criteria="every route triaged"
-    )
+    return store.create_item(space, LEAD, title="Review api", criteria="every route triaged")
 
 
 def test_events_hash_chain_verifies(store):
@@ -34,7 +32,7 @@ def test_out_of_band_edit_breaks_the_chain(store):
     # The append-only property can't be enforced against someone with the sqlite
     # file; the chain makes the edit visible. Tamper directly:
     conn = sqlite3.connect(store.db_path)
-    conn.execute("UPDATE team_events SET payload = '{\"title\":\"forged\"}' WHERE seq = 1")
+    conn.execute('UPDATE team_events SET payload = \'{"title":"forged"}\' WHERE seq = 1')
     conn.commit()
     conn.close()
     with pytest.raises(ChainError):
@@ -95,10 +93,7 @@ def test_rebuild_reproduces_the_projection(store):
     assert after[0]["state"] == "in_progress"
     assert after[0]["assignee"] == "worker-1"
     # created_ts comes from the event, so replay is deterministic
-    assert (
-        store.get_item("proj", item["id"], actor=USER)["created_ts"]
-        == item["created_ts"]
-    )
+    assert store.get_item("proj", item["id"], actor=USER)["created_ts"] == item["created_ts"]
 
 
 def test_taint_travels_with_the_record(store):

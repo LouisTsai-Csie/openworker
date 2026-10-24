@@ -5,6 +5,7 @@ The design ladder it slots into: once → THIS RUN → (mode switch) → always.
 It exists because the EXTERNAL ladder was once-or-forever, and approval fatigue
 drained into permanent trust rules (observed in owner testing 2026-08-30).
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -70,9 +71,7 @@ def test_this_run_grant_is_external_only():
     def req(name: str, category: str = "", approval: bool = False, args: dict | None = None):
         return SimpleNamespace(
             tool_name=name,
-            metadata=SimpleNamespace(requires_approval=approval, category=category)
-            if category or approval
-            else None,
+            metadata=SimpleNamespace(requires_approval=approval, category=category) if category or approval else None,
             arguments=args or {},
         )
 
@@ -113,10 +112,7 @@ def test_approval_outcome_downgrades_unoffered_grants_to_once():
         metadata=SimpleNamespace(requires_approval=True, category="mcp"),
         arguments={},
     )
-    assert (
-        SessionManager.approval_outcome(fake, "this_run", mcp_req, "s1")
-        is ApprovalOutcome.THIS_RUN
-    )
+    assert SessionManager.approval_outcome(fake, "this_run", mcp_req, "s1") is ApprovalOutcome.THIS_RUN
 
 
 # -- end to end: one card per run, covered calls chip-annotated, boundary honored --
@@ -148,9 +144,7 @@ def test_engine_end_to_end_one_card_per_run(tmp_path):
 
     def tool_turn(call_id: str) -> AssistantTurn:
         return AssistantTurn(
-            tool_calls=[
-                ToolCall(id=call_id, name="mcp__srv__search", arguments={"q": "x"})
-            ],
+            tool_calls=[ToolCall(id=call_id, name="mcp__srv__search", arguments={"q": "x"})],
             finish_reason="tool_calls",
         )
 
@@ -188,11 +182,7 @@ def test_engine_end_to_end_one_card_per_run(tmp_path):
         # ONE card for two calls: c1 asked, c2 rode the grant.
         assert asks == ["mcp__srv__search"]
         # The covered call is chip-annotated — silent to attention, never invisible.
-        origins = [
-            m.get("_display", {}).get("approval_origin")
-            for m in engine.messages
-            if m.get("role") == "tool"
-        ]
+        origins = [m.get("_display", {}).get("approval_origin") for m in engine.messages if m.get("role") == "tool"]
         assert "run_grant" in origins
         events_two = [ev async for ev in engine.run("find more")]
         # The run boundary held: the very same tool asks again in the next run.

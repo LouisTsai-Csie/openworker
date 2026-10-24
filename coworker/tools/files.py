@@ -95,14 +95,13 @@ def file_tools(workspace: str, roots: list | None = None) -> list:
     (RootDir list), absolute paths inside ANY root also resolve — multi-root sessions
     (universal scratch) address their scratch/extra dirs by the absolute paths the roots
     context advertises."""
+
     def read_file(
         path: str,
         start_line: int = 1,
         max_lines: int = _DEFAULT_MAX_LINES,
     ) -> dict[str, Any]:
-        return _impl.read_file(
-            workspace, path, start_line, max_lines, roots=[str(r.path) for r in (roots or [])]
-        )
+        return _impl.read_file(workspace, path, start_line, max_lines, roots=[str(r.path) for r in (roots or [])])
 
     read_file.__name__ = "read_file"
     read_file.__doc__ = _SCHEMA["function"]["description"]
@@ -122,7 +121,11 @@ def file_tools(workspace: str, roots: list | None = None) -> list:
         max_results: int = _DEFAULT_MAX_RESULTS,
     ) -> Any:
         return _impl.list_files(
-            workspace, path, pattern, recursive, max_results,
+            workspace,
+            path,
+            pattern,
+            recursive,
+            max_results,
             roots=[str(r.path) for r in (roots or [])],
         )
 

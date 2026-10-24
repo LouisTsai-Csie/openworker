@@ -28,9 +28,7 @@ def capabilities_for(model: str) -> ModelCapabilities:
     if provider in ("ollama", "llamacpp", "vllm"):
         _vision_patterns = ("-vl", "vision", "llava", "bakllava", "cogvlm", "minicpm-v")
         has_vision = any(p in name for p in _vision_patterns)
-        return ModelCapabilities(
-            tools=True, vision=has_vision, parallel_tool_calls=False, streaming=True
-        )
+        return ModelCapabilities(tools=True, vision=has_vision, parallel_tool_calls=False, streaming=True)
 
     # Cloud-account providers (custom-added ids; curated ones answered from the matrix).
     # The family segment decides: Claude keeps its native capabilities; everything else
@@ -38,44 +36,28 @@ def capabilities_for(model: str) -> ModelCapabilities:
     # parallel calls and vision vary per model).
     if provider in ("bedrock", "vertex"):
         if name.startswith(("claude/", "gemini/")):
-            return ModelCapabilities(
-                tools=True, vision=True, pdf=True, parallel_tool_calls=True, streaming=True
-            )
-        return ModelCapabilities(
-            tools=True, vision=False, parallel_tool_calls=False, streaming=True
-        )
+            return ModelCapabilities(tools=True, vision=True, pdf=True, parallel_tool_calls=True, streaming=True)
+        return ModelCapabilities(tools=True, vision=False, parallel_tool_calls=False, streaming=True)
 
     # Claude / Gemini (both native): tools + vision + parallel tool calls + streaming. The
     # engine executes parallel calls sequentially and each converter folds the results into
     # the single next user message — exactly what both APIs require.
     if provider in ("anthropic", "gemini"):
-        return ModelCapabilities(
-            tools=True, vision=True, pdf=True, parallel_tool_calls=True, streaming=True
-        )
+        return ModelCapabilities(tools=True, vision=True, pdf=True, parallel_tool_calls=True, streaming=True)
 
     # Modern OpenAI GPT models: tools + vision + parallel tool calls + streaming.
     if name.startswith(("gpt-5", "gpt-4")):
-        return ModelCapabilities(
-            tools=True, vision=True, pdf=True, parallel_tool_calls=True, streaming=True
-        )
+        return ModelCapabilities(tools=True, vision=True, pdf=True, parallel_tool_calls=True, streaming=True)
 
     # OpenAI reasoning models: tools yes, parallel tool calls constrained.
     if name.startswith(("o1", "o3", "o4")):
-        return ModelCapabilities(
-            tools=True, vision=False, parallel_tool_calls=False, streaming=True
-        )
+        return ModelCapabilities(tools=True, vision=False, parallel_tool_calls=False, streaming=True)
 
     # OpenAI-compatible vendors (DeepSeek, Z AI/GLM, Kimi, MiniMax, Qwen, xAI/Grok, Mistral):
     # tool calling + streaming across their current lineups; vision left off until probed
     # per-model (several have vision variants, but the text flagships are what we suggest).
-    if name.startswith(
-        ("deepseek", "glm", "kimi", "minimax", "qwen", "grok", "mistral", "magistral")
-    ):
-        return ModelCapabilities(
-            tools=True, vision=False, parallel_tool_calls=True, streaming=True
-        )
+    if name.startswith(("deepseek", "glm", "kimi", "minimax", "qwen", "grok", "mistral", "magistral")):
+        return ModelCapabilities(tools=True, vision=False, parallel_tool_calls=True, streaming=True)
 
     # Conservative default for unknown models.
-    return ModelCapabilities(
-        tools=True, vision=False, parallel_tool_calls=False, streaming=True
-    )
+    return ModelCapabilities(tools=True, vision=False, parallel_tool_calls=False, streaming=True)

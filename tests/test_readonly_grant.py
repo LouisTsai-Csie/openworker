@@ -55,73 +55,73 @@ ACCEPT = [
 REJECT = [
     "",
     "rm -rf /",
-    "cat a > b",                              # redirection
+    "cat a > b",  # redirection
     "cat a >> b",
-    "grep x f 2>/dev/null",                   # even stderr redirects
-    "ls; rm -rf /",                           # chaining
+    "grep x f 2>/dev/null",  # even stderr redirects
+    "ls; rm -rf /",  # chaining
     "ls && touch x",
-    "cat `whoami`",                           # substitution
+    "cat `whoami`",  # substitution
     "cat $(secret)",
-    "grep '$(x)' file",                       # can't tell quoted-safe apart — fail closed
+    "grep '$(x)' file",  # can't tell quoted-safe apart — fail closed
     r"cat $env:APPDATA\coworker\secrets.json",  # PowerShell variable expansion
     r"cat $HOME/.config/coworker/secrets.json",  # POSIX variable expansion
     r"cat ${HOME}/.config/coworker/secrets.json",  # POSIX braced expansion
-    "curl https://api.github.com/repos/x",    # network = exfil channel, excluded
+    "curl https://api.github.com/repos/x",  # network = exfil channel, excluded
     "wget http://x",
     "ssh host ls",
-    "python3 -c 'print(1)'",                  # interpreters
+    "python3 -c 'print(1)'",  # interpreters
     "bash -c ls",
-    "sed -i 's/a/b/' f",                      # in-place write
-    "sed -n 'w /tmp/x' f",                    # sed write command
-    "sed -f script.sed f",                    # script file could carry w
-    "awk '{print > \"f\"}' x",                # awk redirection
+    "sed -i 's/a/b/' f",  # in-place write
+    "sed -n 'w /tmp/x' f",  # sed write command
+    "sed -f script.sed f",  # script file could carry w
+    "awk '{print > \"f\"}' x",  # awk redirection
     "awk 'BEGIN{system(\"rm x\")}'",
     "find . -delete",
     "find . -exec rm {} ;",
     "git push origin main",
-    "git branch new-branch",                  # creates
-    "git tag v1",                             # creates
-    "git stash",                              # writes
-    "git config user.name evil",              # writes
-    "git -c core.pager='touch x' log",        # exec hook via -c
-    "git log --output=/tmp/f",                # write via flag
-    "git grep -O./pwn.sh needle",             # exec via pager
+    "git branch new-branch",  # creates
+    "git tag v1",  # creates
+    "git stash",  # writes
+    "git config user.name evil",  # writes
+    "git -c core.pager='touch x' log",  # exec hook via -c
+    "git log --output=/tmp/f",  # write via flag
+    "git grep -O./pwn.sh needle",  # exec via pager
     "git grep --open-files-in-pager=sh needle",
     "git grep --open-files-in-pager needle",  # pager defaults to less, still exec-shaped
-    "/tmp/evil/cat file",                     # path-invoked binary
+    "/tmp/evil/cat file",  # path-invoked binary
     "env FOO=1 rm x",
     "tee /tmp/x",
     "xargs rm",
-    "ls | tee /tmp/x",                        # every pipeline stage must classify
-    "ls |",                                   # dangling pipe
+    "ls | tee /tmp/x",  # every pipeline stage must classify
+    "ls |",  # dangling pipe
     "sudo cat /etc/shadow",
     # -- flags that turn a listed reader into a writer or an executor ---------------
-    "sort -o /tmp/f data.txt",                # writes the sorted output
-    "sort -o/tmp/f data.txt",                 # attached value
+    "sort -o /tmp/f data.txt",  # writes the sorted output
+    "sort -o/tmp/f data.txt",  # attached value
     "sort --output=/tmp/f data.txt",
     "sort --output /tmp/f data.txt",
-    "sort -ro /tmp/f data.txt",               # cluster
-    "sort --compress-program=./p data.txt",   # executes the compressor
-    "xxd -r dump.hex out.bin",                # reverse mode writes the outfile
-    "xxd payload.txt direct.bin",             # the outfile needs no flag at all
-    "rg --pre ./pwn.sh pattern file.txt",     # executes the preprocessor
+    "sort -ro /tmp/f data.txt",  # cluster
+    "sort --compress-program=./p data.txt",  # executes the compressor
+    "xxd -r dump.hex out.bin",  # reverse mode writes the outfile
+    "xxd payload.txt direct.bin",  # the outfile needs no flag at all
+    "rg --pre ./pwn.sh pattern file.txt",  # executes the preprocessor
     "rg --pre=./pwn.sh pattern file.txt",
     "rg --hostname-bin=./pwn.sh pattern file.txt",
     "rg --pager ./pwn.sh pattern file.txt",
-    "file -C -m magic",                       # compiles magic.mgc
+    "file -C -m magic",  # compiles magic.mgc
     "file --compile -m magic",
-    "date -s 2020-01-01",                     # sets the system clock
+    "date -s 2020-01-01",  # sets the system clock
     "date --set=2020-01-01",
-    "du --files0-from=/etc/list",             # reads filenames the scoper cannot see
-    "sed -e'w /tmp/f' data.txt",              # attached -e script carries the write
+    "du --files0-from=/etc/list",  # reads filenames the scoper cannot see
+    "sed -e'w /tmp/f' data.txt",  # attached -e script carries the write
     "sed --expression='w /tmp/f' data.txt",
-    "sed -n '1wout.txt' data.txt",            # attached filename after an address
-    "sed 's/a/b/w out.txt' data.txt",         # substitution flag
+    "sed -n '1wout.txt' data.txt",  # attached filename after an address
+    "sed 's/a/b/w out.txt' data.txt",  # substitution flag
     "sed 's/a/b/wout.txt' data.txt",
     "sed '1w w1.txt' data.txt",
-    "awk 'BEGIN{print \"x\" | \"sh\"}'",      # pipe to a command executes
+    'awk \'BEGIN{print "x" | "sh"}\'',  # pipe to a command executes
     "awk 'BEGIN{\"id\" | getline x}'",
-    "awk -f prog.awk data.txt",               # program file can carry system()/pipes
+    "awk -f prog.awk data.txt",  # program file can carry system()/pipes
     "awk --file=prog.awk data.txt",
 ]
 

@@ -41,8 +41,7 @@ def test_no_access_errors_are_translated():
 
     # Anthropic's 404 body is type not_found_error + "model: <id>"
     exc = RuntimeError(
-        "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', "
-        "'message': 'model: claude-fable-5'}}"
+        "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-fable-5'}}"
     )
     msg = friendly_model_error("anthropic:claude-fable-5", exc)
     assert msg and "doesn't have access to anthropic:claude-fable-5" in msg
@@ -74,16 +73,8 @@ def test_unrelated_errors_pass_through_raw():
         is None
     )
     # a 404 from a wrong base_url isn't an access problem
-    assert (
-        friendly_model_error(
-            "gpt-5.6-sol", RuntimeError("Error code: 404 - no route /v2/chat")
-        )
-        is None
-    )
-    assert (
-        friendly_model_error("gpt-5.6-sol", RuntimeError("connection reset by peer"))
-        is None
-    )
+    assert friendly_model_error("gpt-5.6-sol", RuntimeError("Error code: 404 - no route /v2/chat")) is None
+    assert friendly_model_error("gpt-5.6-sol", RuntimeError("connection reset by peer")) is None
 
 
 def test_os_permission_error_is_not_a_model_access_error():
@@ -103,14 +94,12 @@ def test_os_permission_error_is_not_a_model_access_error():
     msg = friendly_model_error("anthropic:claude-fable-5", real)
     assert msg and "doesn't have access to anthropic:claude-fable-5" in msg
 
+
 # -- friendly authentication errors ------------------------------------------------------
 def test_qwen_auth_error_mentions_endpoint_mismatch():
     # DashScope's 401 InvalidApiKey — the exact shape the OpenAI SDK surfaces when a
     # China-portal key hits the international endpoint (or vice versa).
-    exc = RuntimeError(
-        "Error code: 401 - {'code': 'InvalidApiKey', 'message': 'Invalid API-key "
-        "provided.'}"
-    )
+    exc = RuntimeError("Error code: 401 - {'code': 'InvalidApiKey', 'message': 'Invalid API-key provided.'}")
     msg = friendly_model_error("qwen:qwen3-max", exc)
     assert msg is not None
     assert "qwen3-max" in msg
@@ -121,10 +110,7 @@ def test_qwen_auth_error_mentions_endpoint_mismatch():
 
 def test_qwen_auth_error_works_with_bare_model_name():
     # A bare "qwen3-max" (no provider prefix) should still be recognized as Qwen.
-    exc = RuntimeError(
-        "Error code: 401 - {'code': 'InvalidApiKey', 'message': 'Invalid API-key "
-        "provided.'}"
-    )
+    exc = RuntimeError("Error code: 401 - {'code': 'InvalidApiKey', 'message': 'Invalid API-key provided.'}")
     msg = friendly_model_error("qwen3-max", exc)
     assert msg is not None
     assert "qwen3-max" in msg
@@ -134,8 +120,7 @@ def test_generic_auth_error_for_non_qwen_provider():
     # DeepSeek uses "invalid_api_key" — should get the generic key-check message,
     # not the Qwen-specific endpoint guidance.
     exc = RuntimeError(
-        "Error code: 401 - {'error': {'code': 'invalid_api_key', 'message': "
-        "'Incorrect API key provided.'}}"
+        "Error code: 401 - {'error': {'code': 'invalid_api_key', 'message': 'Incorrect API key provided.'}}"
     )
     msg = friendly_model_error("deepseek:deepseek-v4-pro", exc)
     assert msg is not None
@@ -149,8 +134,7 @@ def test_permission_error_is_not_treated_as_auth_failure():
     # A 403 permission_error is about model access, not key validity — it must be
     # caught by _NO_ACCESS, not by the auth-failure path.
     exc = RuntimeError(
-        "Error code: 403 - {'error': {'type': 'permission_error', 'message': "
-        "'You do not have access to this model.'}}"
+        "Error code: 403 - {'error': {'type': 'permission_error', 'message': 'You do not have access to this model.'}}"
     )
     msg = friendly_model_error("qwen:qwen3-max", exc)
     assert msg is not None

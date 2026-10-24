@@ -44,7 +44,6 @@ def test_both_keys_must_agree():
         parse_manifest(text)
 
 
-
 def test_resolve_prefers_the_first_runnable_entry(tmp_path, monkeypatch):
     mgr = _mgr(tmp_path, monkeypatch)
     # The builtin ops coworker lists [anthropic:claude-opus-4-8, openai:gpt-5.5].

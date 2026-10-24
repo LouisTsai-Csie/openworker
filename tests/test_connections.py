@@ -55,18 +55,14 @@ def _ops_manifest():
 def _channel_event(text="deploy failed", chat_id="C1", platform="slack"):
     return MessageEvent(
         text=text,
-        source=SessionSource(
-            platform=platform, chat_id=chat_id, user_name="bob", chat_type="channel"
-        ),
+        source=SessionSource(platform=platform, chat_id=chat_id, user_name="bob", chat_type="channel"),
     )
 
 
 def _dm_event(text="ping", chat_id="D1", platform="slack"):
     return MessageEvent(
         text=text,
-        source=SessionSource(
-            platform=platform, chat_id=chat_id, user_name="sue", chat_type="dm"
-        ),
+        source=SessionSource(platform=platform, chat_id=chat_id, user_name="sue", chat_type="dm"),
     )
 
 
@@ -74,9 +70,7 @@ def _dm_event(text="ping", chat_id="D1", platform="slack"):
 def test_persona_defaults_seeded_from_manifest(tmp_path):
     p = tmp_path / "persona_connections.json"
     store = PersonaConnectionStore(p)
-    manifest = (
-        _ops_manifest()
-    )  # recommends: github/slack/datadog core, pagerduty optional, +mcp
+    manifest = _ops_manifest()  # recommends: github/slack/datadog core, pagerduty optional, +mcp
 
     # Every CORE connector seeds ON regardless of whether it's connected yet; the optional one
     # (pagerduty) seeds OFF; the mcp recommend is not a connector and is ignored. datadog is core but
@@ -91,9 +85,10 @@ def test_persona_defaults_seeded_from_manifest(tmp_path):
     }
 
     # While datadog is disconnected, effective() excludes it (connected-gate) but keeps github/slack.
-    assert effective(
-        connected={"github", "slack"}, persona_defaults=seeded, session_overrides={}
-    ) == {"github": True, "slack": True}
+    assert effective(connected={"github", "slack"}, persona_defaults=seeded, session_overrides={}) == {
+        "github": True,
+        "slack": True,
+    }
     # Once datadog connects, its True seed now lights up — no re-seed, no manual toggle needed.
     assert effective(
         connected={"github", "slack", "datadog"},

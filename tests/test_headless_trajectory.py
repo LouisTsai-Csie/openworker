@@ -53,8 +53,13 @@ def test_compacted_notice_step_includes_the_summary():
 def test_trimmed_notice_and_plain_notices_render_their_text():
     messages = [
         {"role": "user", "content": "go", "ts": 1.0},
-        {"role": "notice", "kind": "compacted", "text": "Context trimmed — oldest turns dropped",
-         "compaction": {"boundary_index": 3, "summary_text": "", "working_state": "", "trimmed": True}, "ts": 2.0},
+        {
+            "role": "notice",
+            "kind": "compacted",
+            "text": "Context trimmed — oldest turns dropped",
+            "compaction": {"boundary_index": 3, "summary_text": "", "working_state": "", "trimmed": True},
+            "ts": 2.0,
+        },
         {"role": "notice", "kind": "truncated", "text": "cut off 3 times", "ts": 3.0},
         {"role": "notice", "kind": "interrupted", "ts": 4.0},
     ]
@@ -94,8 +99,13 @@ def test_agent_steps_carry_raw_counts_host_and_a_priced_total():
 def test_an_unpriced_model_gets_counts_but_no_cost():
     messages = [
         {"role": "user", "content": "go", "ts": 1.0},
-        {"role": "assistant", "content": "done", "finish_reason": "stop", "ts": 2.0,
-         "usage": {"input": 10, "output": 5}},
+        {
+            "role": "assistant",
+            "content": "done",
+            "finish_reason": "stop",
+            "ts": 2.0,
+            "usage": {"input": 10, "output": 5},
+        },
     ]
     traj = _traj(messages, model="together:some/unpriced-model")
     step = next(s for s in traj["steps"] if s["source"] == "agent")

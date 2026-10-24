@@ -82,9 +82,7 @@ class RelayHub:
         self.relay_url = relay_url
         self._token_provider = token_provider
         self._transport_factory = transport_factory or self._default_transport_factory
-        self._reconnect_delay = (
-            reconnect_delay if reconnect_delay is not None else self._RECONNECT_DELAY
-        )
+        self._reconnect_delay = reconnect_delay if reconnect_delay is not None else self._RECONNECT_DELAY
         self._handlers: dict[str, Callable[[dict], Awaitable[None]]] = {}
         self._transport: RelayTransport | None = None
         self._task: asyncio.Task | None = None
@@ -96,9 +94,7 @@ class RelayHub:
         self.last_error: str = ""  # last connect/reconnect failure ("" once healthy)
         self._progress = asyncio.Event()
 
-    def register(
-        self, provider: str, handler: Callable[[dict], Awaitable[None]]
-    ) -> None:
+    def register(self, provider: str, handler: Callable[[dict], Awaitable[None]]) -> None:
         self._handlers[provider] = handler
 
     async def release(self, provider: str) -> None:
@@ -214,15 +210,11 @@ class RelayHub:
             self._progress.clear()
             remaining = deadline - loop.time()
             if remaining <= 0:
-                raise TimeoutError(
-                    f"only {self._dispatched} frames dispatched (< {at_least})"
-                )
+                raise TimeoutError(f"only {self._dispatched} frames dispatched (< {at_least})")
             try:
                 await asyncio.wait_for(self._progress.wait(), timeout=remaining)
             except TimeoutError as exc:
-                raise TimeoutError(
-                    f"only {self._dispatched} frames dispatched (< {at_least})"
-                ) from exc
+                raise TimeoutError(f"only {self._dispatched} frames dispatched (< {at_least})") from exc
 
     # -- default transport ---------------------------------------------------
     def _default_transport_factory(self) -> RelayTransport:
@@ -268,9 +260,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
         self._hub.register(self.platform, self._dispatch)
         ok = await self._hub.start()
         if ok:
-            logger.info(
-                "slack adapter connected (managed relay), %d team(s)", len(self._teams)
-            )
+            logger.info("slack adapter connected (managed relay), %d team(s)", len(self._teams))
         return ok
 
     async def disconnect(self) -> None:
@@ -293,19 +283,14 @@ class SlackRelayAdapter(BasePlatformAdapter):
             "reconnects": self._hub.reconnects,
             "last_event_at": self.last_event_at,
             "last_error": self._hub.last_error,
-            "teams": {
-                tid: {"token_ok": bool(info.get("token_ok", True))}
-                for tid, info in self._teams.items()
-            },
+            "teams": {tid: {"token_ok": bool(info.get("token_ok", True))} for tid, info in self._teams.items()},
         }
 
     async def wait_dispatched(self, at_least: int, timeout: float = 2.0) -> None:
         await self._hub.wait_dispatched(at_least, timeout)
 
     # -- team registry -------------------------------------------------------
-    def set_team(
-        self, team_id: str, bot_token: str, bot_user_id: str | None = None
-    ) -> None:
+    def set_team(self, team_id: str, bot_token: str, bot_user_id: str | None = None) -> None:
         self._teams[team_id] = {"bot_token": bot_token, "bot_user_id": bot_user_id}
 
     def _bot_user_id(self, team_id: str) -> str | None:
@@ -357,9 +342,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
         # mirroring the Socket-Mode adapter — so cards read "@OpenWorker"/"Rohit"/"#ocw-test"
         # not raw U…/C… ids. Best-effort: ids fall through on failure.
         if not mapped.source.user_name:
-            mapped.source.user_name = await self._display_name(
-                team_id, mapped.source.user_id
-            )
+            mapped.source.user_name = await self._display_name(team_id, mapped.source.user_id)
         if not mapped.source.chat_name:
             mapped.source.chat_name = await self._channel_name(team_id, channel)
         mapped.text = await self._resolve_mentions(team_id, mapped.text)
@@ -420,9 +403,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
             info["token_ok"] = False
 
     # -- name resolution (per workspace, via that team's bot token) ----------
-    async def _slack_get(
-        self, team_id: str, method: str, params: dict
-    ) -> dict | None:
+    async def _slack_get(self, team_id: str, method: str, params: dict) -> dict | None:
         """Call a Slack Web API read method with the team's bot token. Best-effort
         (None on any failure). `SLACK_API_URL` redirects to the fake in tests."""
         import httpx
@@ -453,12 +434,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
         data = await self._slack_get(team_id, "users.info", {"user": uid})
         u = (data or {}).get("user") or {}
         prof = u.get("profile") or {}
-        name = (
-            prof.get("display_name")
-            or prof.get("real_name")
-            or u.get("real_name")
-            or u.get("name")
-        )
+        name = prof.get("display_name") or prof.get("real_name") or u.get("real_name") or u.get("name")
         if name:
             cache[uid] = name
         return name
@@ -486,9 +462,7 @@ class SlackRelayAdapter(BasePlatformAdapter):
         return out
 
     # -- outbound ------------------------------------------------------------
-    async def send(
-        self, chat_id: str, text: str, *, thread_id: str | None = None
-    ) -> SendResult:
+    async def send(self, chat_id: str, text: str, *, thread_id: str | None = None) -> SendResult:
         """Reply directly via the Slack Web API with the per-team bot token."""
         from coworker.connectors.slack_addr import split
 
@@ -500,18 +474,14 @@ class SlackRelayAdapter(BasePlatformAdapter):
         self._note_token_health(team_id or "", None if result.ok else result.error)
         return result
 
-    async def send_interactive(
-        self, chat_id: str, text: str, buttons, *, thread_id: str | None = None
-    ) -> SendResult:
+    async def send_interactive(self, chat_id: str, text: str, buttons, *, thread_id: str | None = None) -> SendResult:
         from coworker.connectors.slack_addr import split
 
         team_id, _channel = split(chat_id)
         token = self._bot_token(team_id or "")
         if not token:
             return SendResult(False, error=f"no bot token for team {team_id}")
-        result = await asyncio.to_thread(
-            _send_slack_interactive, token, chat_id, text, buttons, thread_id
-        )
+        result = await asyncio.to_thread(_send_slack_interactive, token, chat_id, text, buttons, thread_id)
         self._note_token_health(team_id or "", None if result.ok else result.error)
         return result
 
@@ -529,9 +499,7 @@ class _WebSocketsTransport:
         import websockets  # lazy: optional extra
 
         token = self._token_provider()
-        self._ws = await websockets.connect(
-            self._url, additional_headers={"Authorization": f"Bearer {token}"}
-        )
+        self._ws = await websockets.connect(self._url, additional_headers={"Authorization": f"Bearer {token}"})
 
     async def recv(self) -> dict | None:
         import websockets

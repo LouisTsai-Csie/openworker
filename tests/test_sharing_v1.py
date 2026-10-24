@@ -27,9 +27,7 @@ You review code the way our team does.
 """
 
 MANIFEST_V2_SAME = MANIFEST_V1.replace('version: "1"', 'version: "2"')
-MANIFEST_V2_GROWN = MANIFEST_V2_SAME.replace(
-    "tools: [code_files, search]", "tools: [code_files, search, shell]"
-)
+MANIFEST_V2_GROWN = MANIFEST_V2_SAME.replace("tools: [code_files, search]", "tools: [code_files, search, shell]")
 
 
 def _bundle(tmp_path, name, manifest):
@@ -131,9 +129,7 @@ def test_endpoints_round_trip(tmp_path, monkeypatch):
     assert res["ok"] is True
 
     zip_b64 = base64.b64encode(open(res["path"], "rb").read()).decode()
-    res2 = client.post(
-        "/v1/personas/install", json={"zip_b64": zip_b64, "filename": "team-sec.zip"}
-    ).json()
+    res2 = client.post("/v1/personas/install", json={"zip_b64": zip_b64, "filename": "team-sec.zip"}).json()
     assert res2["ok"] is True
     assert res2["consent"][0]["id"] == "team-sec"
     assert res2["consent"][0]["version"] == "1"

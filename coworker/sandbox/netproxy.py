@@ -117,7 +117,12 @@ class AllowListProxy:
                 return self._refuse(client, 400, "not an HTTP request")
             method, target = parts[0].upper(), parts[1]
             if method != "CONNECT":
-                return self._refuse(client, 403, f"only tunnelled connections are allowed out of this sandbox (got {method} {target[:120]})", target)
+                return self._refuse(
+                    client,
+                    403,
+                    f"only tunnelled connections are allowed out of this sandbox (got {method} {target[:120]})",
+                    target,
+                )
             host, _, port_text = target.rpartition(":")
             host = host.strip("[]")
             if not host or not port_text.isdigit():

@@ -56,8 +56,7 @@ _ACCOUNT_CLAIM = "https://api.openai.com/auth"
 _VERIFY_MODEL = "gpt-5.1-codex-mini"
 
 SIGNED_OUT_ERROR = (
-    "Not signed in to ChatGPT — connect your account in Settings ▸ Models to use "
-    "the subscription provider."
+    "Not signed in to ChatGPT — connect your account in Settings ▸ Models to use the subscription provider."
 )
 EXPIRED_ERROR = "ChatGPT session expired — sign in again in Settings ▸ Models."
 PLAN_LIMIT_ERROR = (
@@ -147,9 +146,7 @@ def _token_post(data: dict[str, str], timeout: float = 30.0) -> Any:
     """One POST to the token endpoint (module-level so tests stub the wire here)."""
     import httpx
 
-    return httpx.post(
-        TOKEN_URL, data=data, headers={"Accept": "application/json"}, timeout=timeout
-    )
+    return httpx.post(TOKEN_URL, data=data, headers={"Accept": "application/json"}, timeout=timeout)
 
 
 def exchange_code(code: str, verifier: str, timeout: float = 30.0) -> dict[str, Any]:
@@ -166,9 +163,7 @@ def exchange_code(code: str, verifier: str, timeout: float = 30.0) -> dict[str, 
         timeout,
     )
     if resp.status_code >= 300:
-        raise CodexAuthError(
-            f"Sign-in failed — token exchange returned HTTP {resp.status_code}."
-        )
+        raise CodexAuthError(f"Sign-in failed — token exchange returned HTTP {resp.status_code}.")
     return resp.json()
 
 
@@ -202,10 +197,7 @@ class CodexTokenStore:
         """Persist a token response, keeping prior values a refresh omitted (the
         refresh grant often returns no new refresh/id token)."""
         existing = self._data().get("tokens") or {}
-        merged = {
-            k: (tokens.get(k) or existing.get(k))
-            for k in ("access_token", "refresh_token", "id_token")
-        }
+        merged = {k: (tokens.get(k) or existing.get(k)) for k in ("access_token", "refresh_token", "id_token")}
         merged = {k: v for k, v in merged.items() if v}
         patch: dict[str, Any] = {
             "tokens": merged,
@@ -214,9 +206,7 @@ class CodexTokenStore:
         account_id = account_id_from(merged) or self._data().get("account_id")
         if account_id:
             patch["account_id"] = account_id
-        email = _jwt_claims(merged.get("id_token") or "").get("email") or self._data().get(
-            "account_email"
-        )
+        email = _jwt_claims(merged.get("id_token") or "").get("email") or self._data().get("account_email")
         if email:
             patch["account_email"] = email
         self._merge(patch)
@@ -234,9 +224,7 @@ class CodexTokenStore:
         if not access and not tokens.get("refresh_token"):
             raise CodexSignInRequired(SIGNED_OUT_ERROR)
         exp = _jwt_claims(access).get("exp")
-        stale = not access or (
-            isinstance(exp, (int, float)) and exp - time.time() < REFRESH_MARGIN_SECONDS
-        )
+        stale = not access or (isinstance(exp, (int, float)) and exp - time.time() < REFRESH_MARGIN_SECONDS)
         if stale:
             return self.refresh()
         return access, data.get("account_id") or ""
@@ -275,21 +263,16 @@ class CodexTokenStore:
             )
         except Exception as exc:
             raise CodexAuthError(
-                "Couldn't reach the sign-in service to refresh the ChatGPT session "
-                f"({exc.__class__.__name__})."
+                f"Couldn't reach the sign-in service to refresh the ChatGPT session ({exc.__class__.__name__})."
             ) from exc
         if 400 <= resp.status_code < 500:
             self.clear()
             raise CodexSignInRequired(EXPIRED_ERROR)
         if resp.status_code >= 300:
-            raise CodexAuthError(
-                f"ChatGPT session refresh failed (HTTP {resp.status_code}) — try again."
-            )
+            raise CodexAuthError(f"ChatGPT session refresh failed (HTTP {resp.status_code}) — try again.")
         self.save(resp.json())
         data = self._data()
-        return (data.get("tokens") or {}).get("access_token") or "", (
-            data.get("account_id") or ""
-        )
+        return (data.get("tokens") or {}).get("access_token") or "", (data.get("account_id") or "")
 
 
 # -- interactive sign-in flow -------------------------------------------------------
@@ -346,9 +329,7 @@ async def _start_callback_server(
                     )
                 )
                 if not future.done():
-                    future.set_exception(
-                        CodexAuthError(f"Sign-in failed — the service returned: {error}")
-                    )
+                    future.set_exception(CodexAuthError(f"Sign-in failed — the service returned: {error}"))
                 return
             # Same loopback gate as mcp/oauth.py: a stray local hit with the wrong
             # state must not consume the flow — only the genuine redirect resolves it.
@@ -417,8 +398,7 @@ async def sign_in(
             code = await asyncio.wait_for(code_future, timeout)
         except TimeoutError as exc:
             raise CodexAuthError(
-                "Sign-in timed out — the browser window was not completed in "
-                f"{int(timeout) // 60} minutes."
+                f"Sign-in timed out — the browser window was not completed in {int(timeout) // 60} minutes."
             ) from exc
     finally:
         server.close()

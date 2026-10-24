@@ -118,7 +118,20 @@ def _fake_home(tmp_path):
 
     home = tmp_path / "home"
     (home / ".ssh").mkdir(parents=True)
-    subprocess.run([r"C:\Windows\System32\OpenSSH\ssh-keygen.exe", "-q", "-t", "ed25519", "-N", "", "-f", str(home / ".ssh" / "id_ed25519")], check=True, capture_output=True)
+    subprocess.run(
+        [
+            r"C:\Windows\System32\OpenSSH\ssh-keygen.exe",
+            "-q",
+            "-t",
+            "ed25519",
+            "-N",
+            "",
+            "-f",
+            str(home / ".ssh" / "id_ed25519"),
+        ],
+        check=True,
+        capture_output=True,
+    )
     (home / ".gitconfig").write_text("[user]\n\tname = Sam\n\temail = sam@example.com\n")
     return home
 
@@ -128,7 +141,9 @@ def _ssh_probe(ws) -> str:
     "Permission denied (publickey)": the tunnel, the config and the key all worked. Through
     cmd, because PowerShell 5 turns a native command's first stderr line into an error
     record and drops the rest of its output."""
-    return ws.executor.run('cmd.exe /d /c "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1"')["output"]
+    return ws.executor.run(
+        'cmd.exe /d /c "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1"'
+    )["output"]
 
 
 @full
@@ -141,7 +156,13 @@ def test_a_granted_ssh_key_reaches_github_through_the_proxy(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
     zipapp = build_runner_zipapp(tmp_path / "dist")
-    provider = WindowsProvider(roots=[{"path": str(project), "writable": True}], cwd=project, runner_path=zipapp, network=True, credentials=grants)
+    provider = WindowsProvider(
+        roots=[{"path": str(project), "writable": True}],
+        cwd=project,
+        runner_path=zipapp,
+        network=True,
+        credentials=grants,
+    )
     ws = RunnerWorkspace(provider, cwd=project)
     ws.executor.default_timeout = 90
     try:
@@ -169,7 +190,13 @@ def test_full_mode_removes_the_copies_when_the_sandbox_ends(tmp_path):
     zipapp = build_runner_zipapp(tmp_path / "dist")
 
     def open_one(with_grants):
-        provider = WindowsProvider(roots=[{"path": str(project), "writable": True}], cwd=project, runner_path=zipapp, network=False, credentials=grants if with_grants else ())
+        provider = WindowsProvider(
+            roots=[{"path": str(project), "writable": True}],
+            cwd=project,
+            runner_path=zipapp,
+            network=False,
+            credentials=grants if with_grants else (),
+        )
         ws = RunnerWorkspace(provider, cwd=project)
         ws.executor.default_timeout = 60
         return ws
@@ -196,7 +223,9 @@ def test_without_setup_the_provider_refuses_and_settings_say_why(monkeypatch, tm
 
     monkeypatch.setattr(windows_setup, "state", lambda: None)
     with pytest.raises(windows.WindowsUnavailable, match="setup has not run"):
-        windows.WindowsProvider(roots=[{"path": str(tmp_path), "writable": True}], cwd=tmp_path, runner_path=tmp_path / "r.pyz")
+        windows.WindowsProvider(
+            roots=[{"path": str(tmp_path), "writable": True}], cwd=tmp_path, runner_path=tmp_path / "r.pyz"
+        )
     monkeypatch.setenv("OPENWORKER_SANDBOX_PROVIDER", "windows")
     with pytest.raises(windows.WindowsUnavailable, match="no session will start"):
         selection.select()
@@ -205,7 +234,10 @@ def test_without_setup_the_provider_refuses_and_settings_say_why(monkeypatch, tm
     assert not row["usable"] and "setup has not run" in row["why"]
 
 
-@pytest.mark.skipif(os.environ.get("OPENWORKER_TEST_WINDOWS_SETUP") != "1", reason="changes the machine; OPENWORKER_TEST_WINDOWS_SETUP=1 to run")
+@pytest.mark.skipif(
+    os.environ.get("OPENWORKER_TEST_WINDOWS_SETUP") != "1",
+    reason="changes the machine; OPENWORKER_TEST_WINDOWS_SETUP=1 to run",
+)
 def test_setup_creates_the_two_hidden_accounts_and_status_reports_it():
     import subprocess
 
@@ -217,15 +249,32 @@ def test_setup_creates_the_two_hidden_accounts_and_status_reports_it():
     for kind in ("open", "closed"):
         name, sid, password = windows_setup.account(kind)
         assert name == windows_setup.ACCOUNTS[kind] and sid.startswith("S-1-5-21-") and len(password) > 40
-        users = subprocess.run(["powershell", "-NoProfile", "-Command", f"(Get-LocalUser {name}).Enabled"], capture_output=True, text=True).stdout
+        users = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", f"(Get-LocalUser {name}).Enabled"], capture_output=True, text=True
+        ).stdout
         assert "True" in users
     for legacy in windows_setup.LEGACY_ACCOUNTS:  # the first build's account is gone
-        gone = subprocess.run(["powershell", "-NoProfile", "-Command", f"Get-LocalUser {legacy} -ErrorAction SilentlyContinue; 'end'"], capture_output=True, text=True).stdout
+        gone = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", f"Get-LocalUser {legacy} -ErrorAction SilentlyContinue; 'end'"],
+            capture_output=True,
+            text=True,
+        ).stdout
         assert legacy not in gone
-    rule = subprocess.run(["powershell", "-NoProfile", "-Command", f"(Get-NetFirewallRule -DisplayName '{windows_setup.FIREWALL_RULE}').Enabled"], capture_output=True, text=True).stdout
+    rule = subprocess.run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            f"(Get-NetFirewallRule -DisplayName '{windows_setup.FIREWALL_RULE}').Enabled",
+        ],
+        capture_output=True,
+        text=True,
+    ).stdout
     assert "True" in rule
     assert windows_setup.filters_recorded() and windows_wfp.present() in (True, None)
-    windows_rows = said[: next((i for i, line in enumerate(said) if line.strip().startswith("OpenShell on this machine")), len(said))]
+    windows_rows = said[
+        : next((i for i, line in enumerate(said) if line.strip().startswith("OpenShell on this machine")), len(said))
+    ]
     assert any("setup has run" in line for line in windows_rows) and all("[--]" not in line for line in windows_rows)
     info = windows_setup.info()
     assert info["state"] == "ready" and info["set_up_at"].endswith("Z") and info["can_elevate"]
@@ -249,7 +298,9 @@ def test_full_mode_hides_the_profile_and_gives_the_sessions_folders(tmp_path):
         assert ws.executor.run(f"Get-ChildItem '{tmp_path}'")["exit_code"] != 0
         assert "read me" in ws.executor.run(f"Get-Content '{reference / 'ref.txt'}'")["output"]
         assert ws.executor.run(f"Set-Content -Path '{reference / 'no.txt'}' -Value x")["exit_code"] != 0
-        assert ws.executor.run("Get-ChildItem $env:USERPROFILE\\..\\Administrator")["exit_code"] != 0  # another account's profile
+        assert (
+            ws.executor.run("Get-ChildItem $env:USERPROFILE\\..\\Administrator")["exit_code"] != 0
+        )  # another account's profile
         listing = ws.executor.run(f"Get-ChildItem '{os.path.expanduser('~')}'")
         assert listing["exit_code"] != 0  # the person's profile: denied
         assert ws.executor.run(f"Set-Content -Path '{tmp_path / 'beside.txt'}' -Value x")["exit_code"] != 0
@@ -271,7 +322,9 @@ def test_full_mode_blocks_the_network_except_the_proxy(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
     zipapp = build_runner_zipapp(tmp_path / "dist")
-    provider = WindowsProvider(roots=[{"path": str(project), "writable": True}], cwd=project, runner_path=zipapp, network=True)
+    provider = WindowsProvider(
+        roots=[{"path": str(project), "writable": True}], cwd=project, runner_path=zipapp, network=True
+    )
     ws = RunnerWorkspace(provider, cwd=project)
     ws.executor.default_timeout = 90
     # curl.exe (shipped with Windows) follows the proxy variables; PowerShell 5's
@@ -280,11 +333,17 @@ def test_full_mode_blocks_the_network_except_the_proxy(tmp_path):
     # firewall blocks: curl needs --ssl-revoke-best-effort; OpenSSL clients (git, Python,
     # Node) do not check that way and are unaffected.
     try:
-        direct = ws.executor.run("curl.exe -sS --noproxy '*' -m 8 -o NUL -w '%{http_code}' https://example.com; 'exit ' + $LASTEXITCODE")
+        direct = ws.executor.run(
+            "curl.exe -sS --noproxy '*' -m 8 -o NUL -w '%{http_code}' https://example.com; 'exit ' + $LASTEXITCODE"
+        )
         assert "200" not in direct["output"] and "exit 0" not in direct["output"], direct["output"]
-        via = ws.executor.run("curl.exe -sS --ssl-revoke-best-effort -m 30 -o NUL -w '%{http_code}' https://api.github.com")
+        via = ws.executor.run(
+            "curl.exe -sS --ssl-revoke-best-effort -m 30 -o NUL -w '%{http_code}' https://api.github.com"
+        )
         assert "200" in via["output"], via["output"]
-        refused = ws.executor.run("curl.exe -sS --ssl-revoke-best-effort -m 30 -o NUL -w '%{http_code}' https://example.com")
+        refused = ws.executor.run(
+            "curl.exe -sS --ssl-revoke-best-effort -m 30 -o NUL -w '%{http_code}' https://example.com"
+        )
         assert "403" in refused["output"], refused["output"]
         # loopback: the proxy's port range and nothing else (the WFP filters from setup)
         from coworker.sandbox import netproxy
@@ -325,7 +384,13 @@ def test_full_mode_reads_the_toolchain_folders_it_is_given(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
     zipapp = build_runner_zipapp(tmp_path / "dist")
-    provider = WindowsProvider(roots=[{"path": str(project), "writable": True}], cwd=project, runner_path=zipapp, network=False, tool_dirs=[str(tools)])
+    provider = WindowsProvider(
+        roots=[{"path": str(project), "writable": True}],
+        cwd=project,
+        runner_path=zipapp,
+        network=False,
+        tool_dirs=[str(tools)],
+    )
     ws = RunnerWorkspace(provider, cwd=project)
     ws.executor.default_timeout = 60
     try:
@@ -348,7 +413,9 @@ def test_the_open_profile_runs_as_the_open_account_with_the_network_open(tmp_pat
         assert provider.kind == "open" and provider._proxy is None
         who = ws.executor.run("$env:USERNAME")["output"].strip()
         assert who.lower() == "owsandboxopennet"
-        direct = ws.executor.run("curl.exe -sS --ssl-revoke-best-effort -m 20 -o NUL -w '%{http_code}' https://example.com")
+        direct = ws.executor.run(
+            "curl.exe -sS --ssl-revoke-best-effort -m 20 -o NUL -w '%{http_code}' https://example.com"
+        )
         assert "200" in direct["output"], direct["output"]
         assert ws.client.call("net.probe", {"host": "127.0.0.1", "port": 22}, timeout=15)["ok"]  # any local port
         listing = ws.executor.run(f"Get-ChildItem '{os.path.expanduser('~')}'")

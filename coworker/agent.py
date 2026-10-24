@@ -139,9 +139,7 @@ and skip all of this when the user already gave you a task."""
 CHAT_PLATFORMS: frozenset[str] = frozenset({"slack", "telegram"})
 
 
-def _chat_platforms(
-    agent: Agent, secrets: SecretStore, connector_filter: set[str] | None = None
-) -> set[str]:
+def _chat_platforms(agent: Agent, secrets: SecretStore, connector_filter: set[str] | None = None) -> set[str]:
     """The chat platforms this session may post to: gateway-enabled (token or relay
     present) ∩ the persona's `connectors:` allowlist ∩ the session's effective set."""
     if not agent.connectors:
@@ -156,11 +154,7 @@ def _chat_platforms(
 
 def _enabled_connector_tools(secrets: SecretStore) -> tuple[set[str], set[str]]:
     connectors = {c["name"]: c for c in connector_list(secrets)}
-    enabled_connectors = {
-        name
-        for name, c in connectors.items()
-        if c.get("connected") and c.get("enabled")
-    }
+    enabled_connectors = {name for name, c in connectors.items() if c.get("connected") and c.get("enabled")}
     enabled_tools = {
         tool["name"]
         for c in connectors.values()
@@ -182,9 +176,7 @@ def _loaded_skill_names(messages: list[dict[str, Any]]) -> set[str]:
     for m in messages:
         if m.get("role") == "tool" and m.get("tool_call_id"):
             content = m.get("content")
-            results[m["tool_call_id"]] = (
-                content if isinstance(content, str) else _json.dumps(content)
-            )
+            results[m["tool_call_id"]] = content if isinstance(content, str) else _json.dumps(content)
     loaded: set[str] = set()
     for m in messages:
         if m.get("role") != "assistant" or not m.get("tool_calls"):
@@ -318,8 +310,10 @@ def build_engine(
     # written to, so a repository or task tree stays clean.
     # Inside an OpenShell sandbox the agent may read OpenShell's skills folder: the policy
     # skill there points to a longer file beside it.
-    if _openshell.inside_openshell() and root_list and not any(
-        _is_within(_openshell.SKILLS_DIR, r.path) for r in root_list
+    if (
+        _openshell.inside_openshell()
+        and root_list
+        and not any(_is_within(_openshell.SKILLS_DIR, r.path) for r in root_list)
     ):
         root_list.append(RootDir(path=_openshell.SKILLS_DIR, writable=False, label="openshell-skills"))
 
@@ -333,9 +327,7 @@ def build_engine(
             import os
             import tempfile
 
-            spill_dir = (
-                Path(tempfile.gettempdir()) / "openworker" / f"tool-output-{os.getpid()}"
-            ).resolve()
+            spill_dir = (Path(tempfile.gettempdir()) / "openworker" / f"tool-output-{os.getpid()}").resolve()
     # Registered, not created: the folder appears on disk only when something is spilled.
     if root_list and not any(_is_within(spill_dir, r.path) for r in root_list):
         root_list.append(RootDir(path=spill_dir, writable=False, label="tool-output"))
@@ -390,9 +382,7 @@ def build_engine(
         registry.register(make_send_message_tool(secrets))
         # send_file (§34): hand deliverables into the chat — same targets, but its OWN
         # approval surface (a thread's standing send_message grant never covers uploads).
-        registry.register(
-            make_send_file_tool(secrets, workspace=ws, roots=root_list or None)
-        )
+        registry.register(make_send_file_tool(secrets, workspace=ws, roots=root_list or None))
         # Channel subscriptions (inbound): listen to a channel, catch up, (un)subscribe. The agent
         # obtains a channel via ask_user or from a channel message it's reacting to.
         if subscription_store is not None and channel_buffer is not None and session_id:
@@ -464,9 +454,7 @@ def build_engine(
             "workspace": str(ws),
             "agent": agent.name,
         }
-        registry.register_all(
-            scheduling_tools(task_store, origin=origin, default_workspace=str(ws))
-        )
+        registry.register_all(scheduling_tools(task_store, origin=origin, default_workspace=str(ws)))
     # Self-wake: scheduling surfaces can suspend + schedule their own resumption (timer /
     # on-completion / on-event). The scheduler tick resumes due wakes.
     if wake_store is not None and session_id and (agent.scheduling or agent.team == "lead"):
@@ -480,6 +468,7 @@ def build_engine(
     instructions = f"{agent.system_prompt}\n\n{_NARRATION_GUIDANCE}\n\n{_FIRST_CONTACT_GUIDANCE}"
     if agent.team == "lead":
         from coworker.teams.proposals import PROPOSAL_GUIDANCE
+
         instructions += "\n\n" + PROPOSAL_GUIDANCE
     if agent.team in ("lead", "worker"):
         instructions += (
@@ -515,9 +504,7 @@ def build_engine(
     # The user's own standing instructions, read once here: like the memories below,
     # they're session-stable knowledge. Edits apply to NEW conversations (the Settings
     # copy says exactly that), never mid-conversation.
-    rules_block = format_user_rules(
-        (user_rules() if callable(user_rules) else user_rules) or ""
-    )
+    rules_block = format_user_rules((user_rules() if callable(user_rules) else user_rules) or "")
     if rules_block:
         instructions = f"{instructions}\n\n{rules_block}"
 
@@ -570,11 +557,7 @@ def build_engine(
     # skill; requires_approval routes it through the standard approval card, so the review-
     # before-save rule holds without any bespoke plumbing. Bundled files may only come from
     # this session's roots.
-    registry.register(
-        save_skill_tool(
-            allowed_dirs=[r.path for r in (root_list or [])] or ([ws] if ws else [])
-        )
-    )
+    registry.register(save_skill_tool(allowed_dirs=[r.path for r in (root_list or [])] or ([ws] if ws else [])))
 
     # User-local risk overrides (relax a plugin / tighten anything) + OPE-136 trust
     # rules (per-MCP-tool "don't ask", durable). One store, never written by persona
@@ -587,9 +570,7 @@ def build_engine(
         workspace_root=ws or (root_list[0].path if root_list else Path.cwd()),
         mode=mode,
         # `[]` is an explicit deny-by-default override, not a request to fall back to config.
-        allowed_commands=(
-            allowed_commands if allowed_commands is not None else config.allowed_commands
-        ),
+        allowed_commands=(allowed_commands if allowed_commands is not None else config.allowed_commands),
         auto_allow_tools=set(config.auto_allow),
         allowed_domains=list(config.allowed_domains),
         roots=root_list or None,
@@ -673,9 +654,7 @@ def build_engine(
         # OpenWorker itself inside an OpenShell sandbox: what a blocked request looks like
         # and what to do. Read each turn, since the policy skill can appear mid-session.
         eng = _engine_box[0] if _engine_box else None
-        openshell_ctx = _openshell.context(
-            nobody_answers=eng is not None and eng._auto_answering()
-        )
+        openshell_ctx = _openshell.context(nobody_answers=eng is not None and eng._auto_answering())
         if openshell_ctx:
             parts.append(openshell_ctx)
         # Live skill menu (SKILLS-SPEC §4.1): recomputed every turn like the roots list, so
@@ -699,11 +678,7 @@ def build_engine(
                 )
         return "\n\n".join(parts)
 
-    cap = (
-        tool_result_max_bytes
-        if tool_result_max_bytes is not None
-        else config.tool_result_max_bytes
-    )
+    cap = tool_result_max_bytes if tool_result_max_bytes is not None else config.tool_result_max_bytes
 
     engine = TurnEngine(
         provider=provider,
@@ -716,9 +691,7 @@ def build_engine(
         tool_result_spill_dir=spill_dir,
         # Stop kills the in-flight foreground shell command, not just the loop.
         interrupt_hooks=[executor.interrupt_now] if executor is not None else None,
-        max_iterations=(
-            max_iterations if max_iterations is not None else config.max_iterations
-        ),
+        max_iterations=(max_iterations if max_iterations is not None else config.max_iterations),
         model_settings=model_settings,
         messages=messages,
         audit_sink=audit_sink,
@@ -739,9 +712,7 @@ def build_engine(
     if config.compaction_cap_tokens:
         _compaction_overrides["cap_tokens"] = int(config.compaction_cap_tokens)
     if config.compaction_summary_max_tokens:
-        _compaction_overrides["summary_max_tokens"] = int(
-            config.compaction_summary_max_tokens
-        )
+        _compaction_overrides["summary_max_tokens"] = int(config.compaction_summary_max_tokens)
     if _compaction_overrides:
         engine.compaction_settings = lambda: dict(_compaction_overrides)
     engine.executor = executor  # type: ignore[attr-defined]
@@ -787,6 +758,7 @@ def build_engine(
     engine.agent_name = agent.name  # type: ignore[attr-defined]
     engine.roots = root_list  # type: ignore[attr-defined]  # shared list; Slice C mutates in place
     from coworker.runtime_context import capture as capture_runtime, runtime_context_tool
+
     registry.register(runtime_context_tool(engine.permissions))
     engine.runtime_facts = capture_runtime(engine.permissions.workspace_root, engine.permissions._resolved_roots())
     # Session facts (spec Part 0 / §2.4): freeze the known world NOW, before the agent has
@@ -836,9 +808,7 @@ def build_engine(
     # on regardless of which path set it.
     live_on = auto_approve if auto_approve is not None else getattr(config, "auto_approve", False)
     shadow_on = (
-        auto_approve_shadow
-        if auto_approve_shadow is not None
-        else getattr(config, "auto_approve_shadow", False)
+        auto_approve_shadow if auto_approve_shadow is not None else getattr(config, "auto_approve_shadow", False)
     )
     engine.reviewer_enabled = bool(live_on)
     if live_on or shadow_on:
@@ -847,7 +817,9 @@ def build_engine(
         engine.reviewer = Reviewer(
             provider=provider,
             model=model,
-            known_world=engine.session_facts.world.render() + "\nRUNTIME FACTS (availability, not access grants)\n" + json.dumps(engine.runtime_facts),
+            known_world=engine.session_facts.world.render()
+            + "\nRUNTIME FACTS (availability, not access grants)\n"
+            + json.dumps(engine.runtime_facts),
         )
         # Shadow evaluation (Part 6 step 3): with only the shadow flag on, the reviewer is
         # attached but the LIVE path stays off unless the live feature flag is also on

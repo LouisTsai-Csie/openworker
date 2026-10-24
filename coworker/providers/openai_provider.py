@@ -108,11 +108,7 @@ def _strip_foreign_sidecars(messages: list[dict[str, Any]]) -> list[dict[str, An
     thought signatures — see providers/base.py): they belong to other providers, and the
     OpenAI wire (and its compat servers) rejects unknown message fields."""
     return [
-        (
-            {k: v for k, v in m.items() if not k.startswith("_")}
-            if any(k.startswith("_") for k in m)
-            else m
-        )
+        ({k: v for k, v in m.items() if not k.startswith("_")} if any(k.startswith("_") for k in m) else m)
         for m in messages
     ]
 
@@ -324,14 +320,10 @@ class OpenAIProvider(ProviderClient):
             return None
         rejected = self.__dict__.setdefault("_effort_rejected", set())
         if model in rejected:
-            return EffortPlan(
-                str(level), None, {}, "endpoint rejected reasoning_effort earlier in this run; not sent"
-            )
+            return EffortPlan(str(level), None, {}, "endpoint rejected reasoning_effort earlier in this run; not sent")
         return openai_compat_effort(model, str(level))
 
-    def _note_effort(
-        self, model: str, plan: EffortPlan | None, kwargs: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def _note_effort(self, model: str, plan: EffortPlan | None, kwargs: dict[str, Any]) -> dict[str, Any] | None:
         record = _effort_record(plan, kwargs)
         if (
             plan is not None
@@ -408,9 +400,7 @@ class OpenAIProvider(ProviderClient):
                     text_parts.append(content)
                     yield StreamChunk(text_delta=content)
                 for tc in getattr(delta, "tool_calls", None) or []:
-                    acc = tool_accum.setdefault(
-                        getattr(tc, "index", 0), {"id": "", "name": "", "args": ""}
-                    )
+                    acc = tool_accum.setdefault(getattr(tc, "index", 0), {"id": "", "name": "", "args": ""})
                     if getattr(tc, "id", None):
                         acc["id"] = tc.id
                     fn = getattr(tc, "function", None)
@@ -429,13 +419,9 @@ class OpenAIProvider(ProviderClient):
                 arguments = json.loads(acc["args"]) if acc["args"] else {}
             except (TypeError, json.JSONDecodeError):
                 arguments = {"_raw": acc["args"]}
-            tool_calls.append(
-                ToolCall(id=acc["id"], name=acc["name"], arguments=arguments)
-            )
+            tool_calls.append(ToolCall(id=acc["id"], name=acc["name"], arguments=arguments))
 
-        text, tool_calls = _maybe_salvage_tool_calls(
-            "".join(text_parts) or None, tool_calls, tools=tools
-        )
+        text, tool_calls = _maybe_salvage_tool_calls("".join(text_parts) or None, tool_calls, tools=tools)
         yield StreamChunk(
             turn=AssistantTurn(
                 text=text,
@@ -462,9 +448,7 @@ def _parse_tool_calls(raw_tool_calls: Any) -> list[ToolCall]:
             # Surface unparseable arguments rather than dropping the call; the engine
             # can return a tool-error so the model corrects itself.
             arguments = {"_raw": raw_args}
-        calls.append(
-            ToolCall(id=getattr(tc, "id", ""), name=function.name, arguments=arguments)
-        )
+        calls.append(ToolCall(id=getattr(tc, "id", ""), name=function.name, arguments=arguments))
     return calls
 
 
@@ -533,9 +517,7 @@ def strip_dangling_tool_tag(text: str | None) -> tuple[str | None, bool]:
     return stripped.rstrip(), True
 
 
-def looks_like_unparsed_tool_call(
-    text: str | None, tools: list[dict[str, Any]] | None = None
-) -> bool:
+def looks_like_unparsed_tool_call(text: str | None, tools: list[dict[str, Any]] | None = None) -> bool:
     """True when assistant text still carries tool-call markup that salvage couldn't turn into
     a call — i.e. the model tried to call a tool and the syntax was mangled or cut off.
 
@@ -674,15 +656,10 @@ def _call_from_dict(d: Any, names: set[str] | None) -> ToolCall | None:
 
 
 def _renumber(calls: list[ToolCall]) -> list[ToolCall]:
-    return [
-        ToolCall(id=f"call_salvaged_{i}", name=c.name, arguments=c.arguments)
-        for i, c in enumerate(calls)
-    ]
+    return [ToolCall(id=f"call_salvaged_{i}", name=c.name, arguments=c.arguments) for i, c in enumerate(calls)]
 
 
-def _salvage_tool_calls_from_text(
-    content: str, tools: list[dict[str, Any]] | None = None
-) -> list[ToolCall]:
+def _salvage_tool_calls_from_text(content: str, tools: list[dict[str, Any]] | None = None) -> list[ToolCall]:
     """Best-effort recovery of tool calls embedded in assistant text. Tries, in order:
     1. `<tool_call>…</tool_call>` blocks (anywhere, balanced); 2. embedded `{"name","arguments"}`
     objects (even mixed with prose); 3. `toolname {args}` / `toolname [args]` for known tools.
@@ -712,8 +689,7 @@ def _salvage_tool_calls_from_text(
         if names is not None and name not in names:
             continue
         args = {
-            pm.group("key").strip(): _coerce_param(pm.group("val"))
-            for pm in _PARAM_BLOCK.finditer(fm.group("body"))
+            pm.group("key").strip(): _coerce_param(pm.group("val")) for pm in _PARAM_BLOCK.finditer(fm.group("body"))
         }
         calls.append(ToolCall(id="", name=name, arguments=args))
     if calls:

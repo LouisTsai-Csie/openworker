@@ -64,12 +64,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # With neither flag, the task is read from standard input when it is piped in.
     src = p.add_mutually_exclusive_group()
     src.add_argument("--prompt", help="the task text")
-    src.add_argument(
-        "--prompt-file", help="file containing the task text (UTF-8); - reads standard input"
-    )
-    p.add_argument(
-        "--workspace", default=".", help="folder the agent works in (default: the current folder)"
-    )
+    src.add_argument("--prompt-file", help="file containing the task text (UTF-8); - reads standard input")
+    p.add_argument("--workspace", default=".", help="folder the agent works in (default: the current folder)")
     p.add_argument(
         "--add-dir",
         dest="add_dir",
@@ -83,47 +79,57 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "which tool the model happened to pick.",
     )
     p.add_argument(
-        "--model", default=None,
+        "--model",
+        default=None,
         help="provider:model (OpenWorker) or provider/model (default: this computer's "
         "setting; required with --isolated)",
     )
     p.add_argument(
-        "--coworker", default="cowork", metavar="ID",
+        "--coworker",
+        default="cowork",
+        metavar="ID",
         help="the coworker that does the task, by its id (default: cowork)",
     )
     p.add_argument(
-        "--approval-mode", default="ask", choices=APPROVAL_MODES,
+        "--approval-mode",
+        default="ask",
+        choices=APPROVAL_MODES,
         help="how tool calls are approved (default: ask). At a terminal an approval is "
         "asked there; with no terminal it is refused and recorded.",
     )
     p.add_argument(
-        "--auto-answer", action="store_true",
+        "--auto-answer",
+        action="store_true",
         help="nobody will answer the coworker's questions: it is told so and carries on. "
         "Without this, a question is asked in the terminal. Implied when no terminal is "
         "attached. Approvals are separate: see --approval-mode.",
     )
     p.add_argument(
-        "--allow-site", dest="allow_site", action="append", default=None, metavar="HOST[:PORT]",
+        "--allow-site",
+        dest="allow_site",
+        action="append",
+        default=None,
+        metavar="HOST[:PORT]",
         help="a site this run's commands and web tools may reach, beside this computer's "
         "allowed sites (repeatable). For this run only.",
     )
     p.add_argument(
-        "--allow-sites-file", default=None, metavar="FILE",
+        "--allow-sites-file",
+        default=None,
+        metavar="FILE",
         help="a file of sites to allow for this run, one HOST[:PORT] per line (# starts a comment)",
     )
     p.add_argument(
-        "--isolated", action="store_true",
+        "--isolated",
+        action="store_true",
         help="read nothing from this computer (no settings, no stored keys, no sandbox) and "
         "keep everything under --out. For benchmark and evaluation runs. Needs --out and --model.",
     )
-    p.add_argument(
-        "--max-iterations", type=int, default=None, help="default: OpenWorker config (150)"
-    )
+    p.add_argument("--max-iterations", type=int, default=None, help="default: OpenWorker config (150)")
     p.add_argument(
         "--provider-order",
         default=None,
-        help="OpenRouter only: comma-separated upstream hosts to use, in order, with no "
-        "fallback (e.g. 'Together')",
+        help="OpenRouter only: comma-separated upstream hosts to use, in order, with no fallback (e.g. 'Together')",
     )
     p.add_argument(
         "--compaction-cap-tokens",
@@ -159,9 +165,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="the run's own limit; 0 disables it (use 0 when an outer runner enforces one)",
     )
     p.add_argument(
-        "--out", default=None,
-        help="folder for the run record (default: sessions/<workspace path>/<session id> "
-        "in OpenWorker's state folder)",
+        "--out",
+        default=None,
+        help="folder for the run record (default: sessions/<workspace path>/<session id> in OpenWorker's state folder)",
     )
     p.add_argument("--trajectory-atif", default=None, help="also write the ATIF trajectory here")
     p.add_argument("--agent-version", default=None, help="label for the trajectory's agent.version")
@@ -538,9 +544,7 @@ def recording_provider(inner, log_path: Path):
                 cause = exc.__cause__ or exc.__context__
                 depth = 0
                 while cause is not None and depth < 8:
-                    lines.append(
-                        f"--- caused by ({type(cause).__module__}.{type(cause).__name__}): {cause}"
-                    )
+                    lines.append(f"--- caused by ({type(cause).__module__}.{type(cause).__name__}): {cause}")
                     cause = cause.__cause__ or cause.__context__
                     depth += 1
                 log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -926,9 +930,7 @@ def _run(args: argparse.Namespace) -> int:
             "cap_tokens": int(args.compaction_cap_tokens or _base_cfg["cap_tokens"]),
             "threshold_pct": float(_base_cfg["threshold_pct"]),
             "context_window": _base_cfg.get("context_window"),
-            "summary_max_tokens": int(
-                args.compaction_summary_max_tokens or _base_cfg["summary_max_tokens"]
-            ),
+            "summary_max_tokens": int(args.compaction_summary_max_tokens or _base_cfg["summary_max_tokens"]),
         }
         engine.compaction_settings = lambda: dict(_forced)
     events: list[dict[str, Any]] = []
@@ -1026,11 +1028,7 @@ def _run(args: argparse.Namespace) -> int:
                     flush_provisional("in_progress")
             # A transient provider failure ended the turn: wait, then re-enter the same
             # conversation with a nudge (the engine keeps every message so far).
-            if (
-                last_type == EventType.ERROR
-                and retries < len(delays)
-                and is_transient_provider_error(last_data)
-            ):
+            if last_type == EventType.ERROR and retries < len(delays) and is_transient_provider_error(last_data):
                 delay = delays[retries]
                 retries += 1
                 rec = {
@@ -1423,9 +1421,7 @@ def _write_records(
         ],
     }
 
-    (out / "messages.json").write_text(
-        json.dumps(engine.messages, indent=1, default=str), encoding="utf-8"
-    )
+    (out / "messages.json").write_text(json.dumps(engine.messages, indent=1, default=str), encoding="utf-8")
     (out / "answers.json").write_text(
         json.dumps({"counts": answers.counts(), "rows": answers.rows}, indent=1),
         encoding="utf-8",

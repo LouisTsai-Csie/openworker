@@ -46,7 +46,9 @@ def test_profile_lists_the_folders_and_nothing_else_under_home(tmp_path):
     write_rule = next(line for line in text.splitlines() if line.startswith("(allow file-read* file-write* (subpath"))
     assert real(project) in write_rule and real(tmp_path / "run") in write_rule
     assert real(reference) not in write_rule  # a read-only folder is never writable
-    read_rule = next(line for line in text.splitlines() if line.startswith("(allow file-read* (subpath") and real(reference) in line)
+    read_rule = next(
+        line for line in text.splitlines() if line.startswith("(allow file-read* (subpath") and real(reference) in line
+    )
     assert real(home / ".nvm") in read_rule and real(home / ".gitconfig") in read_rule
     assert ".ssh" not in text
     assert "remote tcp" not in text  # no proxy port given: no network at all
@@ -56,7 +58,9 @@ def test_profile_lists_the_folders_and_nothing_else_under_home(tmp_path):
 def test_profile_allows_only_the_proxy_port_and_quotes_paths(tmp_path):
     odd = tmp_path / 'has "quotes" and spaces'
     odd.mkdir()
-    text = seatbelt_profile.render([{"path": str(odd), "writable": True}], runtime_dir=str(tmp_path), proxy_port=45678, home=str(tmp_path))
+    text = seatbelt_profile.render(
+        [{"path": str(odd), "writable": True}], runtime_dir=str(tmp_path), proxy_port=45678, home=str(tmp_path)
+    )
     assert '(allow network-outbound (remote tcp "localhost:45678"))' in text
     assert text.count("remote tcp") == 1
     assert 'has \\"quotes\\" and spaces' in text
@@ -152,7 +156,9 @@ def test_proxy_tunnels_a_listed_host(monkeypatch):
 
 def test_the_catalogue_offers_sites_and_an_unknown_profile_is_refused():
     assert network_profiles.hosts("allowlist") == []  # nothing until the machine ticks sites
-    assert {"github.com", "pypi.org", "api.tavily.com"} <= {h for hosts in network_profiles.SITES.values() for h in hosts}
+    assert {"github.com", "pypi.org", "api.tavily.com"} <= {
+        h for hosts in network_profiles.SITES.values() for h in hosts
+    }
     for gone in ("strict", "standard", "wide-open"):
         with pytest.raises(ValueError):
             netproxy.AllowListProxy(gone)
@@ -191,9 +197,14 @@ def test_a_running_proxy_takes_more_hosts():
 def test_the_open_profile_has_no_list_and_is_the_default_on_windows_only(tmp_path):
     assert network_profiles.hosts("open") == [] and network_profiles.is_open("open")
     assert network_profiles.default_profile("win32") == "open"
-    assert network_profiles.default_profile("darwin") == "allowlist" and network_profiles.default_profile("linux") == "allowlist"
+    assert (
+        network_profiles.default_profile("darwin") == "allowlist"
+        and network_profiles.default_profile("linux") == "allowlist"
+    )
     # Seatbelt: the files stay confined, the network clause opens
-    text = seatbelt_profile.render([{"path": str(tmp_path), "writable": True}], runtime_dir=str(tmp_path), open_network=True, home=str(tmp_path))
+    text = seatbelt_profile.render(
+        [{"path": str(tmp_path), "writable": True}], runtime_dir=str(tmp_path), open_network=True, home=str(tmp_path)
+    )
     assert "(allow network*)" in text and "localhost:" not in text and "(deny default)" in text
 
 
@@ -204,7 +215,12 @@ def test_profile_reads_the_machines_toolchain_list_when_given(tmp_path):
     (home / ".nvm").mkdir()
     project = tmp_path / "project"
     project.mkdir()
-    text = seatbelt_profile.render([{"path": str(project), "writable": True}], runtime_dir=str(tmp_path / "rt"), home=str(home), tool_dirs=[str(home / "tools")])
+    text = seatbelt_profile.render(
+        [{"path": str(project), "writable": True}],
+        runtime_dir=str(tmp_path / "rt"),
+        home=str(home),
+        tool_dirs=[str(home / "tools")],
+    )
     assert seatbelt_profile.real(str(home / "tools")) in text
     assert seatbelt_profile.real(str(home / ".nvm")) not in text  # the list given replaces the shipped one
 

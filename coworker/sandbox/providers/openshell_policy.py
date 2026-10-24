@@ -38,7 +38,11 @@ _ANY_BINARY = [{"path": "/**"}]
 
 
 def _hosts(name: str, hosts: Sequence[str]) -> dict[str, Any]:
-    return {"name": name, "endpoints": [{"host": h, "port": 443} for h in hosts], "binaries": [dict(b) for b in _ANY_BINARY]}
+    return {
+        "name": name,
+        "endpoints": [{"host": h, "port": 443} for h in hosts],
+        "binaries": [dict(b) for b in _ANY_BINARY],
+    }
 
 
 # The host lists are ours and shared by every provider (network_profiles.py); here they are
@@ -75,8 +79,19 @@ def render(
     profile = network_profiles.check(profile)
     if network_profiles.is_open(profile):
         raise ValueError(OPEN_UNSUPPORTED)
-    read_write = [RUNTIME_DIR, "/dev/null", "/dev/pts", *([home] if home else []), *[str(r["path"]) for r in roots if r.get("writable")]]
-    read_only = [*_SYSTEM_READ_ONLY, *_IMAGE_TOOLS_READ_ONLY, RUNNER_MOUNT, *[str(r["path"]) for r in roots if not r.get("writable")]]
+    read_write = [
+        RUNTIME_DIR,
+        "/dev/null",
+        "/dev/pts",
+        *([home] if home else []),
+        *[str(r["path"]) for r in roots if r.get("writable")],
+    ]
+    read_only = [
+        *_SYSTEM_READ_ONLY,
+        *_IMAGE_TOOLS_READ_ONLY,
+        RUNNER_MOUNT,
+        *[str(r["path"]) for r in roots if not r.get("writable")],
+    ]
     policy: dict[str, Any] = {
         "version": 1,
         "filesystem_policy": {"include_workdir": False, "read_only": read_only, "read_write": read_write},
@@ -93,7 +108,11 @@ def render(
             host, _, port = str(item).rpartition(":")
             if host and port.isdigit():
                 endpoints.append({"host": host, "port": int(port)})
-        policy["network_policies"]["credentials"] = {"name": "shared-credentials", "endpoints": endpoints, "binaries": [dict(b) for b in _ANY_BINARY]}
+        policy["network_policies"]["credentials"] = {
+            "name": "shared-credentials",
+            "endpoints": endpoints,
+            "binaries": [dict(b) for b in _ANY_BINARY],
+        }
     return policy
 
 

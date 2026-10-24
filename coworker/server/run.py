@@ -131,9 +131,7 @@ def _ensure_api_token(port: int) -> Path | None:
         return None  # Tauri supplied an in-memory token; never persist it.
     token = secrets.token_hex(32)
     os.environ["COWORKER_API_TOKEN"] = token
-    return write_private_text(
-        state_dir() / f"sidecar-{port}.token", token + "\n"
-    )
+    return write_private_text(state_dir() / f"sidecar-{port}.token", token + "\n")
 
 
 _ENGINE_LOCK = None
@@ -165,7 +163,11 @@ def main(argv=None) -> None:
     cfg = load_config()  # global config supplies defaults
     # The desktop app's bundled sidecar is a program named openworker-server (packaging/
     # cli_entry.py); from a checkout the server is run as a module.
-    prog = "openworker-server" if os.path.basename(sys.argv[0]).startswith("openworker-server") else "python -m coworker.server.run"
+    prog = (
+        "openworker-server"
+        if os.path.basename(sys.argv[0]).startswith("openworker-server")
+        else "python -m coworker.server.run"
+    )
     parser = argparse.ArgumentParser(prog=prog)
     parser.add_argument("--cwd", default=None, help="optional seed/default workspace")
     parser.add_argument("--model", default=cfg.model)
@@ -223,9 +225,7 @@ def main(argv=None) -> None:
         _exit_when_orphaned()
         _warn_if_state_shared()
         app = build_app(args.cwd, args.model, args.mode)
-        uvicorn.run(
-            app, host=args.host, port=args.port, ws_max_size=_WS_MAX_FRAME_BYTES
-        )
+        uvicorn.run(app, host=args.host, port=args.port, ws_max_size=_WS_MAX_FRAME_BYTES)
     finally:
         if generated_token_path is not None:
             generated_token_path.unlink(missing_ok=True)

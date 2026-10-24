@@ -225,11 +225,7 @@ def _sidecar_extras(items: list[dict[str, Any]]) -> dict[str, Any]:
     server can't resolve them by id and rejects the replay. The sidecar is only worth
     persisting when something beyond plain answer text needs continuity.
     """
-    kept = [
-        item
-        for item in items
-        if item.get("type") != "reasoning" or item.get("encrypted_content")
-    ]
+    kept = [item for item in items if item.get("type") != "reasoning" or item.get("encrypted_content")]
     if any(item.get("type") in ("reasoning", "function_call") for item in kept):
         return {"_openai": {"items": kept}}
     return {}
@@ -391,9 +387,7 @@ class OpenAIResponsesProvider(ProviderClient):
         tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ) -> AssistantTurn:
-        kwargs = self._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings
-        )
+        kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings)
         response = self._create(self._ensure_client(), kwargs)
         return _parse_response(response)
 
@@ -408,9 +402,7 @@ class OpenAIResponsesProvider(ProviderClient):
         tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ):
-        kwargs = self._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings
-        )
+        kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings)
         kwargs["stream"] = True
         events = self._create(self._ensure_client(), kwargs)
 

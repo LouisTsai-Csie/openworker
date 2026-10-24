@@ -410,9 +410,7 @@ def test_make_adapter_socket_mode_builds_socket_adapter():
 
 def test_make_adapter_relay_without_endpoint_returns_none():
     # Relay mode configured but no relay_url / sign-in → don't build (falls back).
-    adapter = make_adapter(
-        "slack", {"mode": "relay", "enabled": True}, secrets=SecretStore()
-    )
+    adapter = make_adapter("slack", {"mode": "relay", "enabled": True}, secrets=SecretStore())
     assert adapter is None
 
 

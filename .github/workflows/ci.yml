@@ -20,6 +20,10 @@ jobs:
         run: uv sync --locked --extra messaging --extra bedrock
       - name: Ruff
         run: uv run ruff check .
+      # The tree is formatter-clean as of 2026-10-24; this keeps it that way, so
+      # nobody has to reflow a diff by hand in review again.
+      - name: Format
+        run: uv run ruff format --check .
       - name: mypy
         run: uv run mypy
       # The layering in ARCHITECTURE.md as a gate: fails on a new import-time cycle or a

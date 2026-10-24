@@ -99,16 +99,10 @@ def test_legacy_default_migrates_lazily(acme, secrets):
 def test_connect_connector_adds_accounts_not_overwrites(acme, secrets):
     """The manual connect path: two submits with different account ids = two
     accounts; same id = credential update in place."""
-    out = connect_connector(
-        secrets, "acmeapp", {"api_key": "k1", "project_id": "11"}, validate=False
-    )
+    out = connect_connector(secrets, "acmeapp", {"api_key": "k1", "project_id": "11"}, validate=False)
     assert out["ok"] and out["account_id"] == "11"
-    connect_connector(
-        secrets, "acmeapp", {"api_key": "k2", "project_id": "22"}, validate=False
-    )
-    connect_connector(
-        secrets, "acmeapp", {"api_key": "k2b", "project_id": "22"}, validate=False
-    )
+    connect_connector(secrets, "acmeapp", {"api_key": "k2", "project_id": "22"}, validate=False)
+    connect_connector(secrets, "acmeapp", {"api_key": "k2b", "project_id": "22"}, validate=False)
     ids = [a for a, _ in accounts.list_accounts(secrets, "acmeapp")]
     assert ids == ["11", "22"]
     assert accounts.resolve(secrets, "acmeapp", "22")[2]["api_key"] == "k2b"
@@ -128,9 +122,7 @@ def test_identity_sentinel_uses_validator_identity(secrets):
 
 
 def test_connector_list_accounts_branch_and_full_disconnect(acme, secrets):
-    accounts.add_account(
-        secrets, "acmeapp", "p1", {"api_key": "k1", "account": "Proj One"}
-    )
+    accounts.add_account(secrets, "acmeapp", "p1", {"api_key": "k1", "account": "Proj One"})
     accounts.add_account(secrets, "acmeapp", "p2", {"api_key": "k2", "managed": True})
     entry = next(c for c in connector_list(secrets) if c["name"] == "acmeapp")
     assert entry["connected"] and entry["enabled"]

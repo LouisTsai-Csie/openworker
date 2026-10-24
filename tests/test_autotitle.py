@@ -69,9 +69,7 @@ async def test_title_set_after_first_turn(tmp_path):
     assert provider.title_calls[0][-1]["content"] == (
         "help me plan a trip to japan\n\n[the assistant's first reply]\nsure"
     )
-    assert mgr.session_store.title_state("s1")["auto_title"] == (
-        "Japan Trip Planning Help"
-    )
+    assert mgr.session_store.title_state("s1")["auto_title"] == ("Japan Trip Planning Help")
     # display precedence: the auto title wins over the title_from snapshot everywhere
     assert mgr.session_store.load("s1").title == "Japan Trip Planning Help"
     row = next(s for s in mgr.list_sessions() if s["session_id"] == "s1")
@@ -122,9 +120,7 @@ async def test_manual_rename_always_wins(tmp_path):
 
 
 async def test_rename_before_generation_blocks_it(tmp_path):
-    mgr, provider = _mgr(
-        tmp_path, [_text("hi"), _text("ok")], ["small-talk", "Should Never Be Asked"]
-    )
+    mgr, provider = _mgr(tmp_path, [_text("hi"), _text("ok")], ["small-talk", "Should Never Be Asked"])
     await _turn(mgr, "s5", "hey")  # sentinel — no title yet
     mgr.rename_session("s5", "My Thread")
     await _turn(mgr, "s5", "help me plan the offsite")

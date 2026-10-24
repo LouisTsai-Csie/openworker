@@ -1,4 +1,5 @@
 """Board-owned copies survive capture/worktree cleanup, with bounded scoped ingestion."""
+
 import base64
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -19,18 +20,40 @@ PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 
 def attach_tool(manager, roots):
     team = manager.teams.for_lead_session("lead")
-    return next(t for t in board_tools(
-        manager.team_store, space=team.space, actor=Actor(id="sam", role=Role.WORKER),
-        attachments=manager.attachment_store, roots=lambda: roots,
-    ) if t.__name__ == "attach_image")
+    return next(
+        t
+        for t in board_tools(
+            manager.team_store,
+            space=team.space,
+            actor=Actor(id="sam", role=Role.WORKER),
+            attachments=manager.attachment_store,
+            roots=lambda: roots,
+        )
+        if t.__name__ == "attach_image"
+    )
 
 
 def test_image_survives_source_deletion_and_actual_worktree_removal(manager, tmp_path):
     repo, checkout = tmp_path / "source-repo", tmp_path / "worker-checkout"
     repo.mkdir()
+
     def git(*args):
-        subprocess.run(["git", "-c", "user.name=Rohit C Prasad", "-c", "user.email=rohit.prasad15@gmail.com",
-                        "-c", "core.hooksPath=/dev/null", *args], cwd=repo, check=True, capture_output=True)
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=Rohit C Prasad",
+                "-c",
+                "user.email=rohit.prasad15@gmail.com",
+                "-c",
+                "core.hooksPath=/dev/null",
+                *args,
+            ],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+
     git("init")
     git("commit", "--allow-empty", "-m", "Initialize synthetic attachment test")
     git("worktree", "add", "--detach", str(checkout), "HEAD")
@@ -77,8 +100,10 @@ def test_agent_attachment_tracks_live_grants_and_resolves_relative_paths(manager
 
 def test_wrong_item_denied_before_reading_or_storing(manager, tmp_path, monkeypatch):
     _, _, item = create_item(manager, "maya")
+
     def forbidden(*args, **kwargs):
         pytest.fail("unauthorized attachment must not read a file")
+
     monkeypatch.setattr("coworker.teams.attachments.read_image_file", forbidden)
     result = attach_tool(manager, [RootDir(tmp_path)])(item["id"], "proof.png")
     assert "error" in result
@@ -126,8 +151,10 @@ def test_corrupt_existing_copy_is_not_reported_as_success(tmp_path):
 def test_failed_copy_does_not_publish_board_evidence(manager, tmp_path, monkeypatch):
     space, _, item = create_item(manager)
     (tmp_path / "proof.png").write_bytes(PNG)
+
     def fail(*args):
         raise OSError("disk full")
+
     monkeypatch.setattr(manager.attachment_store, "put", fail)
     result = attach_tool(manager, [RootDir(tmp_path)])(item["id"], "proof.png")
     assert result == {"error": "disk full"}
@@ -136,8 +163,12 @@ def test_failed_copy_does_not_publish_board_evidence(manager, tmp_path, monkeypa
 
 def test_manager_agent_tool_uses_current_engine_roots(manager, tmp_path):
     engine = manager.get_engine("lead")
-    tools = manager._team_tools_for("lead", type("Agent", (), {"team": "lead", "name": "swe-lead"})(),
-                                    manager.session_store.load("lead"), manager.default_workspace)
+    tools = manager._team_tools_for(
+        "lead",
+        type("Agent", (), {"team": "lead", "name": "swe-lead"})(),
+        manager.session_store.load("lead"),
+        manager.default_workspace,
+    )
     attach = next(t for t in tools if t.__name__ == "attach_image")
     _, _, item = create_item(manager)
     source = Path(manager.default_workspace) / "proof.png"
@@ -149,8 +180,10 @@ def test_manager_agent_tool_uses_current_engine_roots(manager, tmp_path):
 
 def test_failed_atomic_publish_leaves_no_success_or_staging_file(tmp_path, monkeypatch):
     store = AttachmentStore(tmp_path / "attachments")
+
     def fail(*args):
         raise OSError("publish failed")
+
     monkeypatch.setattr(Path, "replace", fail)
     with pytest.raises(OSError, match="publish failed"):
         store.put(PNG, "proof.png")
@@ -176,9 +209,15 @@ def test_wrong_item_on_http_upload_does_not_create_blob(manager):
     _, _, item = create_item(manager, "maya")
     token = manager.board_tokens.mint("sam", "worker")
     client = TestClient(create_app(manager))
-    result = client.post("/v1/board/items/attach", headers={"Authorization": f"Bearer {token}"}, json={
-        "space": manager.teams.for_lead_session("lead").space, "id": item["id"],
-        "filename": "proof.png", "data_b64": base64.b64encode(PNG).decode(),
-    })
+    result = client.post(
+        "/v1/board/items/attach",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "space": manager.teams.for_lead_session("lead").space,
+            "id": item["id"],
+            "filename": "proof.png",
+            "data_b64": base64.b64encode(PNG).decode(),
+        },
+    )
     assert result.status_code in (400, 403)
     assert not manager.attachment_store.root.exists()

@@ -91,9 +91,7 @@ class AuditStore:
             ("approved_by", "TEXT DEFAULT ''"),
         ):
             try:
-                self._conn.execute(
-                    f"ALTER TABLE audit_events ADD COLUMN {column} {decl}"
-                )
+                self._conn.execute(f"ALTER TABLE audit_events ADD COLUMN {column} {decl}")
             except sqlite3.OperationalError:
                 pass  # column already exists
         self._conn.commit()
@@ -125,9 +123,7 @@ class AuditStore:
         tool = str(event.get("tool") or event.get("tool_name") or "")
         connector = str(event.get("connector") or connector_for_tool(tool) or "")
         args = _sanitize_args(tool, event.get("arguments") or {})
-        resource = _resource(
-            tool, event.get("arguments") or {}, event.get("result") or {}
-        )
+        resource = _resource(tool, event.get("arguments") or {}, event.get("result") or {})
         preview = _result_preview(tool, event)
         with self._lock:
             self._conn.execute(
@@ -187,8 +183,14 @@ class AuditStore:
                     (session_id, stage),
                 ).fetchall()
             out = {
-                "checks": 0, "allow": 0, "deny": 0, "unsure": 0,
-                "tokens_in": 0, "tokens_out": 0, "cache_read": 0, "cache_write": 0,
+                "checks": 0,
+                "allow": 0,
+                "deny": 0,
+                "unsure": 0,
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "cache_read": 0,
+                "cache_write": 0,
             }
             for row in rows:
                 status = str(row["status"])
@@ -255,9 +257,7 @@ def _sanitize_result(tool: str, result: Any) -> Any:
     return _sanitize_value(tool, None, result, _RESULT_BODY_KEYS, 0)
 
 
-def _redaction_marker(
-    tool: str, lower_key: str, body_keys: tuple[str, ...]
-) -> str | None:
+def _redaction_marker(tool: str, lower_key: str, body_keys: tuple[str, ...]) -> str | None:
     """The marker this key's value must be replaced by, or None to keep the value."""
     if any(s in lower_key for s in _SECRET_KEYS):
         return "[redacted]"
@@ -268,18 +268,11 @@ def _redaction_marker(
     return None
 
 
-def _sanitize_mapping(
-    tool: str, mapping: dict[Any, Any], body_keys: tuple[str, ...], depth: int
-) -> dict[str, Any]:
-    return {
-        str(key): _sanitize_value(tool, key, value, body_keys, depth)
-        for key, value in list(mapping.items())[:20]
-    }
+def _sanitize_mapping(tool: str, mapping: dict[Any, Any], body_keys: tuple[str, ...], depth: int) -> dict[str, Any]:
+    return {str(key): _sanitize_value(tool, key, value, body_keys, depth) for key, value in list(mapping.items())[:20]}
 
 
-def _sanitize_value(
-    tool: str, key: Any, value: Any, body_keys: tuple[str, ...], depth: int
-) -> Any:
+def _sanitize_value(tool: str, key: Any, value: Any, body_keys: tuple[str, ...], depth: int) -> Any:
     if key is not None:
         marker = _redaction_marker(tool, str(key).lower(), body_keys)
         if marker is not None:
@@ -294,9 +287,7 @@ def _sanitize_value(
     if isinstance(value, list):
         # An item carries no key of its own; a dict item is checked when we recurse
         # into it, and a list under a secret-like key never reaches here at all.
-        return [
-            _sanitize_value(tool, None, v, body_keys, depth + 1) for v in value[:10]
-        ]
+        return [_sanitize_value(tool, None, v, body_keys, depth + 1) for v in value[:10]]
     if isinstance(value, dict):
         return _sanitize_mapping(tool, value, body_keys, depth + 1)
     return _truncate(str(value))

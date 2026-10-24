@@ -178,8 +178,7 @@ class JournalStore:
                 )
                 if not exists:
                     self._conn.execute(
-                        "INSERT INTO journal_meta (case_id, head_hash, created_ts)"
-                        " VALUES (?, ?, ?)",
+                        "INSERT INTO journal_meta (case_id, head_hash, created_ts) VALUES (?, ?, ?)",
                         (case, record["hash"], ts),
                     )
                     # A new case belongs to whoever opened it.
@@ -228,9 +227,7 @@ class JournalStore:
             elif not include_raw:
                 where.append("kind != 'raw'")
             rows = self._conn.execute(
-                "SELECT * FROM journal_entries WHERE "
-                + " AND ".join(where)
-                + " ORDER BY seq",
+                "SELECT * FROM journal_entries WHERE " + " AND ".join(where) + " ORDER BY seq",
                 params,
             ).fetchall()
         out = []
@@ -251,8 +248,7 @@ class JournalStore:
             return []
         with self._lock:
             rows = self._conn.execute(
-                "SELECT case_id, COUNT(*) AS entries, MAX(ts) AS last_ts"
-                " FROM journal_entries GROUP BY case_id"
+                "SELECT case_id, COUNT(*) AS entries, MAX(ts) AS last_ts FROM journal_entries GROUP BY case_id"
             ).fetchall()
         counts = {row["case_id"]: dict(row) for row in rows}
         return [
@@ -268,13 +264,10 @@ class JournalStore:
         """Cases visible to this actor (all of them for the user)."""
         with self._lock:
             if actor.role == Role.USER:
-                rows = self._conn.execute(
-                    "SELECT case_id FROM journal_meta ORDER BY case_id"
-                ).fetchall()
+                rows = self._conn.execute("SELECT case_id FROM journal_meta ORDER BY case_id").fetchall()
             else:
                 rows = self._conn.execute(
-                    "SELECT DISTINCT case_id FROM journal_grants WHERE principal = ?"
-                    " ORDER BY case_id",
+                    "SELECT DISTINCT case_id FROM journal_grants WHERE principal = ? ORDER BY case_id",
                     (actor.id,),
                 ).fetchall()
         return [row["case_id"] for row in rows]
@@ -302,8 +295,7 @@ class JournalStore:
             if actor.role == Role.LEAD:
                 self._check_access(actor, case)
             self._conn.execute(
-                "DELETE FROM journal_grants WHERE case_id = ? AND principal = ?"
-                " AND source = 'grant'",
+                "DELETE FROM journal_grants WHERE case_id = ? AND principal = ? AND source = 'grant'",
                 (case, principal),
             )
             self._conn.commit()
@@ -319,8 +311,7 @@ class JournalStore:
         with self._lock:
             if not self._case_exists(case):
                 self._conn.execute(
-                    "INSERT INTO journal_meta (case_id, head_hash, created_ts)"
-                    " VALUES (?, ?, ?)",
+                    "INSERT INTO journal_meta (case_id, head_hash, created_ts) VALUES (?, ?, ?)",
                     (case, GENESIS, datetime.now(UTC).isoformat()),
                 )
                 self._grant_locked(case, creator, source="creator")
@@ -347,9 +338,7 @@ class JournalStore:
                     " AND source = 'assignment' AND space = ? AND item_id = ?",
                     (case, previous, space, item_id),
                 )
-            self._grant_locked(
-                case, assignee, source="assignment", space=space, item_id=item_id
-            )
+            self._grant_locked(case, assignee, source="assignment", space=space, item_id=item_id)
             self._conn.commit()
 
     # ----------------------------------------------------------------- integrity
@@ -382,8 +371,7 @@ class JournalStore:
         if actor.role == Role.USER:
             return
         row = self._conn.execute(
-            "SELECT 1 FROM journal_grants WHERE case_id = ? AND principal = ?"
-            " LIMIT 1",
+            "SELECT 1 FROM journal_grants WHERE case_id = ? AND principal = ? LIMIT 1",
             (case, actor.id),
         ).fetchone()
         if row is None:
@@ -399,23 +387,15 @@ class JournalStore:
         item_id: int | None = None,
     ) -> None:
         self._conn.execute(
-            "INSERT OR IGNORE INTO journal_grants"
-            " (case_id, principal, source, space, item_id) VALUES (?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO journal_grants (case_id, principal, source, space, item_id) VALUES (?, ?, ?, ?, ?)",
             (case, principal, source, space, item_id),
         )
 
     def _case_exists(self, case: str) -> bool:
-        return (
-            self._conn.execute(
-                "SELECT 1 FROM journal_meta WHERE case_id = ?", (case,)
-            ).fetchone()
-            is not None
-        )
+        return self._conn.execute("SELECT 1 FROM journal_meta WHERE case_id = ?", (case,)).fetchone() is not None
 
     def _head_hash(self, case: str) -> str:
-        row = self._conn.execute(
-            "SELECT head_hash FROM journal_meta WHERE case_id = ?", (case,)
-        ).fetchone()
+        row = self._conn.execute("SELECT head_hash FROM journal_meta WHERE case_id = ?", (case,)).fetchone()
         return row["head_hash"] if row else GENESIS
 
 

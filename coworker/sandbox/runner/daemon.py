@@ -112,7 +112,9 @@ class Daemon:
         are the accounts that may connect to the pipe."""
         self.socket_path = socket_path
         self.is_pipe = winpipe.is_pipe(socket_path)
-        self.runtime_dir = runtime_dir if runtime_dir is not None else (None if self.is_pipe else os.path.dirname(socket_path))
+        self.runtime_dir = (
+            runtime_dir if runtime_dir is not None else (None if self.is_pipe else os.path.dirname(socket_path))
+        )
         self.allow_sids = list(allow_sids)
         # Outside a sandbox nothing else ends this process when its server goes away.
         self._parent = os.getppid() if exit_with_parent else None
@@ -189,7 +191,9 @@ class Daemon:
     def _hello(self, params: dict[str, Any]) -> dict[str, Any]:
         theirs = params.get("protocol_version")
         if theirs is not None and theirs != P.PROTOCOL_VERSION:
-            raise P.RunnerError(P.VERSION_MISMATCH, f"runner speaks protocol {P.PROTOCOL_VERSION}, client sent {theirs}")
+            raise P.RunnerError(
+                P.VERSION_MISMATCH, f"runner speaks protocol {P.PROTOCOL_VERSION}, client sent {theirs}"
+            )
         return {
             "protocol_version": P.PROTOCOL_VERSION,
             "runner_version": RUNNER_VERSION,
@@ -291,7 +295,13 @@ class Daemon:
         except subprocess.TimeoutExpired as exc:
             return {"exit_code": None, "stdout": exc.stdout or "", "stderr": exc.stderr or "", "timed_out": True}
         except OSError as exc:
-            return {"exit_code": None, "stdout": "", "stderr": "", "timed_out": False, "error": f"{type(exc).__name__}: {exc}"}
+            return {
+                "exit_code": None,
+                "stdout": "",
+                "stderr": "",
+                "timed_out": False,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
         return {"exit_code": done.returncode, "stdout": done.stdout, "stderr": done.stderr, "timed_out": False}
 
     def _dispatch(self, req_id: str, method: str, params: dict[str, Any]) -> dict[str, Any]:
@@ -353,9 +363,13 @@ class Daemon:
             path = self._resolve(params)
             try:
                 if method == "fs.read":
-                    return fsops.read(path, **_pick(params, "offset_line", "limit_lines", "offset_bytes", "limit_bytes"))
+                    return fsops.read(
+                        path, **_pick(params, "offset_line", "limit_lines", "offset_bytes", "limit_bytes")
+                    )
                 if method == "fs.write":
-                    return fsops.write(path, **_pick(params, "text", "data_b64", "if_match_sha256", "append", "make_parents"))
+                    return fsops.write(
+                        path, **_pick(params, "text", "data_b64", "if_match_sha256", "append", "make_parents")
+                    )
                 if method == "fs.stat":
                     return fsops.stat(path)
                 if method == "fs.list":
@@ -365,7 +379,9 @@ class Daemon:
                 if method == "fs.remove":
                     return fsops.remove(path, **_pick(params, "recursive"))
                 if method == "fs.search":
-                    return fsops.search(path, str(params.get("pattern") or ""), **_pick(params, "max_matches", "ignore_case"))
+                    return fsops.search(
+                        path, str(params.get("pattern") or ""), **_pick(params, "max_matches", "ignore_case")
+                    )
             except fsops.FsError as exc:
                 raise P.RunnerError(P.FS_ERROR, str(exc)) from exc
         if method == "net.probe":
@@ -514,7 +530,11 @@ class Daemon:
 
     def serve_forever(self) -> None:
         accept = self._listen()
-        print(f"openworker tool runner {RUNNER_VERSION} ready on {self.socket_path} (instance {self.instance_id})", file=sys.stderr, flush=True)
+        print(
+            f"openworker tool runner {RUNNER_VERSION} ready on {self.socket_path} (instance {self.instance_id})",
+            file=sys.stderr,
+            flush=True,
+        )
         try:
             while not self._stop.is_set():
                 try:

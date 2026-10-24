@@ -14,12 +14,16 @@ def test_the_shipped_lists_are_per_platform_and_switched_off():
     win = toolchains.defaults("win32")
     assert {e["name"] for e in mac} >= {"nvm", "pyenv", "cargo", "go", "uv"}
     assert {e["name"] for e in win} >= {"nvm", "npm", "pyenv", "scoop", "cargo"}
-    assert all(not e["enabled"] and e["path"].startswith("~/") for e in mac + win)  # nothing until switched on (UX-053 v6)
+    assert all(
+        not e["enabled"] and e["path"].startswith("~/") for e in mac + win
+    )  # nothing until switched on (UX-053 v6)
     assert toolchains.defaults("linux") == []  # OpenShell mounts no home folder
 
 
 def test_the_user_edits_and_adds_by_name():
-    rows = toolchains.entries([{"name": "nvm", "enabled": False}, {"name": "mytools", "path": "~/tools", "title": "My tools"}], "darwin")
+    rows = toolchains.entries(
+        [{"name": "nvm", "enabled": False}, {"name": "mytools", "path": "~/tools", "title": "My tools"}], "darwin"
+    )
     by = {e["name"]: e for e in rows}
     assert by["nvm"]["enabled"] is False and by["nvm"]["path"] == "~/.nvm"  # the path stays shipped
     assert by["mytools"] == {"name": "mytools", "title": "My tools", "path": "~/tools", "enabled": True}

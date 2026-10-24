@@ -15,7 +15,11 @@ BLOCK = "\n\n<system-context>\n(automatic per-turn context, not part of the user
 def _tool_loop():
     return [
         {"role": "user", "content": "task" + BLOCK},
-        {"role": "assistant", "content": "", "tool_calls": [{"id": "c1", "function": {"name": "run_shell", "arguments": "{}"}}]},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{"id": "c1", "function": {"name": "run_shell", "arguments": "{}"}}],
+        },
         {"role": "tool", "tool_call_id": "c1", "content": "out"},
     ]
 

@@ -67,9 +67,7 @@ def mount_cloud_proxy(
         if content_type:
             headers["Content-Type"] = content_type
         try:
-            resp = await upstream.request(
-                method, path + (f"?{query}" if query else ""), content=body, headers=headers
-            )
+            resp = await upstream.request(method, path + (f"?{query}" if query else ""), content=body, headers=headers)
         except httpx.HTTPError:
             return JSONResponse({"error": "cloud unreachable"}, status_code=502)
         return Response(
@@ -95,9 +93,7 @@ def mount_cloud_proxy(
         if time.monotonic() - me_cache["at"] < _ME_TTL_SECONDS and me_cache["org"]:
             return me_cache["org"]
         try:
-            resp = await upstream.get(
-                "/v1/me", headers={"Authorization": f"Bearer {token}"}
-            )
+            resp = await upstream.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
             if resp.status_code != 200:
                 return me_cache["org"]
             me = resp.json()
@@ -120,9 +116,7 @@ def mount_cloud_proxy(
         if state != "ok":
             return {"session": state, "machines": []}
         try:
-            resp = await upstream.get(
-                "/v1/machines", headers={"Authorization": f"Bearer {token}"}
-            )
+            resp = await upstream.get("/v1/machines", headers={"Authorization": f"Bearer {token}"})
         except httpx.HTTPError:
             return {"session": "unreachable", "machines": []}
         if resp.status_code == 401:
@@ -143,12 +137,8 @@ def mount_cloud_proxy(
         return await _forward_request(f"/v1/machines/{machine_id}/sessions", request)
 
     @app.get("/v1/cloud/machines/{machine_id}/sessions/{session_id}/messages")
-    async def cloud_machine_transcript(
-        machine_id: str, session_id: str, request: Request
-    ) -> Response:
-        return await _forward_request(
-            f"/v1/machines/{machine_id}/sessions/{session_id}/messages", request
-        )
+    async def cloud_machine_transcript(machine_id: str, session_id: str, request: Request) -> Response:
+        return await _forward_request(f"/v1/machines/{machine_id}/sessions/{session_id}/messages", request)
 
     @app.api_route("/v1/cloud/machines/{machine_id}/secrets", methods=["GET", "DELETE"])
     async def cloud_machine_secrets(machine_id: str, request: Request) -> Response:
@@ -171,9 +161,7 @@ def mount_cloud_proxy(
         if wallet is None:
             return JSONResponse({"error": "no wallet configured"}, status_code=500)
         try:
-            resp = await upstream.get(
-                "/v1/machines", headers={"Authorization": f"Bearer {token}"}
-            )
+            resp = await upstream.get("/v1/machines", headers={"Authorization": f"Bearer {token}"})
             rows = resp.json().get("machines", []) if resp.status_code == 200 else []
         except httpx.HTTPError:
             return JSONResponse({"error": "cloud unreachable"}, status_code=502)
@@ -182,16 +170,12 @@ def mount_cloud_proxy(
             return JSONResponse({"error": "unknown machine"}, status_code=404)
         seal_pubkey = row.get("seal_pubkey") or ""
         if not seal_pubkey:
-            return JSONResponse(
-                {"error": "machine has no pinned sealing key yet"}, status_code=409
-            )
+            return JSONResponse({"error": "machine has no pinned sealing key yet"}, status_code=409)
         profiles: dict[str, Any] = {}
         for name in names:
             data = wallet.get(name)
             if data is None:
-                return JSONResponse(
-                    {"error": f"profile '{name}' not in the wallet"}, status_code=400
-                )
+                return JSONResponse({"error": f"profile '{name}' not in the wallet"}, status_code=400)
             profiles[name] = data
         from coworker.remote.acceptor import _hash_profile
 
@@ -210,14 +194,10 @@ def mount_cloud_proxy(
         )
 
     @app.post("/v1/cloud/machines/{machine_id}/connectors/{name}/connect-sealed")
-    async def cloud_connector_connect_sealed(
-        machine_id: str, name: str, request: Request
-    ) -> Response:
+    async def cloud_connector_connect_sealed(machine_id: str, name: str, request: Request) -> Response:
         # Already ciphertext (sealed in the GUI to the machine's pinned key) —
         # a plain forward; the hosted service relays it blind like key deploys.
-        return await _forward_request(
-            f"/v1/machines/{machine_id}/connectors/{name}/connect-sealed", request
-        )
+        return await _forward_request(f"/v1/machines/{machine_id}/connectors/{name}/connect-sealed", request)
 
     @app.api_route(
         "/v1/cloud/machines/{machine_id}/p/{path:path}",
@@ -248,11 +228,7 @@ def mount_cloud_proxy(
         query = ws.scope.get("query_string", b"").decode()
         if query:
             target += "?" + query
-        offered = {
-            part.strip()
-            for part in ws.headers.get("sec-websocket-protocol", "").split(",")
-            if part.strip()
-        }
+        offered = {part.strip() for part in ws.headers.get("sec-websocket-protocol", "").split(",") if part.strip()}
         try:
             upstream_ws = await websockets.connect(
                 target,

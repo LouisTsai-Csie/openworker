@@ -54,6 +54,7 @@ def test_stock_openai_responses_path_unchanged(monkeypatch):
 
     assert captured == {"api_key": "openai-key"}
 
+
 # -- fakes ------------------------------------------------------------------------
 
 
@@ -80,9 +81,7 @@ class _FakeClient:
 
 
 def _response(output, status="completed", incomplete_details=None):
-    return SimpleNamespace(
-        output=output, status=status, incomplete_details=incomplete_details
-    )
+    return SimpleNamespace(output=output, status=status, incomplete_details=incomplete_details)
 
 
 def _message_item(text):
@@ -219,9 +218,7 @@ def test_convert_replays_openai_sidecar_verbatim():
             {
                 "role": "assistant",
                 "content": "on it",
-                "tool_calls": [
-                    {"id": "call_1", "function": {"name": "f", "arguments": "{}"}}
-                ],
+                "tool_calls": [{"id": "call_1", "function": {"name": "f", "arguments": "{}"}}],
                 "_openai": {"items": sidecar_items},
             },
             {"role": "tool", "tool_call_id": "call_1", "content": "done"},
@@ -253,9 +250,7 @@ def test_convert_empty_assistant_tool_turn_emits_no_message_item():
             {
                 "role": "assistant",
                 "content": "",
-                "tool_calls": [
-                    {"id": "c1", "function": {"name": "f", "arguments": "{}"}}
-                ],
+                "tool_calls": [{"id": "c1", "function": {"name": "f", "arguments": "{}"}}],
             },
         ]
     )
@@ -341,6 +336,8 @@ def test_complete_usage_degrades_on_partial_or_missing_fields():
         model="m", messages=[{"role": "user", "content": "hi"}]
     )
     assert turn2.usage is None
+
+
 def test_complete_can_omit_reasoning_summary_but_keep_encrypted_content():
     """BytePlus accepts encrypted reasoning output but rejects reasoning.summary."""
     fake = _FakeClient(response=_response([_message_item("hello")]))
@@ -405,9 +402,7 @@ def test_complete_drops_unresolvable_reasoning_from_sidecar():
 
 
 def test_complete_plain_text_has_no_sidecar():
-    provider = OpenAIResponsesProvider(
-        client=_FakeClient(response=_response([_message_item("plain")]))
-    )
+    provider = OpenAIResponsesProvider(client=_FakeClient(response=_response([_message_item("plain")])))
     turn = provider.complete(model="m", messages=[{"role": "user", "content": "x"}])
     assert turn.extras == {}
 
@@ -488,9 +483,7 @@ def test_complete_parses_attr_style_sdk_objects():
 
 def test_param_fix_drops_named_parameter():
     kwargs = {"model": "m", "input": [], "temperature": 0.2}
-    fixed = _param_fix_retry(
-        kwargs, Exception("Unsupported parameter: 'temperature' is not supported")
-    )
+    fixed = _param_fix_retry(kwargs, Exception("Unsupported parameter: 'temperature' is not supported"))
     assert "temperature" not in fixed and kwargs["temperature"] == 0.2  # copy, not mutate
 
 
@@ -564,9 +557,7 @@ def test_stream_final_turn_carries_tool_calls_and_sidecar():
     )
     events = [SimpleNamespace(type="response.completed", response=final)]
     provider = OpenAIResponsesProvider(client=_FakeClient(events=events))
-    turn = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )[-1].turn
+    turn = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))[-1].turn
     assert turn.finish_reason == "tool_calls"
     assert turn.tool_calls[0].arguments == {"x": 1}
     assert [i["type"] for i in turn.extras["_openai"]["items"]] == [
@@ -581,18 +572,12 @@ def test_stream_rebuilds_turn_when_terminal_output_is_empty():
     tool calls silently vanish (live bug: a turn produced deltas, then persisted empty)."""
     events = [
         SimpleNamespace(type="response.output_text.delta", delta="pong"),
-        SimpleNamespace(
-            type="response.output_item.done", item=_message_item("pong")
-        ),
-        SimpleNamespace(
-            type="response.output_item.done", item=_call_item("call_1", "f", '{"x": 1}')
-        ),
+        SimpleNamespace(type="response.output_item.done", item=_message_item("pong")),
+        SimpleNamespace(type="response.output_item.done", item=_call_item("call_1", "f", '{"x": 1}')),
         SimpleNamespace(type="response.completed", response=_response([])),
     ]
     provider = OpenAIResponsesProvider(client=_FakeClient(events=events))
-    turn = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )[-1].turn
+    turn = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))[-1].turn
     assert turn.text == "pong"
     assert turn.finish_reason == "tool_calls"
     assert turn.tool_calls[0].arguments == {"x": 1}
@@ -605,18 +590,14 @@ def test_stream_falls_back_to_deltas_when_no_items_repeat_anywhere():
         SimpleNamespace(type="response.completed", response=_response([])),
     ]
     provider = OpenAIResponsesProvider(client=_FakeClient(events=events))
-    turn = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )[-1].turn
+    turn = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))[-1].turn
     assert turn.text == "pong" and turn.finish_reason == "stop"
 
 
 def test_stream_without_terminal_event_keeps_accumulated_text():
     events = [SimpleNamespace(type="response.output_text.delta", delta="partial")]
     provider = OpenAIResponsesProvider(client=_FakeClient(events=events))
-    turn = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )[-1].turn
+    turn = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))[-1].turn
     assert turn.text == "partial" and turn.finish_reason is None
     assert turn.usage is None  # nothing terminal arrived — no usage to invent
 
@@ -635,9 +616,7 @@ def test_stream_terminal_event_carries_usage():
         SimpleNamespace(type="response.completed", response=final),
     ]
     provider = OpenAIResponsesProvider(client=_FakeClient(events=events))
-    turn = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )[-1].turn
+    turn = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))[-1].turn
     assert turn.usage is not None
     assert (turn.usage.input, turn.usage.output, turn.usage.cache_read) == (22, 65, 1408)
 
@@ -707,20 +686,14 @@ def test_registry_routes_blank_endpoint_to_responses():
     from coworker.providers import OpenAIProvider
     from coworker.providers.registry import build_provider_client
 
-    assert isinstance(
-        build_provider_client("openai", {}, None), OpenAIResponsesProvider
-    )
+    assert isinstance(build_provider_client("openai", {}, None), OpenAIResponsesProvider)
     assert isinstance(
         build_provider_client("openai", {"base_url": "   "}, None),
         OpenAIResponsesProvider,
     )
     # A custom endpoint (Azure, vLLM, any compat gateway) keeps Chat Completions…
-    custom = build_provider_client(
-        "openai", {"base_url": "https://my.azure.example/openai/v1"}, None
-    )
+    custom = build_provider_client("openai", {"base_url": "https://my.azure.example/openai/v1"}, None)
     assert isinstance(custom, OpenAIProvider)
     # …and so do Ollama and every compat vendor (their own descriptors).
     assert isinstance(build_provider_client("ollama", {}, None), OpenAIProvider)
-    assert isinstance(
-        build_provider_client("deepseek", {"api_key": "sk-x"}, None), OpenAIProvider
-    )
+    assert isinstance(build_provider_client("deepseek", {"api_key": "sk-x"}, None), OpenAIProvider)

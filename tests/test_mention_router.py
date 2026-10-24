@@ -25,11 +25,7 @@ class CapturingProvider(ProviderClient):
 
     def complete(self, *, model, messages, tools=None, **settings):
         self.calls.append([dict(m) for m in messages])
-        return (
-            self._turns.pop(0)
-            if self._turns
-            else AssistantTurn(text="ok", finish_reason="stop")
-        )
+        return self._turns.pop(0) if self._turns else AssistantTurn(text="ok", finish_reason="stop")
 
     def capabilities(self, model):
         return ModelCapabilities()
@@ -43,12 +39,7 @@ def _connect_slack(mgr):
 
 
 def _mention_event(
-    text="<@UBOT> check the deploy?",
-    *,
-    chat_id="C1",
-    ts="1700000010.000100",
-    thread_ts=None,
-    team_id=None
+    text="<@UBOT> check the deploy?", *, chat_id="C1", ts="1700000010.000100", thread_ts=None, team_id=None
 ):
     return MessageEvent(
         text=text,
@@ -95,12 +86,8 @@ def _capture_deliveries(mgr, monkeypatch):
 def test_slack_mapper_computes_mentions_me():
     base = {"channel": "C1", "user": "U1", "ts": "1.2", "channel_type": "channel"}
     assert slack_event_to_event({**base, "text": "<@UBOT> hi"}, "UBOT").mentions_me
-    assert slack_event_to_event(
-        {**base, "text": "hey <@UBOT|ocw> hi"}, "UBOT"
-    ).mentions_me
-    assert not slack_event_to_event(
-        {**base, "text": "<@UOTHER> hi"}, "UBOT"
-    ).mentions_me
+    assert slack_event_to_event({**base, "text": "hey <@UBOT|ocw> hi"}, "UBOT").mentions_me
+    assert not slack_event_to_event({**base, "text": "<@UOTHER> hi"}, "UBOT").mentions_me
     # No bot id known (misconfigured) → never flags.
     assert not slack_event_to_event({**base, "text": "<@UBOT> hi"}, None).mentions_me
 
@@ -133,7 +120,10 @@ def test_mention_spawns_visible_session_with_thread_grant(tmp_path, monkeypatch)
     assert got_sid == sid
     # The origin block (spec §11.3): ids the model copies into the reply call, no handle.
     assert "From Slack · workspace default · #general (C1) · thread 1700000010.000100" in opening
-    assert 'slack_post_message(workspace="default", channel="C1", thread_ts="1700000010.000100", text=…) — pre-approved' in opening
+    assert (
+        'slack_post_message(workspace="default", channel="C1", thread_ts="1700000010.000100", text=…) — pre-approved'
+        in opening
+    )
     assert target not in opening
     assert "mentioned on Slack in #general" in opening and "Slack-appropriate" in opening
     # The grant covers the platform's own reply tool as well (spec §11.4).
@@ -145,18 +135,31 @@ def test_mention_opening_is_framed_for_the_platform():
     """GitHub mentions must not be told they own a Slack thread (2026-09-01 drill)."""
     from coworker.server.manager import mention_opening
 
-    gh_src = SessionSource(platform="github", chat_id="acme/api#12", user_id="rohit", user_name="rohit", chat_name="acme/api#12", chat_type="channel")
+    gh_src = SessionSource(
+        platform="github",
+        chat_id="acme/api#12",
+        user_id="rohit",
+        user_name="rohit",
+        chat_name="acme/api#12",
+        chat_type="channel",
+    )
     gh = mention_opening(gh_src, "@bot fix this")
     assert gh.startswith("🔔 You were mentioned on GitHub in acme/api#12 by rohit")
     assert "You own this GitHub issue/PR thread" in gh
-    assert 'github_reply(owner="acme", repo="api", number=12, body=…) — pre-approved' in gh and "GitHub-appropriate" in gh
+    assert (
+        'github_reply(owner="acme", repo="api", number=12, body=…) — pre-approved' in gh and "GitHub-appropriate" in gh
+    )
     assert "Slack" not in gh
-    sl_src = SessionSource(platform="slack", chat_id="C1", user_id="U1", user_name="U1", chat_name="general", chat_type="channel")
+    sl_src = SessionSource(
+        platform="slack", chat_id="C1", user_id="U1", user_name="U1", chat_name="general", chat_type="channel"
+    )
     sl = mention_opening(sl_src, "hi", "1.2", "- U2: earlier")
     assert "You own this Slack thread" in sl and sl.endswith("Recent channel context:\n- U2: earlier")
     assert 'slack_post_message(workspace="default", channel="C1", thread_ts="1.2", text=…)' in sl
     # Unknown platform degrades to a capitalised name, never a crash.
-    mx = mention_opening(SessionSource(platform="matrix", chat_id="!r", user_id="u", user_name="u", chat_name="!r"), "t")
+    mx = mention_opening(
+        SessionSource(platform="matrix", chat_id="!r", user_id="u", user_name="u", chat_name="!r"), "t"
+    )
     assert "mentioned on Matrix in" in mx and 'send_message(target="matrix:!r", text=…)' in mx
 
 
@@ -188,11 +191,7 @@ def test_distinct_thread_spawns_distinct_session(tmp_path, monkeypatch):
     _capture_deliveries(mgr, monkeypatch)
 
     asyncio.run(mgr._dispatch_inbound(_mention_event()))
-    asyncio.run(
-        mgr._dispatch_inbound(
-            _mention_event("<@UBOT> other thing", ts="1700000099.000900")
-        )
-    )
+    asyncio.run(mgr._dispatch_inbound(_mention_event("<@UBOT> other thing", ts="1700000099.000900")))
 
     sids = {t.session_id for t in mgr.mention_sessions.all()}
     assert len(sids) == 2
@@ -212,7 +211,10 @@ def test_subscribed_coworker_overrides_router(tmp_path, monkeypatch):
     sid, message, _ = captured[0]
     assert sid == "sA"
     assert "must" in message and "respond" in message
-    assert 'slack_post_message(workspace="default", channel="C1", thread_ts="1700000010.000100", text=…) — pre-approved' in message
+    assert (
+        'slack_post_message(workspace="default", channel="C1", thread_ts="1700000010.000100", text=…) — pre-approved'
+        in message
+    )
     # …and the router spawned nothing.
     assert mgr.mention_sessions.all() == []
     assert [s["session_id"] for s in mgr.list_sessions()] == ["sA"]
@@ -258,11 +260,7 @@ def test_relay_team_qualified_target(tmp_path, monkeypatch):
     """Managed relay chat_ids are 'T…/C…' — the '/' rides inside the ':'-delimited target."""
     mgr = _mgr(tmp_path)
     _capture_deliveries(mgr, monkeypatch)
-    asyncio.run(
-        mgr._dispatch_inbound(
-            _mention_event(chat_id="T0AB/C9", ts="1700000050.000500", team_id="T0AB")
-        )
-    )
+    asyncio.run(mgr._dispatch_inbound(_mention_event(chat_id="T0AB/C9", ts="1700000050.000500", team_id="T0AB")))
     target = "slack:T0AB/C9:1700000050.000500"
     listed = mgr.list_sessions()[0]
     assert mgr.mention_sessions.get(target) == listed["session_id"]
@@ -290,9 +288,7 @@ def test_untagged_channel_traffic_stays_judgement_only(tmp_path, monkeypatch):
 
 def test_set_origin_round_trips_and_survives_saves(tmp_path):
     store = ConversationStore(tmp_path)
-    rec = SessionRecord(
-        session_id="s1", workspace=str(tmp_path), model="m", mode="interactive"
-    )
+    rec = SessionRecord(session_id="s1", workspace=str(tmp_path), model="m", mode="interactive")
     store.save(rec)
     assert store.set_origin("s1", "slack", "#general · T1")
     loaded = store.load("s1")
@@ -313,9 +309,7 @@ def test_origin_columns_migrate_on_old_db(tmp_path):
         "messages TEXT, extra_roots TEXT, pinned INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, "
         "updated_at TEXT DEFAULT CURRENT_TIMESTAMP)"
     )
-    conn.execute(
-        "INSERT INTO sessions (session_id, workspace, model, mode) VALUES ('old', 'w', 'm', 'i')"
-    )
+    conn.execute("INSERT INTO sessions (session_id, workspace, model, mode) VALUES ('old', 'w', 'm', 'i')")
     conn.commit()
     conn.close()
 

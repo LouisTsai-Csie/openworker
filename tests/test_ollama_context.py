@@ -86,9 +86,7 @@ def test_tool_history_round_trips_with_a_name():
 class _Inner(httpx.BaseTransport):
     """Fake Ollama: one canned `/api/chat` response, optional `/api/show` per path."""
 
-    def __init__(
-        self, response: httpx.Response, show: httpx.Response | None = None
-    ) -> None:
+    def __init__(self, response: httpx.Response, show: httpx.Response | None = None) -> None:
         self.response = response
         self.show = show
         self.requests: list[httpx.Request] = []
@@ -203,7 +201,7 @@ def test_an_error_line_mid_stream_becomes_an_error_chunk():
     body = "\n".join(json.dumps(line) for line in lines) + "\n"
     inner = _Inner(httpx.Response(200, content=body.encode()), show=httpx.Response(200, json=GEMMA_SHOW))
     response = OllamaContextTransport(inner=inner, memory_bytes=BIG).handle_request(_chat_request(stream=True))
-    events = [json.loads(e[len("data: "):]) for e in response.read().decode().split("\n\n") if e.startswith("data: {")]
+    events = [json.loads(e[len("data: ") :]) for e in response.read().decode().split("\n\n") if e.startswith("data: {")]
     assert events[0]["choices"][0]["delta"]["content"] == "Hel"
     assert events[-1] == {"error": {"message": "model runner has unexpectedly stopped", "type": "server_error"}}
 
@@ -237,9 +235,7 @@ def test_unreachable_api_show_falls_back_to_the_machine_rule_and_retries_later()
 
 def test_native_endpoints_keep_a_reverse_proxy_prefix():
     inner = _Inner(_done(), show=httpx.Response(200, json=GEMMA_SHOW))
-    OllamaContextTransport(inner=inner).handle_request(
-        _chat_request(base="http://gateway.local/ollama/v1")
-    )
+    OllamaContextTransport(inner=inner).handle_request(_chat_request(base="http://gateway.local/ollama/v1"))
     paths = [r.url.path for r in inner.requests]
     assert paths == ["/ollama/api/show", "/ollama/api/chat"]
 
@@ -306,9 +302,7 @@ def test_provider_stream_sees_the_full_prompt_usage():
             }
         ),
     ]
-    inner = _Inner(
-        httpx.Response(200, stream=httpx.ByteStream("\n".join(lines).encode()))
-    )
+    inner = _Inner(httpx.Response(200, stream=httpx.ByteStream("\n".join(lines).encode())))
     transport = OllamaContextTransport(num_ctx=32768, inner=inner)
     provider = OpenAIProvider(
         api_key="ollama",
@@ -361,7 +355,5 @@ def test_ollama_compaction_window_matches_the_requested_context():
 
 
 def test_ollama_context_overflow_is_recognized():
-    exc = RuntimeError(
-        "the prompt is longer than the context length currently available to the model"
-    )
+    exc = RuntimeError("the prompt is longer than the context length currently available to the model")
     assert is_context_overflow(exc)

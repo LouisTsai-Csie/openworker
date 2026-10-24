@@ -21,15 +21,9 @@ class EventType(StrEnum):
     DIRECTORY_REQUESTED = "directory_requested"  # agent asks the user to grant a folder
     TOOL_REQUESTED = "tool_requested"  # agent asks for a missing CLI tool (scanner, etc.)
     CONNECTOR_REQUESTED = "connector_requested"  # request_connector / grant_connector gate (§11.6)
-    QUESTION_REQUESTED = (
-        "question_requested"  # agent asks the user a free-text/multiple-choice question
-    )
-    PLAN_PROPOSED = (
-        "plan_proposed"  # agent presents a plan for approval (plan mode exit)
-    )
-    TEAM_PROPOSED = (
-        "team_proposed"  # a lead proposes a worker roster (the staffing gate)
-    )
+    QUESTION_REQUESTED = "question_requested"  # agent asks the user a free-text/multiple-choice question
+    PLAN_PROPOSED = "plan_proposed"  # agent presents a plan for approval (plan mode exit)
+    TEAM_PROPOSED = "team_proposed"  # a lead proposes a worker roster (the staffing gate)
     ITEMS_PROPOSED = (
         "items_proposed"  # a lead proposes work items (the decomposition gate);
         # unlike propose_plan this is mode-independent — approval creates the items

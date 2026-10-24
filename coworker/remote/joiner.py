@@ -90,9 +90,7 @@ def default_name() -> str:
     return socket.gethostname().split(".")[0] or "machine"
 
 
-async def _handshake(
-    ws, identity: MachineIdentity, name: str, token: str | None
-) -> dict[str, Any]:
+async def _handshake(ws, identity: MachineIdentity, name: str, token: str | None) -> dict[str, Any]:
     hello: dict[str, Any] = {
         "type": "hello",
         "protocol_version": ch.PROTOCOL_VERSION,
@@ -180,15 +178,13 @@ async def _serve_channel(
                 for profile in profiles:
                     if str(profile).startswith("provider:"):
                         try:
-                            adopt(str(profile)[len("provider:"):])
+                            adopt(str(profile)[len("provider:") :])
                         except Exception:
                             pass
             # Hot-add listeners: a deployed Slack/GitHub grant (machine
             # handoff, spec §Managed events) should start polling without a
             # restart — the same gateway refresh a local connect triggers.
-            if any(
-                str(p).startswith(("slack:", "github:")) for p in profiles
-            ):
+            if any(str(p).startswith(("slack:", "github:")) for p in profiles):
                 spawn(app.state.manager.refresh_gateway())
             await reply(frame_id, 200, {"ok": True, "profiles": sorted(profiles)})
         except (ValueError, json.JSONDecodeError) as exc:
@@ -258,9 +254,7 @@ async def _serve_channel(
         except (ValueError, json.JSONDecodeError) as exc:
             await reply(frame_id, 400, {"error": str(exc)})
             return
-        body = json.dumps(
-            {"fields": fields, "acknowledge_risk": bool(payload.get("acknowledge_risk"))}
-        ).encode()
+        body = json.dumps({"fields": fields, "acknowledge_risk": bool(payload.get("acknowledge_risk"))}).encode()
         await send_frame(
             await dispatcher.dispatch(
                 {
@@ -398,9 +392,7 @@ def held_policy(app) -> dict[str, Any]:
     return dict(getattr(manager, "org_policy", None) or {})
 
 
-def apply_policy(
-    app, policy: dict[str, Any], *, state: Path | None = None, exporter=None
-) -> tuple[bool, int]:
+def apply_policy(app, policy: dict[str, Any], *, state: Path | None = None, exporter=None) -> tuple[bool, int]:
     """Persist + apply an org policy DOCUMENT on this box (spec §Versioned org
     policy). Today one field acts: `audit_export` (remote/audit_export.py).
     Unknown keys are kept verbatim so the machine can display them; nothing
@@ -482,9 +474,7 @@ async def run_joined(
             backoff = _BACKOFF_START
             while True:
                 try:
-                    async with websockets.connect(
-                        _ws_url(controller), max_size=_WS_MAX_SIZE
-                    ) as ws:
+                    async with websockets.connect(_ws_url(controller), max_size=_WS_MAX_SIZE) as ws:
                         welcome = await _handshake(ws, identity, name, token)
                         token = None  # single-use by design; reconnects sign the challenge
                         backoff = _BACKOFF_START
@@ -501,9 +491,7 @@ async def run_joined(
                         # a desktop controller sends none and the stored record stands.
                         if isinstance(welcome.get("policy"), dict):
                             apply_policy(app, welcome["policy"], state=state, exporter=exporter)
-                        await _serve_channel(
-                            ws, dispatcher, app, identity, exporter=exporter, state=state
-                        )
+                        await _serve_channel(ws, dispatcher, app, identity, exporter=exporter, state=state)
                         log("[openworker] controller closed the connection")
                 except JoinRejected as exc:
                     if exc.reason in _FATAL_REJECTS:
@@ -606,9 +594,7 @@ def cli(
     # flow), then run the SAME enrollment with the token the approval minted.
     p_auth = sub.add_parser("auth", help="account-approved enrollment (no join URL needed)")
     auth_sub = p_auth.add_subparsers(dest="auth_command", required=True)
-    p_auth_join = auth_sub.add_parser(
-        "join", help="request approval from the controller, then enroll and serve"
-    )
+    p_auth_join = auth_sub.add_parser("join", help="request approval from the controller, then enroll and serve")
     p_auth_join.add_argument("url", help="controller base URL (e.g. http://127.0.0.1:8765)")
     p_auth_join.add_argument("--name", default=None, help="machine name (default: hostname)")
 
@@ -630,16 +616,10 @@ def cli(
     p_leave = sub.add_parser("leave", help="forget enrollment AND identity on this box")
     p_leave.add_argument("--yes", action="store_true", help="skip confirmation")
     # The systemd story: `up` under a unit, restarted forever (P1d).
-    p_service = sub.add_parser(
-        "service", help="run this joined machine as a background service (systemd or launchd)"
-    )
+    p_service = sub.add_parser("service", help="run this joined machine as a background service (systemd or launchd)")
     service_sub = p_service.add_subparsers(dest="service_command", required=True)
-    p_install = service_sub.add_parser(
-        "install", help="write + enable a user unit that keeps this machine serving"
-    )
-    p_install.add_argument(
-        "--force", action="store_true", help="replace another unit already pinned to this state dir"
-    )
+    p_install = service_sub.add_parser("install", help="write + enable a user unit that keeps this machine serving")
+    p_install.add_argument("--force", action="store_true", help="replace another unit already pinned to this state dir")
     p_uninstall = service_sub.add_parser("uninstall", help="disable and remove the unit")
     p_uninstall.add_argument("--unit", default=None, help="unit file name (default: this machine's)")
     service_sub.add_parser("list", help="show every openworker unit on this box and its state dir")
@@ -711,9 +691,7 @@ def _cmd_join(state: Path, url: str, name: str | None) -> int:
     return _run(state, controller, chosen, token=token, on_welcome=on_welcome)
 
 
-def _cmd_auth_join(
-    state: Path, url: str, name: str | None, poll_interval: float | None = None
-) -> int:
+def _cmd_auth_join(state: Path, url: str, name: str | None, poll_interval: float | None = None) -> int:
     """Device flow: print a code, wait for approval in the controller UI, then
     run the ordinary token join. `poll_interval` overrides the server's pacing
     (tests only)."""
@@ -913,7 +891,9 @@ def _linger_on() -> bool:
     try:
         done = subprocess.run(
             ["loginctl", "show-user", getpass.getuser(), "-p", "Linger"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired):
         return False
@@ -941,12 +921,7 @@ def _systemctl_user(*args: str) -> bool:
     import subprocess
 
     try:
-        return (
-            subprocess.run(
-                ["systemctl", "--user", *args], capture_output=True, timeout=15
-            ).returncode
-            == 0
-        )
+        return subprocess.run(["systemctl", "--user", *args], capture_output=True, timeout=15).returncode == 0
     except (OSError, Exception):
         return False
 
@@ -1036,6 +1011,7 @@ def _cmd_service(state: Path, args, platform: str | None = None, home: Path | No
             f"  systemctl --user enable --now {derived}"
         )
     return 0
+
 
 # -- macOS: a launchd agent, the counterpart of the systemd user unit ----------------
 
@@ -1172,19 +1148,14 @@ def _cmd_service_macos(state: Path, args, home: Path) -> int:
         print("It runs while you are logged in. For a Mac that must serve with nobody logged in,")
         print("turn on automatic login, or keep the session open.")
     else:
-        print(
-            "launchd was not reachable from here — load it manually:\n"
-            f"  launchctl bootstrap {domain} {plist}"
-        )
+        print(f"launchd was not reachable from here — load it manually:\n  launchctl bootstrap {domain} {plist}")
     return 0
 
 
 # -- logs ----------------------------------------------------------------------------
 
 
-def logs_command(
-    state: Path, platform: str, unit: str | None, lines: int, follow: bool
-) -> list[str] | None:
+def logs_command(state: Path, platform: str, unit: str | None, lines: int, follow: bool) -> list[str] | None:
     """The command that prints this machine's service log, or None where there is none."""
     n = str(max(1, int(lines)))
     if platform == "linux":
@@ -1288,10 +1259,7 @@ def _cmd_leave(state: Path, yes: bool) -> int:
         print("nothing to forget — this machine never joined a controller")
         return 0
     if not yes:
-        answer = input(
-            "Forget enrollment AND this machine's identity? Re-joining will need a "
-            "fresh join URL. [y/N] "
-        )
+        answer = input("Forget enrollment AND this machine's identity? Re-joining will need a fresh join URL. [y/N] ")
         if answer.strip().lower() not in ("y", "yes"):
             print("aborted")
             return 1

@@ -138,7 +138,9 @@ def make_chat_tools(
     render_html = render_html or _render_html_png
     bases = [Path(r.path) for r in (roots or []) if getattr(r, "path", None)]
 
-    def slack_post_message(workspace: str = "", channel: str = "", thread_ts: str = "", text: str = "") -> dict[str, Any]:
+    def slack_post_message(
+        workspace: str = "", channel: str = "", thread_ts: str = "", text: str = ""
+    ) -> dict[str, Any]:
         if not (text or "").strip():
             return {"error": "text is required"}
         ws, err = _pick_workspace(secrets, workspace)
@@ -214,7 +216,13 @@ def make_chat_tools(
             note = sender_prefix(secrets, chat_id) + note
         result = sender(token, chat_id, (thread_ts or "").strip() or None, filename, data, title or None, note or None)
         if result.ok:
-            return {"ok": True, "file_id": result.message_id, "workspace": ws, "channel": channel_id, "filename": filename}
+            return {
+                "ok": True,
+                "file_id": result.message_id,
+                "workspace": ws,
+                "channel": channel_id,
+                "filename": filename,
+            }
         return {"error": result.error or "file send failed"}
 
     def telegram_send_message(chat_id: str = "", text: str = "", thread_id: str = "") -> dict[str, Any]:
@@ -252,7 +260,12 @@ def make_chat_tools(
             _schema(
                 "slack_post_message",
                 "Post a message to a Slack channel or thread. To answer a message you received, pass the workspace, channel and thread_ts it came with — that reply is pre-approved for the thread the session was started for. Plain assistant text is not delivered anywhere.",
-                {"workspace": workspace_prop, "channel": channel_prop, "thread_ts": thread_prop, "text": {"type": "string", "description": "The message text."}},
+                {
+                    "workspace": workspace_prop,
+                    "channel": channel_prop,
+                    "thread_ts": thread_prop,
+                    "text": {"type": "string", "description": "The message text."},
+                },
                 ["channel", "text"],
             ),
             ["messaging"],
@@ -266,10 +279,16 @@ def make_chat_tools(
                     "workspace": workspace_prop,
                     "channel": channel_prop,
                     "thread_ts": thread_prop,
-                    "path": {"type": "string", "description": "The file to send — workspace-relative, or absolute within an allowed folder."},
+                    "path": {
+                        "type": "string",
+                        "description": "The file to send — workspace-relative, or absolute within an allowed folder.",
+                    },
                     "title": {"type": "string", "description": "Display title (defaults to the filename)."},
                     "comment": {"type": "string", "description": "Short message posted with the file."},
-                    "as_screenshot": {"type": "boolean", "description": "HTML only: render headless and send a PNG preview instead of the raw file."},
+                    "as_screenshot": {
+                        "type": "boolean",
+                        "description": "HTML only: render headless and send a PNG preview instead of the raw file.",
+                    },
                 },
                 ["channel", "path"],
             ),

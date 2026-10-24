@@ -113,9 +113,7 @@ def _fake_hubspot(monkeypatch, responses: dict[str, dict]):
 def test_tools_pick_the_requested_portal_by_id_or_name(secrets, monkeypatch):
     hubspot_portals.managed_connect_portal(secrets, _portal("111"))
     hubspot_portals.managed_connect_portal(secrets, _portal("222"))
-    calls = _fake_hubspot(
-        monkeypatch, {"/search": {"ok": True, "data": {"results": []}}}
-    )
+    calls = _fake_hubspot(monkeypatch, {"/search": {"ok": True, "data": {"results": []}}})
     search = _tool(secrets, "hubspot_search")
 
     out = search("acme")  # default portal

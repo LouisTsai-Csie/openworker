@@ -15,9 +15,7 @@ from coworker.providers import openrouter_auth
 from coworker.secrets import SecretStore
 
 
-def test_manual_login_uses_pkce_and_keeps_credentials_out_of_status(
-    tmp_path, monkeypatch
-):
+def test_manual_login_uses_pkce_and_keeps_credentials_out_of_status(tmp_path, monkeypatch):
     store = SecretStore(tmp_path / "secrets.json")
     store.put("provider:openrouter", {"api_key": "manual-existing"})
     exchanged = []
@@ -43,9 +41,7 @@ def test_manual_login_uses_pkce_and_keeps_credentials_out_of_status(
         code, verifier = exchanged[0]
         assert code == "returned-code"
         challenge = (
-            base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest())
-            .rstrip(b"=")
-            .decode("ascii")
+            base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).rstrip(b"=").decode("ascii")
         )
         assert query["code_challenge"] == [challenge]
         assert verifier not in json.dumps(started)
@@ -203,9 +199,7 @@ def test_exchange_failure_preserves_previous_account(tmp_path, monkeypatch):
     assert store.get("provider:openrouter-account")["api_key"] == "previous-secret"
 
 
-def test_disconnect_only_removes_account_and_rejects_pending_completion(
-    tmp_path, monkeypatch
-):
+def test_disconnect_only_removes_account_and_rejects_pending_completion(tmp_path, monkeypatch):
     store = SecretStore(tmp_path / "secrets.json")
     store.put("provider:openrouter", {"api_key": "manual-secret"})
     store.put("provider:openrouter-account", {"api_key": "account-secret"})
@@ -238,10 +232,7 @@ def test_exchange_validates_key_with_authenticated_endpoint(monkeypatch):
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
     monkeypatch.setattr(openrouter_auth.httpx, "AsyncClient", lambda **kwargs: client)
-    assert (
-        asyncio.run(openrouter_auth.exchange_key("code", "verifier"))
-        == "sk-or-test-secret"
-    )
+    assert asyncio.run(openrouter_auth.exchange_key("code", "verifier")) == "sk-or-test-secret"
     assert len(requests) == 2
     assert str(requests[0].url) == "https://openrouter.ai/api/v1/auth/keys"
     assert json.loads(requests[0].content) == {

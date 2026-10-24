@@ -70,11 +70,7 @@ class BoardTokens:
             return 0
         with self._lock:
             entries = self._load()
-            keep = {
-                key: entry
-                for key, entry in entries.items()
-                if not entry["prefix"].startswith(prefix)
-            }
+            keep = {key: entry for key, entry in entries.items() if not entry["prefix"].startswith(prefix)}
             removed = len(entries) - len(keep)
             if removed:
                 self._save(keep)

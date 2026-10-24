@@ -47,7 +47,9 @@ def test_tool_loop_block_rides_on_the_task_prompt_and_nowhere_else(tmp_path):
     eng = _engine(tmp_path, _tool_loop(), [FOLDERS])
     out = eng._outbound_messages()
     assert len(out) == len(eng.messages)  # no extra message
-    assert out[1]["content"].startswith("Reconstruct the scene file from this image.\n\n<system-context>\n(automatic per-turn context")
+    assert out[1]["content"].startswith(
+        "Reconstruct the scene file from this image.\n\n<system-context>\n(automatic per-turn context"
+    )
     assert out[1]["content"].endswith(f"\n{FOLDERS}\n</system-context>")
     # Everything the model said and ran is untouched; the final message is the tool result.
     assert out[-1]["role"] == "tool" and out[-1]["content"] == "output 2"
@@ -67,7 +69,11 @@ def test_tool_loop_next_turn_keeps_the_previous_request_as_a_prefix(tmp_path):
     eng = _engine(tmp_path, _tool_loop(turns=2), [FOLDERS])
     before = eng._outbound_messages()
     eng.messages.append(
-        {"role": "assistant", "content": "", "tool_calls": [{"id": "c9", "function": {"name": "run_shell", "arguments": "{}"}}]}
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{"id": "c9", "function": {"name": "run_shell", "arguments": "{}"}}],
+        }
     )
     eng.messages.append({"role": "tool", "tool_call_id": "c9", "content": "output 9"})
     after = eng._outbound_messages()

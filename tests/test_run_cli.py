@@ -24,7 +24,10 @@ from coworker.headless.terminal import Terminal
 ROOT = Path(__file__).resolve().parents[1]
 
 WRITE_THEN_DONE = [
-    {"text": "I will create the file.", "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}]},
+    {
+        "text": "I will create the file.",
+        "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}],
+    },
     {"text": "The file is written. Done."},
 ]
 
@@ -44,8 +47,19 @@ def _command(tmp_path: Path, script: list[dict], *extra: str) -> tuple[list[str]
     path = tmp_path / "script.json"
     path.write_text(json.dumps(script), encoding="utf-8")
     return [
-        sys.executable, "-m", "coworker.cli", "run", "--prompt", "Create hello.txt.",
-        "--workspace", str(ws), "--scripted", str(path), "--timeout-seconds", "120", *extra,
+        sys.executable,
+        "-m",
+        "coworker.cli",
+        "run",
+        "--prompt",
+        "Create hello.txt.",
+        "--workspace",
+        str(ws),
+        "--scripted",
+        str(path),
+        "--timeout-seconds",
+        "120",
+        *extra,
     ], ws
 
 
@@ -66,7 +80,9 @@ def _session_folders(machine: Path, ws: Path) -> list[Path]:
 
 
 def test_a_run_is_saved_under_the_state_folder_by_workspace_path(tmp_path: Path) -> None:
-    proc, ws, machine = _run(tmp_path, WRITE_THEN_DONE, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals")
+    proc, ws, machine = _run(
+        tmp_path, WRITE_THEN_DONE, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals"
+    )
     assert proc.returncode == 0, proc.stderr
     assert (ws / "hello.txt").read_text(encoding="utf-8") == "hello"
     (folder,) = _session_folders(machine, ws)
@@ -97,7 +113,10 @@ def test_this_computers_settings_are_read_and_not_changed(tmp_path: Path) -> Non
     proc, ws, _ = _run(tmp_path, WRITE_THEN_DONE, "--approval-mode", "bypass-approvals", machine=machine)  # no --model
     assert proc.returncode == 0, proc.stderr
     (folder,) = _session_folders(machine, ws)
-    assert json.loads((folder / "summary.json").read_text(encoding="utf-8"))["args"]["model"] == "anthropic:claude-sonnet-5"
+    assert (
+        json.loads((folder / "summary.json").read_text(encoding="utf-8"))["args"]["model"]
+        == "anthropic:claude-sonnet-5"
+    )
     assert {p.name: p.read_bytes() for p in machine.iterdir() if p.is_file()} == before
     # Beside the settings, the run left only its own session.
     assert sorted(p.name for p in machine.iterdir() if p.is_dir()) == ["sessions"]
@@ -108,9 +127,19 @@ def test_a_run_has_the_connectors_this_computer_has_connected(tmp_path: Path) ->
     connector's tool was there to be called; nothing leaves the computer."""
     machine = tmp_path / "machine"
     machine.mkdir()
-    (machine / "secrets.json").write_text(json.dumps({"github:default": {"token": "ghp_test", "enabled": True}}), encoding="utf-8")
+    (machine / "secrets.json").write_text(
+        json.dumps({"github:default": {"token": "ghp_test", "enabled": True}}), encoding="utf-8"
+    )
     script = [
-        {"text": "", "tool_calls": [{"name": "github_create_issue", "arguments": {"owner": "acme", "repo": "app", "title": "A title", "body": "A body"}}]},
+        {
+            "text": "",
+            "tool_calls": [
+                {
+                    "name": "github_create_issue",
+                    "arguments": {"owner": "acme", "repo": "app", "title": "A title", "body": "A body"},
+                }
+            ],
+        },
         {"text": "It was refused."},
     ]
     proc, ws, _ = _run(tmp_path, script, "--model", "anthropic/claude-sonnet-5", machine=machine)
@@ -118,12 +147,16 @@ def test_a_run_has_the_connectors_this_computer_has_connected(tmp_path: Path) ->
     (folder,) = _session_folders(machine, ws)
     answers = json.loads((folder / "answers.json").read_text(encoding="utf-8"))
     assert [row["tool"] for row in answers["rows"]] == ["github_create_issue"]
-    assert json.loads((machine / "secrets.json").read_text(encoding="utf-8")) == {"github:default": {"token": "ghp_test", "enabled": True}}
+    assert json.loads((machine / "secrets.json").read_text(encoding="utf-8")) == {
+        "github:default": {"token": "ghp_test", "enabled": True}
+    }
 
 
 def test_two_runs_in_one_workspace_are_two_sessions(tmp_path: Path) -> None:
     for _ in range(2):
-        proc, ws, machine = _run(tmp_path, WRITE_THEN_DONE, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals")
+        proc, ws, machine = _run(
+            tmp_path, WRITE_THEN_DONE, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals"
+        )
         assert proc.returncode == 0, proc.stderr
     assert len(_session_folders(machine, ws)) == 2
 
@@ -144,10 +177,17 @@ def test_the_default_mode_asks_and_with_no_terminal_the_card_is_refused(tmp_path
 
 def test_with_no_terminal_a_question_is_answered_by_rule(tmp_path: Path) -> None:
     script = [
-        {"text": "", "tool_calls": [{"name": "ask_user", "arguments": {"question": "Which colour?", "options": ["red", "blue"]}}]},
+        {
+            "text": "",
+            "tool_calls": [
+                {"name": "ask_user", "arguments": {"question": "Which colour?", "options": ["red", "blue"]}}
+            ],
+        },
         {"text": "Going with the safe one."},
     ]
-    proc, ws, machine = _run(tmp_path, script, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals")
+    proc, ws, machine = _run(
+        tmp_path, script, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals"
+    )
     assert proc.returncode == 0, proc.stderr
     (folder,) = _session_folders(machine, ws)
     assert json.loads((folder / "summary.json").read_text(encoding="utf-8"))["answers"]["questions_answered"] == 1
@@ -155,7 +195,9 @@ def test_with_no_terminal_a_question_is_answered_by_rule(tmp_path: Path) -> None
 
 def test_a_run_that_stops_early_exits_3_and_says_why(tmp_path: Path) -> None:
     fail = {"error": "Invalid API key provided", "error_type": "AuthenticationError"}
-    proc, ws, machine = _run(tmp_path, [fail], "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals")
+    proc, ws, machine = _run(
+        tmp_path, [fail], "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals"
+    )
     assert proc.returncode == 3
     assert "outcome=model_error" in proc.stderr and "Invalid API key provided" in proc.stderr
     assert proc.stdout == ""  # no answer was given
@@ -173,7 +215,10 @@ def test_a_run_that_stops_early_exits_3_and_says_why(tmp_path: Path) -> None:
         (["--isolated", "--out", "OUT"], "--isolated needs --model"),
         (["--model", "anthropic/claude-sonnet-5", "--allow-site", "*.example.com"], "not a site name"),
         (["--model", "anthropic/claude-sonnet-5", "--allow-site", "10.0.0.1"], "not a site name"),
-        (["--model", "anthropic/claude-sonnet-5", "--allow-sites-file", "missing.txt"], "cannot read --allow-sites-file"),
+        (
+            ["--model", "anthropic/claude-sonnet-5", "--allow-sites-file", "missing.txt"],
+            "cannot read --allow-sites-file",
+        ),
     ],
 )
 def test_a_command_line_that_cannot_run_stops_with_exit_code_2(tmp_path: Path, extra: list[str], said: str) -> None:
@@ -186,17 +231,41 @@ def test_a_command_line_that_cannot_run_stops_with_exit_code_2(tmp_path: Path, e
 
 def test_allowed_sites_come_from_the_flag_and_the_file(tmp_path: Path) -> None:
     listed = tmp_path / "sites.txt"
-    listed.write_text("# package registries\nregistry.npmjs.org\n\nfiles.pythonhosted.org:443  # wheels\ninternal.example.com:8443\n", encoding="utf-8")
-    args = parse_args(["--prompt", "x", "--allow-site", "example.com", "--allow-site", "registry.npmjs.org", "--allow-sites-file", str(listed)])
+    listed.write_text(
+        "# package registries\nregistry.npmjs.org\n\nfiles.pythonhosted.org:443  # wheels\ninternal.example.com:8443\n",
+        encoding="utf-8",
+    )
+    args = parse_args(
+        [
+            "--prompt",
+            "x",
+            "--allow-site",
+            "example.com",
+            "--allow-site",
+            "registry.npmjs.org",
+            "--allow-sites-file",
+            str(listed),
+        ]
+    )
     assert allowed_sites(args) == [
-        "example.com:443", "registry.npmjs.org:443", "files.pythonhosted.org:443", "internal.example.com:8443",
+        "example.com:443",
+        "registry.npmjs.org:443",
+        "files.pythonhosted.org:443",
+        "internal.example.com:8443",
     ]
     assert allowed_sites(parse_args(["--prompt", "x"])) == []
 
 
 def test_allow_site_says_so_when_no_list_holds_the_run(tmp_path: Path) -> None:
     proc, _ws, _machine = _run(
-        tmp_path, WRITE_THEN_DONE, "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals", "--allow-site", "example.com",
+        tmp_path,
+        WRITE_THEN_DONE,
+        "--model",
+        "anthropic/claude-sonnet-5",
+        "--approval-mode",
+        "bypass-approvals",
+        "--allow-site",
+        "example.com",
     )
     assert proc.returncode == 0, proc.stderr
     assert "--allow-site has no effect here" in proc.stderr
@@ -225,9 +294,15 @@ def _request(tool: str, arguments: dict, reason: str = "requires approval") -> P
 
 def test_a_command_card_offers_once_this_session_and_no() -> None:
     home = Path.home()
-    for typed, outcome in (("y", ApprovalOutcome.ONCE), ("s", ApprovalOutcome.ALWAYS_COMMAND), ("n", ApprovalOutcome.DENY)):
+    for typed, outcome in (
+        ("y", ApprovalOutcome.ONCE),
+        ("s", ApprovalOutcome.ALWAYS_COMMAND),
+        ("n", ApprovalOutcome.DENY),
+    ):
         keys = _Keys(typed)
-        got = asyncio.run(keys.terminal(cwd=home / "src" / "project").approve(_request("run_shell", {"command": "npm install"})))
+        got = asyncio.run(
+            keys.terminal(cwd=home / "src" / "project").approve(_request("run_shell", {"command": "npm install"}))
+        )
         assert got is outcome
         assert "Approval needed: run a command\n  npm install\n  in ~/src/project\n" in keys.printed
         assert "[y] yes, once   [s] yes, for this session   [n] no" in keys.printed
@@ -270,20 +345,35 @@ def test_the_network_card_offers_this_run_only() -> None:
 
     keys = _Keys("n")
     term = keys.terminal()
-    term.card = {"network_request": {"reason": "", "evidence": True, "hosts": [{"host": "example.org:8443", "blocked_seconds_ago": None}]}}
+    term.card = {
+        "network_request": {
+            "reason": "",
+            "evidence": True,
+            "hosts": [{"host": "example.org:8443", "blocked_seconds_ago": None}],
+        }
+    }
     assert asyncio.run(term.approve(request)) is ApprovalOutcome.DENY
-    assert "let commands reach example.org:8443" in keys.printed and "No command has tried this site yet." in keys.printed
+    assert (
+        "let commands reach example.org:8443" in keys.printed and "No command has tried this site yet." in keys.printed
+    )
 
 
 def test_a_question_takes_a_number_or_typed_text() -> None:
     question = {"question": "Which database should the migration target?", "options": ["staging", "production"]}
     keys = _Keys("2")
     assert asyncio.run(keys.terminal().ask(dict(question))) == {"answer": "production"}
-    assert "The coworker asks:\n  Which database should the migration target?\n    1. staging\n    2. production\n" in keys.printed
+    assert (
+        "The coworker asks:\n  Which database should the migration target?\n    1. staging\n    2. production\n"
+        in keys.printed
+    )
     assert "Type a number, or your own answer:" in keys.printed
 
-    assert asyncio.run(_Keys("", "neither, use a copy").terminal().ask(dict(question))) == {"answer": "neither, use a copy"}
-    assert asyncio.run(_Keys("the blue one").terminal().ask({"question": "Which colour?"})) == {"answer": "the blue one"}
+    assert asyncio.run(_Keys("", "neither, use a copy").terminal().ask(dict(question))) == {
+        "answer": "neither, use a copy"
+    }
+    assert asyncio.run(_Keys("the blue one").terminal().ask({"question": "Which colour?"})) == {
+        "answer": "the blue one"
+    }
 
     keys = _Keys("other", "1")
     assert asyncio.run(keys.terminal().ask({**question, "allow_text": False})) == {"answer": "staging"}
@@ -296,7 +386,12 @@ def test_grouped_questions_are_asked_in_turn_and_keyed_by_header() -> None:
         keys.terminal().ask(
             {
                 "questions": [
-                    {"header": "Regions", "question": "Which regions?", "options": [{"label": "EU"}, {"label": "US"}], "multi": True},
+                    {
+                        "header": "Regions",
+                        "question": "Which regions?",
+                        "options": [{"label": "EU"}, {"label": "US"}],
+                        "multi": True,
+                    },
                     {"question": "How often?"},
                 ]
             }
@@ -335,7 +430,10 @@ def test_a_folder_request_is_asked_and_yes_gives_the_folder(tmp_path: Path) -> N
 
     # No, and a closed terminal, both decline and give nothing.
     for keys in (_Keys("n"), _Keys()):
-        assert asyncio.run(terminal(keys).directory(dict(request))) == {"granted": False, "reason": "the user declined the request"}
+        assert asyncio.run(terminal(keys).directory(dict(request))) == {
+            "granted": False,
+            "reason": "the user declined the request",
+        }
     assert len(given) == 3
 
     # A read request has no read-only choice; a request with no path asks for one.
@@ -357,7 +455,10 @@ def test_a_tool_install_is_asked_and_yes_installs_the_pinned_build(monkeypatch: 
     keys = _Keys("what", "y")
     got = asyncio.run(keys.terminal().tool({"name": "scanner", "reason": "to check the lockfile"}))
     assert got == {"installed": True, "path": "/tools/scanner", "version": "1.2.3"} and installed == ["scanner"]
-    assert "The coworker asks to install a tool: scanner 1.2.3" in keys.printed and "[y] install it   [n] no" in keys.printed
+    assert (
+        "The coworker asks to install a tool: scanner 1.2.3" in keys.printed
+        and "[y] install it   [n] no" in keys.printed
+    )
 
     got = asyncio.run(_Keys("n").terminal().tool({"name": "scanner"}))
     assert got["installed"] is False and installed == ["scanner"]
@@ -438,7 +539,10 @@ def test_at_a_terminal_no_refuses_the_call(tmp_path: Path) -> None:
 
 
 QUESTION_THEN_WRITE = [
-    {"text": "", "tool_calls": [{"name": "ask_user", "arguments": {"question": "Which colour?", "options": ["red", "blue"]}}]},
+    {
+        "text": "",
+        "tool_calls": [{"name": "ask_user", "arguments": {"question": "Which colour?", "options": ["red", "blue"]}}],
+    },
     {"text": "", "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}]},
     {"text": "Done."},
 ]
@@ -447,7 +551,11 @@ QUESTION_THEN_WRITE = [
 @pytest.mark.skipif(sys.platform == "win32", reason="needs a pseudo-terminal")
 def test_at_a_terminal_a_question_is_asked_there(tmp_path: Path) -> None:
     code, shown, _out, ws = _at_a_terminal(
-        tmp_path, QUESTION_THEN_WRITE, [("Which colour?", "2")], "--approval-mode", "bypass-approvals",
+        tmp_path,
+        QUESTION_THEN_WRITE,
+        [("Which colour?", "2")],
+        "--approval-mode",
+        "bypass-approvals",
     )
     assert code == 0, shown
     assert "The coworker asks:" in shown and "2. blue" in shown
@@ -461,7 +569,10 @@ def test_at_a_terminal_a_question_is_asked_there(tmp_path: Path) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="needs a pseudo-terminal")
 def test_auto_answer_at_a_terminal_answers_the_question_and_still_asks_the_approval(tmp_path: Path) -> None:
     code, shown, _out, ws = _at_a_terminal(
-        tmp_path, QUESTION_THEN_WRITE, [("Approval needed: use write_file", "y")], "--auto-answer",
+        tmp_path,
+        QUESTION_THEN_WRITE,
+        [("Approval needed: use write_file", "y")],
+        "--auto-answer",
     )
     assert code == 0, shown
     assert "The coworker asks:" not in shown  # answered by rule
@@ -500,10 +611,20 @@ def test_ctrl_c_at_a_prompt_ends_the_run_and_leaves_the_record(tmp_path: Path) -
     assert json.loads((folder / "summary.json").read_text(encoding="utf-8"))["outcome"] == "interrupted"
 
 
-
 FOLDER_THEN_WRITE = [
-    {"text": "", "tool_calls": [{"name": "request_directory", "arguments": {"path": "EXPORTS", "writable": True, "reason": "to save the report there"}}]},
-    {"text": "", "tool_calls": [{"name": "write_file", "arguments": {"path": "EXPORTS/report.txt", "content": "done"}}]},
+    {
+        "text": "",
+        "tool_calls": [
+            {
+                "name": "request_directory",
+                "arguments": {"path": "EXPORTS", "writable": True, "reason": "to save the report there"},
+            }
+        ],
+    },
+    {
+        "text": "",
+        "tool_calls": [{"name": "write_file", "arguments": {"path": "EXPORTS/report.txt", "content": "done"}}],
+    },
     {"text": "Saved."},
 ]
 
@@ -517,7 +638,11 @@ def test_at_a_terminal_a_folder_request_is_asked_and_the_folder_can_then_be_writ
     exports = tmp_path / "exports"
     exports.mkdir()
     code, shown, _out, _ws = _at_a_terminal(
-        tmp_path, _folder_script(exports), [("The coworker asks for a folder", "y")], "--approval-mode", "bypass-approvals",
+        tmp_path,
+        _folder_script(exports),
+        [("The coworker asks for a folder", "y")],
+        "--approval-mode",
+        "bypass-approvals",
     )
     assert code == 0, shown
     assert "to save the report there" in shown
@@ -528,12 +653,20 @@ def test_with_auto_answer_a_folder_request_is_declined_by_rule(tmp_path: Path) -
     exports = tmp_path / "exports"
     exports.mkdir()
     proc, ws, machine = _run(
-        tmp_path, _folder_script(exports), "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals", "--auto-answer",
+        tmp_path,
+        _folder_script(exports),
+        "--model",
+        "anthropic/claude-sonnet-5",
+        "--approval-mode",
+        "bypass-approvals",
+        "--auto-answer",
     )
     assert proc.returncode == 0, proc.stderr
     assert not (exports / "report.txt").exists()
     (folder,) = _session_folders(machine, ws)
-    assert json.loads((folder / "summary.json").read_text(encoding="utf-8"))["answers"]["directory_requests_declined"] == 1
+    assert (
+        json.loads((folder / "summary.json").read_text(encoding="utf-8"))["answers"]["directory_requests_declined"] == 1
+    )
 
 
 # -- a failing model call ---------------------------------------------------------------
@@ -565,7 +698,12 @@ def test_the_root_cause_is_the_bottom_of_the_chain() -> None:
     assert root_cause_text(ValueError("nothing underneath")) == ""
 
 
-REFUSED_BY_A_PROXY = {"error": "Connection error.", "error_type": "APIConnectionError", "cause": "403 Forbidden", "cause_type": "ProxyError"}
+REFUSED_BY_A_PROXY = {
+    "error": "Connection error.",
+    "error_type": "APIConnectionError",
+    "cause": "403 Forbidden",
+    "cause_type": "ProxyError",
+}
 
 
 def test_the_retry_line_says_why_the_model_call_failed(tmp_path: Path) -> None:
@@ -575,7 +713,10 @@ def test_the_retry_line_says_why_the_model_call_failed(tmp_path: Path) -> None:
     env = {**_env(machine), "OPENWORKER_RUN_RETRY_DELAYS": "0"}
     proc = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stderr
-    assert "provider error (APIConnectionError: Connection error. Cause: the proxy answered 403 Forbidden); retry 1/1 in 0s" in proc.stderr
+    assert (
+        "provider error (APIConnectionError: Connection error. Cause: the proxy answered 403 Forbidden); retry 1/1 in 0s"
+        in proc.stderr
+    )
     (folder,) = _session_folders(machine, ws)
     events = [json.loads(line) for line in (folder / "events.jsonl").read_text(encoding="utf-8").splitlines()]
     (retry,) = [e for e in events if e["type"] == "provider_retry"]
@@ -585,7 +726,9 @@ def test_the_retry_line_says_why_the_model_call_failed(tmp_path: Path) -> None:
     second = tmp_path / "second"
     second.mkdir()
     cmd, _ws = _command(second, [REFUSED_BY_A_PROXY, REFUSED_BY_A_PROXY], "--model", "anthropic/claude-sonnet-5")
-    proc = subprocess.run(cmd, env={**_env(machine), "OPENWORKER_RUN_RETRY_DELAYS": "0"}, capture_output=True, text=True, timeout=300)
+    proc = subprocess.run(
+        cmd, env={**_env(machine), "OPENWORKER_RUN_RETRY_DELAYS": "0"}, capture_output=True, text=True, timeout=300
+    )
     assert proc.returncode == 3
     assert proc.stderr.rstrip().splitlines()[-1].endswith("Cause: the proxy answered 403 Forbidden")
 
@@ -596,7 +739,9 @@ def test_a_stop_signal_ends_the_run_during_the_wait_between_retries(tmp_path: Pa
 
     machine = tmp_path / "machine"
     machine.mkdir()
-    cmd, ws = _command(tmp_path, [REFUSED_BY_A_PROXY, {"text": "never reached"}], "--model", "anthropic/claude-sonnet-5")
+    cmd, ws = _command(
+        tmp_path, [REFUSED_BY_A_PROXY, {"text": "never reached"}], "--model", "anthropic/claude-sonnet-5"
+    )
     env = {**_env(machine), "OPENWORKER_RUN_RETRY_DELAYS": "600"}
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
@@ -614,4 +759,3 @@ def test_a_stop_signal_ends_the_run_during_the_wait_between_retries(tmp_path: Pa
             proc.kill()
     (folder,) = _session_folders(machine, ws)
     assert json.loads((folder / "summary.json").read_text(encoding="utf-8"))["outcome"] == "interrupted"
-

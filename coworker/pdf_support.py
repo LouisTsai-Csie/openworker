@@ -128,9 +128,7 @@ def extract_text(file_data: str) -> str | None:
     return _cached((_digest(file_data), "text"), compute)
 
 
-def _encode_png(
-    width: int, height: int, pixels: bytes, stride: int, channels: int
-) -> bytes:
+def _encode_png(width: int, height: int, pixels: bytes, stride: int, channels: int) -> bytes:
     """Minimal PNG writer (RGB/RGBA, 8-bit) so we don't ship Pillow just for this —
     the packaged sidecar deliberately excludes PIL (bundle size, signing surface)."""
     import struct
@@ -146,10 +144,7 @@ def _encode_png(
 
     def chunk(tag: bytes, payload: bytes) -> bytes:
         return (
-            struct.pack(">I", len(payload))
-            + tag
-            + payload
-            + struct.pack(">I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
+            struct.pack(">I", len(payload)) + tag + payload + struct.pack(">I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
         )
 
     header = struct.pack(">IIBBBBB", width, height, 8, color_type, 0, 0, 0)
@@ -222,9 +217,7 @@ def adapt_content(content: list[dict[str, Any]], caps: Any) -> list[dict[str, An
                         "text": f"[Attached PDF: {name} — {len(images)} page image(s), rendered locally]",
                     }
                 )
-                out.extend(
-                    {"type": "image_url", "image_url": {"url": url}} for url in images
-                )
+                out.extend({"type": "image_url", "image_url": {"url": url}} for url in images)
                 continue
 
         text = extract_text(file_data)
@@ -233,8 +226,7 @@ def adapt_content(content: list[dict[str, Any]], caps: Any) -> list[dict[str, An
                 {
                     "type": "text",
                     "text": (
-                        f"[Attached PDF: {name} — text extracted locally; "
-                        f"this model has no native PDF support]\n{text}"
+                        f"[Attached PDF: {name} — text extracted locally; this model has no native PDF support]\n{text}"
                     ),
                 }
             )

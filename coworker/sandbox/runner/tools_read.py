@@ -20,8 +20,15 @@ _MAX_RESULTS_CAP = 2000
 # The same skip-list the aisuite file toolkit uses (copied: this module must stay
 # standard-library only), so every listing hides the same folders.
 _IGNORED_DIRS = (
-    ".git", ".venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
-    "node_modules", "dist", "build",
+    ".git",
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "node_modules",
+    "dist",
+    "build",
 )
 
 
@@ -48,11 +55,7 @@ def list_files(
     `roots` come back absolute."""
     root = Path(workspace).resolve()
     extra_roots = [Path(str(r)).resolve() for r in (roots or [])]
-    n = (
-        max_results
-        if isinstance(max_results, int) and max_results > 0
-        else _DEFAULT_MAX_RESULTS
-    )
+    n = max_results if isinstance(max_results, int) and max_results > 0 else _DEFAULT_MAX_RESULTS
     n = min(n, _MAX_RESULTS_CAP)
     p = Path(str(path or ".")).expanduser()
     base = p.resolve() if p.is_absolute() else (root / p).resolve()
@@ -94,11 +97,7 @@ def read_file(
     root = Path(workspace).resolve()
     extra_roots = [Path(str(r)).resolve() for r in (roots or [])]
     start = start_line if isinstance(start_line, int) and start_line > 0 else 1
-    n = (
-        max_lines
-        if isinstance(max_lines, int) and max_lines > 0
-        else _DEFAULT_MAX_LINES
-    )
+    n = max_lines if isinstance(max_lines, int) and max_lines > 0 else _DEFAULT_MAX_LINES
     n = min(n, _DEFAULT_MAX_LINES)
     target = (root / path).resolve()
     home = root
@@ -141,8 +140,5 @@ def read_file(
         "content": "\n".join(selected),
     }
     if end < total:
-        result["note"] = (
-            f"showing lines {start}-{end} of {total}; "
-            f"call again with start_line={end + 1} to continue"
-        )
+        result["note"] = f"showing lines {start}-{end} of {total}; call again with start_line={end + 1} to continue"
     return result

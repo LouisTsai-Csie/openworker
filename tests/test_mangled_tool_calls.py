@@ -32,9 +32,7 @@ class MangledProvider(ProviderClient):
         if self.calls == 1:
             return AssistantTurn(
                 text="",
-                tool_calls=[
-                    ToolCall(id="t1", name="write_file", arguments={"_raw": self.raw})
-                ],
+                tool_calls=[ToolCall(id="t1", name="write_file", arguments={"_raw": self.raw})],
                 finish_reason=self.finish_reason,
             )
         return AssistantTurn(text="done", tool_calls=[])

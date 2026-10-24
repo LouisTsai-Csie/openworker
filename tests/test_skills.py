@@ -57,21 +57,15 @@ def test_get_agent_fallback():
 def _make_skill(skills_dir, name, desc, body):
     d = skills_dir / name
     d.mkdir(parents=True)
-    (d / "SKILL.md").write_text(
-        f"---\nname: {name}\ndescription: {desc}\n---\n{body}", encoding="utf-8"
-    )
+    (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: {desc}\n---\n{body}", encoding="utf-8")
 
 
 def test_skill_loader_catalog_and_load(tmp_path):
     skills_dir = tmp_path / "skills"
-    _make_skill(
-        skills_dir, "pdf", "extract text from PDFs", "Use pdfplumber to extract text."
-    )
+    _make_skill(skills_dir, "pdf", "extract text from PDFs", "Use pdfplumber to extract text.")
     loader = SkillLoader([skills_dir])
 
-    assert loader.catalog() == [
-        {"name": "pdf", "description": "extract text from PDFs"}
-    ]
+    assert loader.catalog() == [{"name": "pdf", "description": "extract text from PDFs"}]
     assert "pdf: extract text from PDFs" in skill_catalog_text(loader)
 
     reg = ToolRegistry()
@@ -117,9 +111,7 @@ def test_unreadable_skill_dir_does_not_abort_the_scan(tmp_path, monkeypatch):
 
     good = tmp_path / "good"
     (good / "helper").mkdir(parents=True)
-    (good / "helper" / "SKILL.md").write_text(
-        "---\nname: helper\ndescription: works\n---\nbody\n", encoding="utf-8"
-    )
+    (good / "helper" / "SKILL.md").write_text("---\nname: helper\ndescription: works\n---\nbody\n", encoding="utf-8")
     denied = tmp_path / "denied"
     denied.mkdir()
 
@@ -148,9 +140,7 @@ def test_unreadable_single_skill_folder_is_skipped(tmp_path, monkeypatch):
     root = tmp_path / "skills"
     for name in ("alpha", "beta"):
         (root / name).mkdir(parents=True)
-        (root / name / "SKILL.md").write_text(
-            f"---\nname: {name}\ndescription: d\n---\nbody\n", encoding="utf-8"
-        )
+        (root / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\nbody\n", encoding="utf-8")
 
     real_read_text = Path.read_text
 

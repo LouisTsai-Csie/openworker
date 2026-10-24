@@ -42,6 +42,7 @@ def build(dialect, *, space: str):
             result = func(*args, **kwargs)
             if func.__name__ in ("transition", "assign", "claim", "set_status", "comment", "link"):
                 from coworker.teams.tools import mutation_receipt
+
                 return mutation_receipt(result)
             return result
         except (BoardError, ValueError) as error:
@@ -51,9 +52,7 @@ def build(dialect, *, space: str):
     def board_list(state: str = "", assignee: str = "", after_item: int = 0, limit: int = 50) -> Any:
         """List work items on the board, optionally filtered by state
         (open/in_progress/blocked/review/done/canceled) or assignee."""
-        result = _safe(
-            dialect.list_items, space, state=state or None, assignee=assignee or None
-        )
+        result = _safe(dialect.list_items, space, state=state or None, assignee=assignee or None)
         if not isinstance(result, list):
             return result
         if isinstance(after_item, bool) or not isinstance(after_item, int) or after_item < 0:
@@ -61,19 +60,24 @@ def build(dialect, *, space: str):
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
             return {"error": "limit must be between 1 and 100"}
         from coworker.teams.tools import item_snapshot
+
         items = [i for i in result if i["id"] > after_item]
         page = [item_snapshot(i, brief=True) for i in items[:limit]]
         for i in page:
             if i.get("proposal_ref"):
                 i["proposal_ref"]["read_tool"] = "board_proposal"
-        return {"items": page, "has_more": len(items) > limit,
-                "next_after_item": page[-1]["id"] if page else after_item}
+        return {
+            "items": page,
+            "has_more": len(items) > limit,
+            "next_after_item": page[-1]["id"] if page else after_item,
+        }
 
     @mcp.tool()
     def board_show(item: int) -> Any:
         """Current task details, not historical comments. Use board_comments for
         incremental handoffs and board_proposal for shared approved intent."""
         from coworker.teams.tools import item_snapshot
+
         result = _safe(dialect.get_item, space, item)
         snapshot = item_snapshot(result)
         if snapshot.get("proposal_ref"):
@@ -100,7 +104,11 @@ def build(dialect, *, space: str):
         """Read shared approved proposal intent and external-action declarations;
         these are not permission grants. Read once or when context is missing."""
         result = _safe(dialect.get_item, space, item)
-        return result if "error" in result else {"proposal": result.get("proposal"), "authority": "intent_not_access_grants"}
+        return (
+            result
+            if "error" in result
+            else {"proposal": result.get("proposal"), "authority": "intent_not_access_grants"}
+        )
 
     @mcp.tool()
     def board_create(
@@ -134,9 +142,7 @@ def build(dialect, *, space: str):
         """Move a work item: in_progress when you start, blocked with the blocker
         as `comment`, review with a hand-off comment and artifact refs (branch,
         PR, file:line) when finished."""
-        return _safe(
-            dialect.transition, space, item, to, comment=comment, refs=list(refs or [])
-        )
+        return _safe(dialect.transition, space, item, to, comment=comment, refs=list(refs or []))
 
     @mcp.tool()
     def board_comment(item: int, body: str, refs: list[str] = [], needs_attention: bool = False) -> Any:

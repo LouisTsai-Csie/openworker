@@ -50,6 +50,7 @@ def test_overrides_relax_metadata_but_never_downgrade_a_builtin():
     # A user-local override may relax a metadata/MCP tool (the intended use)...
     def relax(n):
         return RiskClass.READ if n in {"write_file", "mcp_tool"} else None
+
     assert classify("mcp_tool", EXTERNAL_META, relax) == RiskClass.READ  # relax MCP
     # ...but must NEVER loosen a built-in write/exec/egress tool: downgrading write_file to
     # read would switch off path scoping AND the read-only gate, so the override is ignored.
@@ -62,6 +63,7 @@ def test_overrides_may_tighten_a_builtin():
     # Tightening is fine — only loosening a built-in is refused.
     def tighten(n):
         return RiskClass.EXEC if n == "write_file" else None
+
     assert classify("write_file", None, tighten) == RiskClass.EXEC
 
 
@@ -160,9 +162,7 @@ def test_shell_commands_not_auto_allowed_by_default(tmp_path):
     # environment disclosure, reads outside the workspace, and helper execution.
     from coworker.config import DEFAULT_ALLOWED_COMMANDS
 
-    eng = PermissionEngine(
-        workspace_root=tmp_path, allowed_commands=list(DEFAULT_ALLOWED_COMMANDS)
-    )
+    eng = PermissionEngine(workspace_root=tmp_path, allowed_commands=list(DEFAULT_ALLOWED_COMMANDS))
     for cmd in (
         "python3 -c 'import os'",
         "pytest /tmp/attacker_test.py",

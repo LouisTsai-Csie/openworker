@@ -56,6 +56,7 @@ def _spawn(coro) -> asyncio.Task:
     task.add_done_callback(_BACKGROUND_TASKS.discard)
     return task
 
+
 # Origins allowed to talk to the local sidecar. It binds to 127.0.0.1, but a page in the
 # user's own browser can still reach loopback — so without an origin gate, any website they
 # visit could read `GET /v1/sessions` (CORS was `*`) and drive a session over the WS (which
@@ -111,9 +112,7 @@ _BRAND_COLORS = {
 }
 
 
-def _browser_page(
-    title: str, detail: str, *, ok: bool = True, error: str = "", connector: str = ""
-) -> str:
+def _browser_page(title: str, detail: str, *, ok: bool = True, error: str = "", connector: str = "") -> str:
     """The page shown in the user's browser at the end of a loopback flow (sign-in or
     connector callback) — one branded card (UX-DECISIONS §30): OCW mark, ok/fail icon
     (the connector's initial rides the ✓), the friendly detail, and the raw error
@@ -126,9 +125,7 @@ def _browser_page(
         color = _BRAND_COLORS.get(connector, "#3670b2")
         initial = _html.escape((connector[:1] or "?").upper())
         badge = f'<span class="mini" style="background:{color}">{initial}</span>'
-    icon = (
-        f'<div class="ico ok">✓{badge}</div>' if ok else '<div class="ico bad">✕</div>'
-    )
+    icon = f'<div class="ico ok">✓{badge}</div>' if ok else '<div class="ico bad">✕</div>'
     err = f'<div class="err">{_html.escape(error)}</div>' if error else ""
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
@@ -180,10 +177,7 @@ def _connector_title(name: str) -> str:
     return d.title if d else (name[:1].upper() + name[1:])
 
 
-_CONNECT_FAILED_DETAIL = (
-    "Something went wrong finishing this connection. "
-    "Close this tab and try again from OpenWorker."
-)
+_CONNECT_FAILED_DETAIL = "Something went wrong finishing this connection. Close this tab and try again from OpenWorker."
 
 
 def _session_sandbox(engine: Any) -> dict[str, Any]:
@@ -217,9 +211,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         try:
-            live = (
-                await manager.start_gateway()
-            )  # start messaging listeners (if configured)
+            live = await manager.start_gateway()  # start messaging listeners (if configured)
             if live:
                 print(f"[coworker] messaging gateway live: {', '.join(live)}")
         except Exception:  # never let a bad connector stop the server
@@ -245,20 +237,12 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     def _request_authenticated(request: Request) -> bool:
         provided = request.headers.get("x-openworker-token", "")
-        return bool(
-            api_token
-            and provided
-            and secrets.compare_digest(provided, api_token)
-        )
+        return bool(api_token and provided and secrets.compare_digest(provided, api_token))
 
     def _websocket_authenticated(ws: WebSocket) -> bool:
         if not api_token:
             return True
-        protocols = {
-            part.strip()
-            for part in ws.headers.get("sec-websocket-protocol", "").split(",")
-            if part.strip()
-        }
+        protocols = {part.strip() for part in ws.headers.get("sec-websocket-protocol", "").split(",") if part.strip()}
         return any(secrets.compare_digest(part, api_token) for part in protocols)
 
     @app.middleware("http")
@@ -337,6 +321,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.get("/v1/inbox")
     def inbox(session_id: str = "", state: str = "") -> dict[str, Any]:
         from dataclasses import asdict
+
         manager.reconcile_obsolete_prompts(session_id)
 
         # The cross-session Inbox list shows only Unattended (inbox-visibility) items; a per-session
@@ -353,12 +338,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         for i in items:
             d = asdict(i)
             rec = manager.session_store.load(i.session_id)
-            if (
-                rec is None
-                and not session_id
-                and i.state == "pending"
-                and i.session_id not in manager._engines
-            ):
+            if rec is None and not session_id and i.state == "pending" and i.session_id not in manager._engines:
                 # Lazy cleanup for legacy orphans (sessions deleted before delete_session
                 # started closing their items): an orphaned prompt can never be answered.
                 # A LIVE engine without a record yet (brand-new session, first turn still
@@ -517,12 +497,8 @@ def create_app(manager: SessionManager) -> FastAPI:
         if body.get("clear"):
             manager.session_skills.clear(session_id, skill)
         else:
-            manager.session_skills.set(
-                session_id, skill, bool(body.get("enabled", False))
-            )
-        return manager.session_skills_view(
-            session_id, str(body.get("workspace", "")) or None
-        )
+            manager.session_skills.set(session_id, skill, bool(body.get("enabled", False)))
+        return manager.session_skills_view(session_id, str(body.get("workspace", "")) or None)
 
     @app.get("/v1/sessions/{session_id}/connections")
     def session_connections(session_id: str, persona: str = "") -> dict[str, Any]:
@@ -542,9 +518,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         if body.get("clear"):
             manager.session_connections.clear(session_id, connector)
         else:
-            manager.session_connections.set(
-                session_id, connector, bool(body.get("enabled", False))
-            )
+            manager.session_connections.set(session_id, connector, bool(body.get("enabled", False)))
         persona = str(body.get("persona", "")) or None
         return {
             "ok": True,
@@ -568,9 +542,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                     data = base64.b64decode(str(body["zip_b64"]), validate=True)
                 except (ValueError, binascii.Error):
                     return {"ok": False, "error": "Invalid archive encoding."}
-                summaries = reg.install_from_zip(
-                    data, str(body.get("filename", ""))
-                )
+                summaries = reg.install_from_zip(data, str(body.get("filename", "")))
             elif body.get("gallery_slug"):
                 # Gallery install = fetch the manifest markdown from the cloud
                 # (sign-in required), verify its hash, then reuse the exact
@@ -592,10 +564,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                     }
                 markdown = manifest.get("manifest_markdown", "")
                 digest = "sha256:" + hashlib.sha256(markdown.encode()).hexdigest()
-                if (
-                    manifest.get("manifest_hash")
-                    and manifest["manifest_hash"] != digest
-                ):
+                if manifest.get("manifest_hash") and manifest["manifest_hash"] != digest:
                     return {"ok": False, "error": "manifest hash mismatch"}
                 with tempfile.TemporaryDirectory() as td:
                     (Path(td) / f"{slug}.md").write_text(markdown)
@@ -614,9 +583,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     def export_persona(persona_id: str, body: dict) -> dict[str, Any]:
         # Sharing v1 (OPE-7): zip the persona's bundle into the chosen folder. The zip
         # is the import format — send it to a teammate, they import it from the picker.
-        return manager.personas.export_persona(
-            persona_id, str((body or {}).get("dir", ""))
-        )
+        return manager.personas.export_persona(persona_id, str((body or {}).get("dir", "")))
 
     @app.get("/v1/cloud/gallery/{slug}")
     def cloud_gallery_detail(slug: str) -> dict[str, Any]:
@@ -654,9 +621,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             if "enabled" in body:
                 # Disable archives the persona's sessions atomically (server-side, one
                 # request) so any client gets the same semantic. See set_persona_enabled.
-                archived = manager.set_persona_enabled(
-                    persona_id, bool(body["enabled"])
-                )["archived_sessions"]
+                archived = manager.set_persona_enabled(persona_id, bool(body["enabled"]))["archived_sessions"]
             if "surfaced" in body:
                 reg.set_surfaced(persona_id, bool(body["surfaced"]))
             if body.get("default"):
@@ -708,9 +673,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # Dedicated §5/§8 route; delegates to the same manager toggle as POST /v1/personas/{id}
         # (so disable archives the persona's sessions here too).
         try:
-            manager.set_persona_enabled(
-                persona_id, bool((body or {}).get("enabled", True))
-            )
+            manager.set_persona_enabled(persona_id, bool((body or {}).get("enabled", True)))
         except KeyError:
             return {"ok": False, "error": f"unknown persona: {persona_id}"}
         return {"ok": True, "personas": manager.personas.list_all()}
@@ -722,9 +685,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         connector = str(body.get("connector", "")).strip()
         if not connector:
             return {"ok": False, "error": "connector required"}
-        return manager.set_persona_connection(
-            persona_id, connector, bool(body.get("enabled", False))
-        )
+        return manager.set_persona_connection(persona_id, connector, bool(body.get("enabled", False)))
 
     @app.get("/v1/skills")
     def skills(workspace: str = "") -> dict[str, Any]:
@@ -773,9 +734,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/workspaces/open")
     def open_workspace(body: dict) -> dict[str, Any]:
-        return manager.open_workspace(
-            body.get("path", ""), create=bool(body.get("create"))
-        )
+        return manager.open_workspace(body.get("path", ""), create=bool(body.get("create")))
 
     @app.get("/v1/workspaces/trusted")
     def trusted_workspaces() -> dict[str, Any]:
@@ -839,9 +798,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.post("/v1/sessions/{session_id}/roots")
     def session_add_root(session_id: str, body: dict) -> dict[str, Any]:
         body = body or {}
-        return manager.add_root(
-            session_id, str(body.get("path", "")), bool(body.get("writable", False))
-        )
+        return manager.add_root(session_id, str(body.get("path", "")), bool(body.get("writable", False)))
 
     @app.delete("/v1/sessions/{session_id}/roots")
     def session_remove_root(session_id: str, path: str) -> dict[str, Any]:
@@ -871,9 +828,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.post("/v1/sessions/{session_id}/artifacts/reveal")
     def session_artifact_reveal(session_id: str, body: dict) -> dict[str, Any]:
         body = body or {}
-        return manager.reveal_artifact(
-            session_id, str(body.get("path", "")), str(body.get("mode", "reveal"))
-        )
+        return manager.reveal_artifact(session_id, str(body.get("path", "")), str(body.get("mode", "reveal")))
 
     # Agent teams (OPE-96): the session's board (workspace-keyed space) + journal
     # overview. Mutations act as the USER — the human side of the gates.
@@ -902,9 +857,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.post("/v1/sessions/{session_id}/board/comment")
     def session_board_comment(session_id: str, body: dict) -> dict[str, Any]:
         body = body or {}
-        return manager.board_comment(
-            session_id, int(body.get("item", 0)), str(body.get("body", ""))
-        )
+        return manager.board_comment(session_id, int(body.get("item", 0)), str(body.get("body", "")))
 
     @app.post("/v1/sessions/{session_id}/board/transition")
     def session_board_transition(session_id: str, body: dict) -> dict[str, Any]:
@@ -950,8 +903,10 @@ def create_app(manager: SessionManager) -> FastAPI:
         actor = _board_actor(request)
         if actor is None:
             return JSONResponse(
-                {"error": "board token required (Authorization: Bearer …) — mint"
-                          " one with `python -m coworker.teams.cli board token` on the serving machine"},
+                {
+                    "error": "board token required (Authorization: Bearer …) — mint"
+                    " one with `python -m coworker.teams.cli board token` on the serving machine"
+                },
                 status_code=401,
             )
         try:
@@ -965,24 +920,18 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.get("/v1/board/whoami")
     def board_whoami(request: Request):
-        return _board(
-            request, lambda actor: {"actor": actor.id, "role": actor.role.value}
-        )
+        return _board(request, lambda actor: {"actor": actor.id, "role": actor.role.value})
 
     @app.get("/v1/board/spaces")
     def board_spaces(request: Request):
         return _board(request, lambda actor: {"spaces": manager.team_store.spaces()})
 
     @app.get("/v1/board/items")
-    def board_list_items(
-        request: Request, space: str, state: str = "", assignee: str = ""
-    ):
+    def board_list_items(request: Request, space: str, state: str = "", assignee: str = ""):
         return _board(
             request,
             lambda actor: {
-                "items": manager.team_store.list_items(
-                    space, actor, state=state or None, assignee=assignee or None
-                )
+                "items": manager.team_store.list_items(space, actor, state=state or None, assignee=assignee or None)
             },
         )
 
@@ -995,14 +944,19 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.get("/v1/board/comments")
     def board_comments(request: Request, space: str, id: int, after_seq: int = 0, limit: int = 20):
-        return _board(request, lambda actor: manager.team_store.comment_page(
-            space, id, actor=actor, after_seq=after_seq, limit=limit))
+        return _board(
+            request,
+            lambda actor: manager.team_store.comment_page(space, id, actor=actor, after_seq=after_seq, limit=limit),
+        )
 
     @app.get("/v1/board/comment")
-    def board_comment_text(request: Request, space: str, id: int, seq: int,
-                           offset: int = 0, max_chars: int = 12000):
-        return _board(request, lambda actor: manager.team_store.comment_text(
-            space, id, actor=actor, seq=seq, offset=offset, max_chars=max_chars))
+    def board_comment_text(request: Request, space: str, id: int, seq: int, offset: int = 0, max_chars: int = 12000):
+        return _board(
+            request,
+            lambda actor: manager.team_store.comment_text(
+                space, id, actor=actor, seq=seq, offset=offset, max_chars=max_chars
+            ),
+        )
 
     @app.post("/v1/board/items")
     def board_create_item(request: Request, body: dict):
@@ -1015,9 +969,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 title=str(body.get("title", "")),
                 criteria=str(body.get("criteria", "")),
                 description=str(body.get("description", "")),
-                parent=(
-                    int(body["parent"]) if body.get("parent") is not None else None
-                ),
+                parent=(int(body["parent"]) if body.get("parent") is not None else None),
                 case=str(body.get("case") or "") or None,
             )
             manager.kick_team_tick()  # a new filing is lead-subscription news
@@ -1046,6 +998,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.post("/v1/board/items/comment")
     def board_comment_item(request: Request, body: dict):
         body = body or {}
+
         def run(actor):
             result = manager.team_store.comment(
                 str(body.get("space", "")),
@@ -1057,6 +1010,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             )
             manager.kick_team_tick()
             return result
+
         return _board(request, run)
 
     @app.post("/v1/board/items/assign")
@@ -1077,18 +1031,19 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/board/items/status")
     def board_set_status(request: Request, body: dict):
-        return _board(request, lambda actor: manager.team_store.set_status(
-            str(body.get("space", "")), actor, body.get("id"), body.get("text")
-        ))  # Display-only: deliberately no team tick.
+        return _board(
+            request,
+            lambda actor: manager.team_store.set_status(
+                str(body.get("space", "")), actor, body.get("id"), body.get("text")
+            ),
+        )  # Display-only: deliberately no team tick.
 
     @app.post("/v1/board/items/claim")
     def board_claim_item(request: Request, body: dict):
         body = body or {}
 
         def run(actor):
-            item = manager.team_store.claim(
-                str(body.get("space", "")), actor, int(body.get("id", 0))
-            )
+            item = manager.team_store.claim(str(body.get("space", "")), actor, int(body.get("id", 0)))
             manager.kick_team_tick()  # claims land in the lead's feed
             return item
 
@@ -1113,25 +1068,17 @@ def create_app(manager: SessionManager) -> FastAPI:
         body = body or {}
 
         def run(actor):
-            manager.team_store.require_attachment_write(
-                str(body.get("space", "")), actor, int(body.get("id", 0))
-            )
+            manager.team_store.require_attachment_write(str(body.get("space", "")), actor, int(body.get("id", 0)))
             raw = str(body.get("data_b64", ""))
             # Cheap pre-decode bound: base64 is ~4/3 of the payload, so anything
             # multiples over the cap is refused before allocating the decode.
             if len(raw) > 15 * 1024 * 1024:
-                return JSONResponse(
-                    {"error": "attachment exceeds 10MB"}, status_code=400
-                )
+                return JSONResponse({"error": "attachment exceeds 10MB"}, status_code=400)
             try:
                 data = base64.b64decode(raw, validate=True)
             except (binascii.Error, ValueError):
-                return JSONResponse(
-                    {"error": "data_b64 is not valid base64"}, status_code=400
-                )
-            ref = manager.attachment_store.put(
-                data, str(body.get("filename", ""))
-            )
+                return JSONResponse({"error": "data_b64 is not valid base64"}, status_code=400)
+            ref = manager.attachment_store.put(data, str(body.get("filename", "")))
             filename = str(body.get("filename", ""))
             event = manager.team_store.attach_ref(
                 str(body.get("space", "")),
@@ -1179,11 +1126,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # follows the assignment relation, same projection in-app workers use.
         return _board(
             request,
-            lambda actor: {
-                "events": manager.team_store.feed_for(
-                    space, actor.id, limit=int(limit)
-                )
-            },
+            lambda actor: {"events": manager.team_store.feed_for(space, actor.id, limit=int(limit))},
         )
 
     @app.post("/v1/board/consume")
@@ -1191,18 +1134,14 @@ def create_app(manager: SessionManager) -> FastAPI:
         body = body or {}
 
         def run(actor):
-            manager.team_store.consume_feed(
-                str(body.get("space", "")), actor.id, int(body.get("upto_seq", 0))
-            )
+            manager.team_store.consume_feed(str(body.get("space", "")), actor.id, int(body.get("upto_seq", 0)))
             return {"ok": True}
 
         return _board(request, run)
 
     @app.get("/v1/board/journal/cases")
     def board_journal_cases(request: Request):
-        return _board(
-            request, lambda actor: {"cases": manager.journal_store.overview(actor)}
-        )
+        return _board(request, lambda actor: {"cases": manager.journal_store.overview(actor)})
 
     @app.get("/v1/board/journal")
     def board_journal_read(
@@ -1255,9 +1194,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     @app.post("/v1/memory")
     def add_memory(body: dict) -> dict[str, Any]:
         body = body or {}
-        return manager.add_memory(
-            str(body.get("content", "")), str(body.get("scope", "workspace"))
-        )
+        return manager.add_memory(str(body.get("content", "")), str(body.get("scope", "workspace")))
 
     # Declared before the /{item_id} routes so "settings" can never be parsed as an id.
     @app.get("/v1/memory/settings")
@@ -1294,23 +1231,17 @@ def create_app(manager: SessionManager) -> FastAPI:
     def put_binding(session_id: str, body: dict) -> dict[str, Any]:
         body = body or {}
         name = body.get("name")
-        return manager.set_binding(
-            session_id, str(body.get("kind", "")), str(name) if name else None
-        )
+        return manager.set_binding(session_id, str(body.get("kind", "")), str(name) if name else None)
 
     @app.post("/v1/sessions/{session_id}/project-name")
     def name_project(session_id: str, body: dict) -> dict[str, Any]:
         body = body or {}
-        return manager.name_current_project(
-            session_id, str(body.get("kind", "")), str(body.get("name", ""))
-        )
+        return manager.name_current_project(session_id, str(body.get("kind", "")), str(body.get("name", "")))
 
     @app.post("/v1/chat/completions")
     def chat_completions(body: dict) -> dict[str, Any]:
         model = body.get("model", manager.model)
-        turn = manager.provider_complete(
-            model, body.get("messages", []), body.get("tools")
-        )
+        turn = manager.provider_complete(model, body.get("messages", []), body.get("tools"))
         return _openai_response(model, turn)
 
     # -- MCP servers ------------------------------------------------------------
@@ -1372,9 +1303,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         return await manager.signout_mcp(name)
 
     @app.get("/mcp/oauth/callback")
-    async def mcp_oauth_callback(
-        code: str = "", state: str = "", error: str = ""
-    ) -> Any:
+    async def mcp_oauth_callback(code: str = "", state: str = "", error: str = "") -> Any:
         # Loopback landing for the MCP OAuth browser flow (mcp/oauth.py). Browser-facing:
         # returns the same styled page as the managed-connector callbacks.
         from fastapi.responses import HTMLResponse
@@ -1436,9 +1365,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         acknowledged = bool(isinstance(body, dict) and body.get("acknowledge_risk"))
         # token validation does a blocking HTTP call → keep it off the event loop
         result = await asyncio.to_thread(
-            lambda: manager.connect_connector(
-                name, fields or {}, acknowledged=acknowledged
-            )
+            lambda: manager.connect_connector(name, fields or {}, acknowledged=acknowledged)
         )
         if result.get("ok"):
             await _refresh_listeners_if_two_way(name)
@@ -1544,9 +1471,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         from coworker import cloud
         from coworker.config import load_config
 
-        status, data = await asyncio.to_thread(
-            cloud.broker_request, manager.secrets, load_config(), method, path, body
-        )
+        status, data = await asyncio.to_thread(cloud.broker_request, manager.secrets, load_config(), method, path, body)
         if status == 0:
             return JSONResponse({"error": "cloud unreachable"}, status_code=502)
         return JSONResponse(data, status_code=status)
@@ -1617,9 +1542,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         from coworker.config import load_config
 
         revoked = await asyncio.to_thread(
-            lambda: cloud.revoke_connector_connections(
-                manager.secrets, load_config(), name
-            )
+            lambda: cloud.revoke_connector_connections(manager.secrets, load_config(), name)
         )
         return {"ok": True, "revoked": revoked}
 
@@ -1640,7 +1563,11 @@ def create_app(manager: SessionManager) -> FastAPI:
             return {"ok": False, "error": "seal_pubkey required"}
         info = connector_handoff_info(manager.secrets, name)
         if not info.get("ok") or not info.get("portable"):
-            return {"ok": False, "error": info.get("error") or f"{name} can't be copied to a machine", "reason": info.get("reason", "")}
+            return {
+                "ok": False,
+                "error": info.get("error") or f"{name} can't be copied to a machine",
+                "reason": info.get("reason", ""),
+            }
         if info.get("needs_delegation") and not (grant.get("user_id") and grant.get("machine_credential")):
             return {"ok": False, "error": "a delegated grant for the target machine is required"}
         profiles: dict[str, Any] = {}
@@ -1671,9 +1598,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         from coworker import cloud
         from coworker.config import load_config
 
-        await asyncio.to_thread(
-            lambda: cloud.cloud_disconnect(manager.secrets, load_config(), name)
-        )
+        await asyncio.to_thread(lambda: cloud.cloud_disconnect(manager.secrets, load_config(), name))
         result = manager.disconnect_connector(name)
         await _refresh_listeners_if_two_way(name)
         return result
@@ -1711,9 +1636,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
         profile_key = gmail_accounts.PREFIX + email.strip().lower()
         await asyncio.to_thread(
-            lambda: cloud.cloud_disconnect(
-                manager.secrets, load_config(), "gmail", profile_key=profile_key
-            )
+            lambda: cloud.cloud_disconnect(manager.secrets, load_config(), "gmail", profile_key=profile_key)
         )
         return gmail_accounts.disconnect_account(manager.secrets, email)
 
@@ -1770,9 +1693,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
         profile_key = hubspot_portals.PREFIX + hub_id.strip()
         await asyncio.to_thread(
-            lambda: cloud.cloud_disconnect(
-                manager.secrets, load_config(), "hubspot", profile_key=profile_key
-            )
+            lambda: cloud.cloud_disconnect(manager.secrets, load_config(), "hubspot", profile_key=profile_key)
         )
         return hubspot_portals.disconnect_portal(manager.secrets, hub_id)
 
@@ -1795,9 +1716,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         _id, profile_key, profile = accounts.resolve(manager.secrets, name, account_id)
         if profile and profile.get("managed"):
             await asyncio.to_thread(
-                lambda: cloud.cloud_disconnect(
-                    manager.secrets, load_config(), name, profile_key=profile_key
-                )
+                lambda: cloud.cloud_disconnect(manager.secrets, load_config(), name, profile_key=profile_key)
             )
         return accounts.disconnect_account(manager.secrets, name, account_id)
 
@@ -1821,9 +1740,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         return hubspot_portals.set_hidden_fields(manager.secrets, fields)
 
     @app.post("/v1/connectors/{name}/unauthorized/{item_id}")
-    async def connector_unauthorized_resolve(
-        name: str, item_id: str, body: dict
-    ) -> dict[str, Any]:
+    async def connector_unauthorized_resolve(name: str, item_id: str, body: dict) -> dict[str, Any]:
         # Resolve a parked unauthorized message: dismiss / allow / allow_deliver (§19).
         action = str((body or {}).get("action", "")).strip()
         return await manager.resolve_unauthorized(name, item_id, action)
@@ -1847,9 +1764,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         send nothing regardless of this value."""
         from coworker import cloud
 
-        return cloud.set_telemetry_enabled(
-            manager.secrets, bool((body or {}).get("enabled", True))
-        )
+        return cloud.set_telemetry_enabled(manager.secrets, bool((body or {}).get("enabled", True)))
 
     @app.post("/v1/cloud/login")
     def cloud_login() -> dict[str, Any]:
@@ -1877,19 +1792,13 @@ def create_app(manager: SessionManager) -> FastAPI:
         from coworker import cloud
         from coworker.config import load_config
 
-        signin_failed_detail = (
-            "Close this tab and try signing in again from OpenWorker."
-        )
+        signin_failed_detail = "Close this tab and try signing in again from OpenWorker."
         if error:
             return HTMLResponse(
-                _browser_page(
-                    "Sign-in failed", signin_failed_detail, ok=False, error=error
-                ),
+                _browser_page("Sign-in failed", signin_failed_detail, ok=False, error=error),
                 status_code=400,
             )
-        result = await asyncio.to_thread(
-            lambda: cloud.complete_login(manager.secrets, load_config(), code, state)
-        )
+        result = await asyncio.to_thread(lambda: cloud.complete_login(manager.secrets, load_config(), code, state))
         if not result.get("ok"):
             return HTMLResponse(
                 _browser_page(
@@ -1907,9 +1816,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # the gateway so the relay connects without a restart.
         async def _restore_connections() -> None:
             try:
-                out = await asyncio.to_thread(
-                    lambda: cloud.sync_connections(manager.secrets, load_config())
-                )
+                out = await asyncio.to_thread(lambda: cloud.sync_connections(manager.secrets, load_config()))
                 if out.get("restored"):
                     await manager.refresh_gateway()
             except Exception:
@@ -1919,15 +1826,12 @@ def create_app(manager: SessionManager) -> FastAPI:
         return HTMLResponse(
             _browser_page(
                 "Signed in",
-                "You're signed in to OpenWorker Cloud. "
-                "You can close this tab and return to OpenWorker.",
+                "You're signed in to OpenWorker Cloud. You can close this tab and return to OpenWorker.",
             )
         )
 
     @app.post("/v1/connectors/{name}/connect-managed")
-    async def connector_connect_managed(
-        name: str, body: dict | None = None
-    ) -> dict[str, Any]:
+    async def connector_connect_managed(name: str, body: dict | None = None) -> dict[str, Any]:
         """One-click managed OAuth (requires cloud sign-in). Opens the provider
         consent page in the system browser; the broker's callback page will
         form-POST the tokens to /oauth/callback below. `access` picks a consent
@@ -1983,26 +1887,18 @@ def create_app(manager: SessionManager) -> FastAPI:
         from coworker.config import load_config
 
         if machine_id.startswith("cloud:"):
-            token = await asyncio.to_thread(
-                cloud.fresh_access_token, manager.secrets, load_config()
-            )
+            token = await asyncio.to_thread(cloud.fresh_access_token, manager.secrets, load_config())
             if not token:
                 raise RuntimeError("cloud session expired — sign in again")
-            async with _httpx.AsyncClient(
-                base_url=load_config().cloud_machines_base.rstrip("/"), timeout=30
-            ) as client:
-                yield client, {"Authorization": f"Bearer {token}"}, machine_id[
-                    len("cloud:") :
-                ]
+            async with _httpx.AsyncClient(base_url=load_config().cloud_machines_base.rstrip("/"), timeout=30) as client:
+                yield client, {"Authorization": f"Bearer {token}"}, machine_id[len("cloud:") :]
             return
         async with _httpx.AsyncClient(
             transport=_httpx.ASGITransport(app=app),
             base_url="http://sidecar",
             timeout=30,
         ) as client:
-            yield client, (
-                {"X-OpenWorker-Token": api_token} if api_token else {}
-            ), machine_id
+            yield client, ({"X-OpenWorker-Token": api_token} if api_token else {}), machine_id
 
     async def _find_machine(client, headers: dict, mid: str) -> dict | None:
         r = await client.get("/v1/machines", headers=headers)
@@ -2034,9 +1930,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 pass
             return {
                 "ok": False,
-                "error": str(
-                    detail.get("message") or detail.get("error") or "deploy failed"
-                ),
+                "error": str(detail.get("message") or detail.get("error") or "deploy failed"),
             }
         return {"ok": True}
 
@@ -2111,9 +2005,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                         return _handoff_failed("unknown machine")
                     seal_pubkey = str(row.get("seal_pubkey") or "")
                     if not seal_pubkey:
-                        return _handoff_failed(
-                            "machine has no pinned sealing key yet"
-                        )
+                        return _handoff_failed("machine has no pinned sealing key yet")
                     # Delegate WITH the seal key: the broker mints the machine
                     # credential and flips this connection's events to the
                     # machine's sealed queue in the same stroke.
@@ -2128,28 +2020,18 @@ def create_app(manager: SessionManager) -> FastAPI:
                         )
                     )
                     if not grant:
-                        return _handoff_failed(
-                            "could not delegate the connection for machine renewal"
-                        )
+                        return _handoff_failed("could not delegate the connection for machine renewal")
                     staging = EphemeralSecretStore()
                     staged = stage(staging, grant)
                     if not staged.get("ok"):
-                        return _handoff_failed(
-                            staged.get("error", "could not stage the grant")
-                        )
-                    deployed = await _post_sealed_profiles(
-                        mclient, mheaders, mid, seal_pubkey, staging.profiles()
-                    )
+                        return _handoff_failed(staged.get("error", "could not stage the grant"))
+                    deployed = await _post_sealed_profiles(mclient, mheaders, mid, seal_pubkey, staging.profiles())
                     if not deployed.get("ok"):
-                        return _handoff_failed(
-                            deployed.get("error", "deploy failed"), status=502
-                        )
+                        return _handoff_failed(deployed.get("error", "deploy failed"), status=502)
             except RuntimeError as exc:
                 return _handoff_failed(str(exc))
             except _httpx.HTTPError as exc:
-                return _handoff_failed(
-                    f"machine unreachable: {type(exc).__name__}", status=502
-                )
+                return _handoff_failed(f"machine unreachable: {type(exc).__name__}", status=502)
             return HTMLResponse(
                 _browser_page(
                     f"{_connector_title(connector)} connected on {machine_label}",
@@ -2172,9 +2054,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 # the box's browser-sealed path.
                 return await _targeted_handoff(
                     data.get("connection_id", ""),
-                    lambda staging, grant: store_managed_grant_bundle(
-                        staging, "github", data, grant
-                    ),
+                    lambda staging, grant: store_managed_grant_bundle(staging, "github", data, grant),
                 )
             result = managed_connect_install(manager.secrets, data)
             if result.get("ok"):
@@ -2209,9 +2089,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         if target_machine and connector != "github":
             return await _targeted_handoff(
                 data.get("connection_id", ""),
-                lambda staging, grant: store_managed_grant_bundle(
-                    staging, connector, data, grant
-                ),
+                lambda staging, grant: store_managed_grant_bundle(staging, connector, data, grant),
             )
         # Managed Slack is multi-workspace + relay: store the per-team bot token
         # and flip to relay mode, rather than the single-token connector path.
@@ -2222,9 +2100,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 # (and the relay socket opens on a first-ever install) right away.
                 await manager.refresh_gateway()
         else:
-            result = store_managed_grant(
-                manager.secrets, connector, data, cloud.managed_profile_from_callback(data)
-            )
+            result = store_managed_grant(manager.secrets, connector, data, cloud.managed_profile_from_callback(data))
         if not result.get("ok"):
             return HTMLResponse(
                 _browser_page(
@@ -2263,34 +2139,24 @@ def create_app(manager: SessionManager) -> FastAPI:
         )
 
     @app.get("/v1/connectors/slack/workspaces/{team_id}/directory")
-    async def slack_directory(
-        team_id: str, q: str = "", limit: int = 25
-    ) -> dict[str, Any]:
+    async def slack_directory(team_id: str, q: str = "", limit: int = 25) -> dict[str, Any]:
         """Workspace member roster for the people picker (team_id "default" =
         the manual Socket-Mode workspace). Cached locally; never leaves this machine."""
         from coworker.connectors import slack_directory as roster
 
-        return await asyncio.to_thread(
-            lambda: roster.list_members(manager.secrets, team_id, q, limit)
-        )
+        return await asyncio.to_thread(lambda: roster.list_members(manager.secrets, team_id, q, limit))
 
     @app.get("/v1/connectors/slack/workspaces/{team_id}/channels")
-    async def slack_channels(
-        team_id: str, q: str = "", limit: int = 25
-    ) -> dict[str, Any]:
+    async def slack_channels(team_id: str, q: str = "", limit: int = 25) -> dict[str, Any]:
         """Channel roster for the channel typeahead: all public channels, private
         ones only where the bot is a member (Slack API constraint)."""
         from coworker.connectors import slack_directory as roster
 
-        return await asyncio.to_thread(
-            lambda: roster.list_channels(manager.secrets, team_id, q, limit)
-        )
+        return await asyncio.to_thread(lambda: roster.list_channels(manager.secrets, team_id, q, limit))
 
     @app.post("/v1/connectors/{name}/disallow")
     def connector_disallow(name: str, body: dict) -> dict[str, Any]:
-        return manager.disallow_user(
-            name, str(body.get("user_id", "")), str(body.get("team_id", "")) or None
-        )
+        return manager.disallow_user(name, str(body.get("user_id", "")), str(body.get("team_id", "")) or None)
 
     @app.post("/v1/connectors/slack/approval-owners/add")
     def slack_approval_owner_add(body: dict) -> dict[str, Any]:
@@ -2302,9 +2168,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/slack/approval-owners/remove")
     def slack_approval_owner_remove(body: dict) -> dict[str, Any]:
-        return manager.set_slack_approval_owner(
-            str(body.get("user_id", "")), add=False
-        )
+        return manager.set_slack_approval_owner(str(body.get("user_id", "")), add=False)
 
     @app.post("/v1/connectors/telegram/approval-owners/add")
     def telegram_approval_owner_add(body: dict) -> dict[str, Any]:
@@ -2316,9 +2180,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.post("/v1/connectors/telegram/approval-owners/remove")
     def telegram_approval_owner_remove(body: dict) -> dict[str, Any]:
-        return manager.set_telegram_approval_owner(
-            str(body.get("user_id", "")), add=False
-        )
+        return manager.set_telegram_approval_owner(str(body.get("user_id", "")), add=False)
 
     # -- audit / browser observability ------------------------------------------
     @app.get("/v1/audit")
@@ -2328,11 +2190,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         connector: str | None = None,
         tool: str | None = None,
     ) -> dict[str, Any]:
-        return {
-            "events": manager.list_audit(
-                limit=limit, session_id=session_id, connector=connector, tool=tool
-            )
-        }
+        return {"events": manager.list_audit(limit=limit, session_id=session_id, connector=connector, tool=tool)}
 
     @app.get("/v1/browser/state")
     def browser_state_get() -> dict[str, Any]:
@@ -2392,9 +2250,7 @@ def create_app(manager: SessionManager) -> FastAPI:
     async def providers_verify(body: dict) -> dict[str, Any]:
         # Live read-only credential check (sync httpx) — run off the event loop.
         name = (body or {}).get("name", "") or "openai"
-        return await asyncio.to_thread(
-            manager.verify_provider, name, (body or {}).get("fields")
-        )
+        return await asyncio.to_thread(manager.verify_provider, name, (body or {}).get("fields"))
 
     @app.post("/v1/providers/openai-codex/signin")
     async def codex_signin() -> dict[str, Any]:
@@ -2698,11 +2554,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         # Unattended → the cross-session Inbox; attended → inline in this session only. The agent
         # stays blocked until the item is resolved (live WS response, REST, or a bound channel).
         def _visibility() -> str:
-            return (
-                VIS_INBOX
-                if manager.unattended.is_unattended(session_id)
-                else VIS_INLINE
-            )
+            return VIS_INBOX if manager.unattended.is_unattended(session_id) else VIS_INLINE
 
         async def _mirror(item) -> None:
             # Unattended items mirror to a bound channel as buttons (see mirror_inbox_item).
@@ -2736,12 +2588,8 @@ def create_app(manager: SessionManager) -> FastAPI:
                     prompt_id=item.id,
                     preview=args_preview(getattr(_request, "arguments", None)) or "",
                 )
-            if (
-                item.state == "pending"
-            ):  # freshly raised (not a durable-resume re-raise)
-                manager.persist_session(
-                    session_id
-                )  # the pending tool call is now on disk
+            if item.state == "pending":  # freshly raised (not a durable-resume re-raise)
+                manager.persist_session(session_id)  # the pending tool call is now on disk
                 if item.visibility == VIS_INBOX:
                     await _mirror(item)
             resolution = await manager.inbox.wait(item.id)
@@ -2864,9 +2712,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 manager.persist_session(session_id)
                 if item.visibility == VIS_INBOX:
                     await _mirror(item)
-            resp = _parse_json(
-                await manager.inbox.wait(item.id)
-            )  # {granted, path, writable}
+            resp = _parse_json(await manager.inbox.wait(item.id))  # {granted, path, writable}
             if not resp.get("granted"):
                 return {"granted": False, "reason": "the user declined the request"}
             path = (resp.get("path") or args.get("path") or "").strip()
@@ -2876,9 +2722,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             if bool(args.get("primary", False)):
                 # Root promotion (workspace-scratch-design.md §5) — the shell cd inside
                 # is blocking, keep it off the event loop.
-                promo = await asyncio.to_thread(
-                    manager.promote_workspace, session_id, path
-                )
+                promo = await asyncio.to_thread(manager.promote_workspace, session_id, path)
                 if promo.get("ok"):
                     return {
                         "granted": True,
@@ -2903,8 +2747,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                     "path": path,
                     "writable": writable,
                     "primary": False,
-                    "note": promo.get("error", "")
-                    + " — granted as an additional folder instead",
+                    "note": promo.get("error", "") + " — granted as an additional folder instead",
                 }
             res = manager.add_root(session_id, path, writable)
             if not res.get("ok"):
@@ -2916,9 +2759,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 (
                     r
                     for r in res.get("roots", [])
-                    if r.get("path")
-                    and Path(r["path"]).expanduser().resolve()
-                    == Path(path).expanduser().resolve()
+                    if r.get("path") and Path(r["path"]).expanduser().resolve() == Path(path).expanduser().resolve()
                 ),
                 None,
             )
@@ -2942,9 +2783,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 manager.persist_session(session_id)
                 if item.visibility == VIS_INBOX:
                     await _mirror(item)
-            resp = _parse_json(
-                await manager.inbox.wait(item.id)
-            )  # {approved, mode, feedback}
+            resp = _parse_json(await manager.inbox.wait(item.id))  # {approved, mode, feedback}
             if not resp.get("approved"):
                 return {
                     "approved": False,
@@ -2960,6 +2799,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         team_approver = manager.inbox_team_approver(session_id, agent, visibility=_visibility)
 
         items_approver = manager.inbox_items_approver(session_id, agent, visibility=_visibility)
+
         async def _apply_model(model: str | None) -> None:
             # Mid-session rebind is allowed (roadmap item 3, supersedes the 2026-07-04
             # lock): history is canonical and providers convert per call. A real switch
@@ -2992,9 +2832,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                 manager.inbox.resolve(pend[0].id, resolution, by=viewer_actor)
 
         workspace = ws.query_params.get("workspace")
-        mcp_tools = await manager.prepare_mcp_tools(
-            session_id, workspace=workspace, agent=agent
-        )
+        mcp_tools = await manager.prepare_mcp_tools(session_id, workspace=workspace, agent=agent)
         # The engine is built off the event loop (OPE-206: a build once froze the server).
         # Its sandbox is not made here: the first turn makes it and says so
         # (TurnEngine._start_sandbox), so opening a session or picking its folder builds
@@ -3029,9 +2867,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             await ws.send_json(
                 {
                     "type": "error",
-                    "data": {
-                        "error": "no valid workspace — choose a project folder first"
-                    },
+                    "data": {"error": "no valid workspace — choose a project folder first"},
                 }
             )
             await ws.close()
@@ -3072,17 +2908,11 @@ def create_app(manager: SessionManager) -> FastAPI:
                     "mode": engine.permissions.mode.value,
                     # OPE-218: the header chip says which walls this session runs behind.
                     "sandbox": _session_sandbox(engine),
-                    "workspace": (
-                        str(engine.executor.cwd)
-                        if getattr(engine, "executor", None)
-                        else None
-                    ),
+                    "workspace": (str(engine.executor.cwd) if getattr(engine, "executor", None) else None),
                     # UX-029: the GUI never shows a temporary folder's raw path — this flag
                     # is how it knows to say "Temporary folder" (and offer Save as project).
                     "temp_workspace": manager.is_temp_workspace(
-                        str(engine.executor.cwd)
-                        if getattr(engine, "executor", None)
-                        else None
+                        str(engine.executor.cwd) if getattr(engine, "executor", None) else None
                     ),
                     "command_trust": manager.workspace_command_trust(
                         str(getattr(engine, "audit_context", {}).get("workspace", ""))
@@ -3111,16 +2941,15 @@ def create_app(manager: SessionManager) -> FastAPI:
                 events = (
                     engine.retry()
                     if retry
-                    else engine.run(content, display=display,
-                                    activity=manager.prepare_activity(session_id, "user activity"))
+                    else engine.run(
+                        content, display=display, activity=manager.prepare_activity(session_id, "user activity")
+                    )
                 )
                 async for event in events:
                     data = event.data
                     # Broadcast to every socket viewing this session (this socket included — it's a
                     # registered client), so a second view of the same session stays in sync too.
-                    await manager.broadcast_session(
-                        session_id, {"type": event.type.value, "data": data}
-                    )
+                    await manager.broadcast_session(session_id, {"type": event.type.value, "data": data})
                     if event.type.value in _CHECKPOINTS:
                         manager.save(session_id, engine)
                     if event.type.value == "turn_start":
@@ -3132,15 +2961,11 @@ def create_app(manager: SessionManager) -> FastAPI:
                 # die silently ("Task exception was never retrieved") and the GUI would only see
                 # turn_done. Surface it as an error event like the background-turn path does.
                 logger.warning("ws turn crashed for %s: %s", session_id, exc)
-                await manager.broadcast_session(
-                    session_id, {"type": "error", "data": {"error": str(exc)}}
-                )
+                await manager.broadcast_session(session_id, {"type": "error", "data": {"error": str(exc)}})
             finally:
                 manager.mark_idle(session_id)
                 manager.save(session_id, engine)
-                await manager.broadcast_session(
-                    session_id, {"type": "turn_done", "data": {}}
-                )
+                await manager.broadcast_session(session_id, {"type": "turn_done", "data": {}})
 
         # This socket is now a live view of the session; background turns (channel delivery,
         # self-wake, durable resume) broadcast here too, not just locally driven run_turns.
@@ -3150,9 +2975,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         ):
             from coworker.permissions import AUTO_APPROVE_NOTICE
 
-            engine._append_notice(
-                "mode_notice", AUTO_APPROVE_NOTICE, title="Auto-approve is on."
-            )
+            engine._append_notice("mode_notice", AUTO_APPROVE_NOTICE, title="Auto-approve is on.")
             manager.save(session_id, engine, touch=False)  # migration ≠ activity
             await ws.send_json(
                 {
@@ -3172,9 +2995,7 @@ def create_app(manager: SessionManager) -> FastAPI:
 
         async def claim_turn(*, retry: bool = False, content=None, display=None) -> None:
             if not manager.try_mark_running(session_id):
-                await reject_input(
-                    "This session is already running a turn. Wait for it to finish or stop it."
-                )
+                await reject_input("This session is already running a turn. Wait for it to finish or stop it.")
                 return
             _spawn(run_turn(content, retry=retry, display=display))
 
@@ -3187,10 +3008,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                     continue
 
                 now = asyncio.get_running_loop().time()
-                while (
-                    inbound_times
-                    and now - inbound_times[0] > _WS_RATE_LIMIT_WINDOW_SECONDS
-                ):
+                while inbound_times and now - inbound_times[0] > _WS_RATE_LIMIT_WINDOW_SECONDS:
                     inbound_times.popleft()
                 if len(inbound_times) >= _WS_RATE_LIMIT_COUNT:
                     await reject_input("Too many WebSocket messages; reconnect and try again.")
@@ -3218,9 +3036,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                         )
                     )
                 elif kind == "tool_response":
-                    _resolve_pending(
-                        json.dumps({"approved": bool(message.get("approved"))})
-                    )
+                    _resolve_pending(json.dumps({"approved": bool(message.get("approved"))}))
                 elif kind == "plan_response":
                     _resolve_pending(
                         json.dumps(
@@ -3251,9 +3067,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                         )
                     )
                 elif kind == "connector_response":
-                    _resolve_pending(
-                        json.dumps({"approved": bool(message.get("approved"))})
-                    )
+                    _resolve_pending(json.dumps({"approved": bool(message.get("approved"))}))
                 elif kind == "question_response":
                     _resolve_pending(str(message.get("answer", "")))
                 elif kind == "allow_anyway":
@@ -3281,10 +3095,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                     except (TypeError, ValueError):
                         pass
                     else:
-                        if (
-                            new_mode is Mode.DANGEROUSLY_BYPASS_APPROVALS
-                            and not manager.allow_dangerous_mode
-                        ):
+                        if new_mode is Mode.DANGEROUSLY_BYPASS_APPROVALS and not manager.allow_dangerous_mode:
                             await reject_input(
                                 "dangerously-bypass-approvals is not available here: "
                                 "start the server with --allow-dangerous-mode, and only "
@@ -3294,9 +3105,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                         previous = engine.permissions.mode
                         engine.permissions.mode = new_mode
                         if previous is not new_mode:
-                            manager.audit_autonomy_change(
-                                session_id, "mode", previous.value, new_mode.value
-                            )
+                            manager.audit_autonomy_change(session_id, "mode", previous.value, new_mode.value)
                             # The transcript records which mode each exchange ran under
                             # (owner ruling 2026-08-24): full explainer the first time a
                             # session enters Auto-Approve, a one-line marker otherwise.
@@ -3308,8 +3117,7 @@ def create_app(manager: SessionManager) -> FastAPI:
                             )
 
                             if new_mode is Mode.AUTO_APPROVE and not any(
-                                m.get("kind") == "mode_notice"
-                                for m in engine.messages
+                                m.get("kind") == "mode_notice" for m in engine.messages
                             ):
                                 engine._append_notice(
                                     "mode_notice",
@@ -3321,12 +3129,8 @@ def create_app(manager: SessionManager) -> FastAPI:
                                     "text": AUTO_APPROVE_NOTICE,
                                 }
                             else:
-                                label = MODE_LABELS.get(
-                                    new_mode.value, new_mode.value
-                                )
-                                engine._append_notice(
-                                    "mode_switch", f"{label} is on."
-                                )
+                                label = MODE_LABELS.get(new_mode.value, new_mode.value)
+                                engine._append_notice("mode_switch", f"{label} is on.")
                                 notice_data = {"text": f"{label} is on."}
                             # A mode switch with no accompanying message is bookkeeping,
                             # not activity (owner ruling 2026-08-24): the transcript
@@ -3361,15 +3165,9 @@ def create_app(manager: SessionManager) -> FastAPI:
                         continue
                     reject = None
                     if len(text) > _MAX_MESSAGE_TEXT_CHARS:
-                        reject = (
-                            f"Message too long ({len(text)} chars; "
-                            f"limit {_MAX_MESSAGE_TEXT_CHARS})."
-                        )
+                        reject = f"Message too long ({len(text)} chars; limit {_MAX_MESSAGE_TEXT_CHARS})."
                     elif len(attachments) > _MAX_ATTACHMENTS:
-                        reject = (
-                            f"Too many attachments ({len(attachments)}; "
-                            f"limit {_MAX_ATTACHMENTS})."
-                        )
+                        reject = f"Too many attachments ({len(attachments)}; limit {_MAX_ATTACHMENTS})."
                     elif any(not isinstance(a, dict) for a in attachments):
                         reject = "Invalid attachment: expected an object."
                     elif _json_value_size(attachments) > _MAX_ATTACHMENTS_BYTES:
@@ -3381,13 +3179,9 @@ def create_app(manager: SessionManager) -> FastAPI:
                             mime = attachment.get("mime")
                             if attachment_kind not in {"image", "pdf", "text"}:
                                 reject = "Invalid attachment kind."
-                            elif name is not None and (
-                                not isinstance(name, str) or len(name) > 1024
-                            ):
+                            elif name is not None and (not isinstance(name, str) or len(name) > 1024):
                                 reject = "Invalid attachment name."
-                            elif mime is not None and (
-                                not isinstance(mime, str) or len(mime) > 255
-                            ):
+                            elif mime is not None and (not isinstance(mime, str) or len(mime) > 255):
                                 reject = "Invalid attachment MIME type."
                             elif attachment_kind == "image":
                                 data = attachment.get("data_url")
@@ -3402,18 +3196,13 @@ def create_app(manager: SessionManager) -> FastAPI:
                                 data = attachment.get("data_url")
                                 if (
                                     not isinstance(data, str)
-                                    or not data.startswith(
-                                        "data:application/pdf;base64,"
-                                    )
+                                    or not data.startswith("data:application/pdf;base64,")
                                     or len(data) > MAX_PDF_CHARS
                                 ):
                                     reject = "Invalid or oversized PDF attachment."
                             else:
                                 body = attachment.get("text")
-                                if (
-                                    not isinstance(body, str)
-                                    or len(body) > MAX_TEXT_CHARS
-                                ):
+                                if not isinstance(body, str) or len(body) > MAX_TEXT_CHARS:
                                     reject = "Invalid or oversized text attachment."
                             if reject is not None:
                                 break
@@ -3441,15 +3230,12 @@ def create_app(manager: SessionManager) -> FastAPI:
                         skill = skill.strip()
                         menu = manager.effective_skill_names(session_id, workspace)
                         if skill not in menu:
-                            await reject_input(
-                                f"Skill '{skill}' is not available in this session."
-                            )
+                            await reject_input(f"Skill '{skill}' is not available in this session.")
                             continue
                         display = f"/{skill}" + (f" {text}" if text else "")
                         text = (
                             f'Use the skill "{skill}" for this request: first call '
-                            f'load_skill("{skill}") and follow its instructions.'
-                            + (f"\n\n{text}" if text else "")
+                            f'load_skill("{skill}") and follow its instructions.' + (f"\n\n{text}" if text else "")
                         )
                     await _apply_model(model)
                     if text or attachments:
@@ -3528,9 +3314,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             profile = manager.secrets.get(_cloud.CLOUD_AUTH_PROFILE) or {}
             if not profile.get("access_token"):
                 return "signed_out", None
-            token = await asyncio.to_thread(
-                _cloud.fresh_access_token, manager.secrets, _load_cfg()
-            )
+            token = await asyncio.to_thread(_cloud.fresh_access_token, manager.secrets, _load_cfg())
             return ("ok", token) if token else ("expired", None)
 
         mount_cloud_proxy(

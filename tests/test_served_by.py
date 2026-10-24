@@ -40,8 +40,15 @@ def test_openai_complete_keeps_the_serving_host():
 
 def test_openai_stream_keeps_the_serving_host_from_any_chunk():
     chunks = [
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="hi", tool_calls=None), finish_reason=None)], usage=None),
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="!", tool_calls=None), finish_reason="stop")], usage=None, provider="Together"),
+        SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content="hi", tool_calls=None), finish_reason=None)],
+            usage=None,
+        ),
+        SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content="!", tool_calls=None), finish_reason="stop")],
+            usage=None,
+            provider="Together",
+        ),
     ]
     chunks_out = list(
         OpenAIProvider(client=_FakeOpenAI(stream_chunks=chunks)).stream(

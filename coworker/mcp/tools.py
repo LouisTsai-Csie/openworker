@@ -77,9 +77,7 @@ def build_callables(
         # include/exclude filter only ever see the visible tool name.
         def _make_invoke(remote: str) -> Callable[..., Any]:
             def _call(**kwargs: Any) -> Any:
-                future = asyncio.run_coroutine_threadsafe(
-                    call_async(remote, kwargs), loop
-                )
+                future = asyncio.run_coroutine_threadsafe(call_async(remote, kwargs), loop)
                 return future.result(timeout)
 
             return _call
@@ -89,10 +87,7 @@ def build_callables(
         # We attach the schema + metadata explicitly (rather than via `ai.tool`, which would
         # try to derive a schema from this `**kwargs` wrapper): the registry reads both attrs.
         _invoke.__name__ = name
-        _invoke.__doc__ = (
-            getattr(mcp_tool, "description", None)
-            or f"MCP tool {remote} from {server.name}"
-        )
+        _invoke.__doc__ = getattr(mcp_tool, "description", None) or f"MCP tool {remote} from {server.name}"
         _invoke.__aisuite_tool_metadata__ = ai.ToolMetadata(
             name=name,
             category="mcp",

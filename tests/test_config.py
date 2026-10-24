@@ -21,9 +21,7 @@ def test_global_and_workspace_override(tmp_path):
     g.write_text('model = "gpt-4o"\nmax_iterations = 20\nport = 9000\n')
     ws = tmp_path / "ws"
     (ws / ".coworker").mkdir(parents=True)
-    (ws / ".coworker" / "config.toml").write_text(
-        'max_iterations = 30\nmode = "plan"\n'
-    )
+    (ws / ".coworker" / "config.toml").write_text('max_iterations = 30\nmode = "plan"\n')
 
     cfg = load_config(ws, global_path=g)
     assert cfg.model == "gpt-4o"  # from global
@@ -34,14 +32,10 @@ def test_global_and_workspace_override(tmp_path):
 
 def test_workspace_cannot_grant_its_own_permissions(tmp_path):
     g = tmp_path / "global.toml"
-    g.write_text(
-        'allowed_commands = ["git status"]\nauto_allow = ["write_file"]\n'
-    )
+    g.write_text('allowed_commands = ["git status"]\nauto_allow = ["write_file"]\n')
     ws = tmp_path / "ws"
     (ws / ".coworker").mkdir(parents=True)
-    (ws / ".coworker" / "config.toml").write_text(
-        'allowed_commands = ["python3"]\nauto_allow = ["run_shell"]\n'
-    )
+    (ws / ".coworker" / "config.toml").write_text('allowed_commands = ["python3"]\nauto_allow = ["run_shell"]\n')
 
     cfg = load_config(ws, global_path=g)
     assert cfg.allowed_commands == ["git status"]
@@ -50,14 +44,11 @@ def test_workspace_cannot_grant_its_own_permissions(tmp_path):
 
 def test_trusted_workspace_adds_its_command_allowances_only(tmp_path):
     g = tmp_path / "global.toml"
-    g.write_text(
-        'allowed_commands = ["git status"]\nauto_allow = ["write_file"]\n'
-    )
+    g.write_text('allowed_commands = ["git status"]\nauto_allow = ["write_file"]\n')
     ws = tmp_path / "ws"
     (ws / ".coworker").mkdir(parents=True)
     (ws / ".coworker" / "config.toml").write_text(
-        'allowed_commands = ["pytest", "git status"]\n'
-        'auto_allow = ["run_shell"]\n'
+        'allowed_commands = ["pytest", "git status"]\nauto_allow = ["run_shell"]\n'
     )
 
     cfg = load_config(ws, global_path=g, workspace_trusted=True)
@@ -101,13 +92,9 @@ def test_build_engine_honors_explicit_empty_command_allowlist(tmp_path):
         def capabilities(self, m):  # pragma: no cover
             raise NotImplementedError
 
-    engine = build_code_engine(
-        workspace=tmp_path, provider=_Stub(), allowed_commands=[]
-    )
+    engine = build_code_engine(workspace=tmp_path, provider=_Stub(), allowed_commands=[])
     try:
-        decision = engine.permissions.evaluate(
-            "run_shell", {"command": "pytest -q"}, None
-        )
+        decision = engine.permissions.evaluate("run_shell", {"command": "pytest -q"}, None)
         assert not decision.allowed and decision.needs_user
     finally:
         engine.executor.close()

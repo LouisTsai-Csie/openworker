@@ -45,8 +45,7 @@ ABOUT: dict[str, str] = {
     "see.",
     "attio": "Read your Attio CRM — objects, records, and lists — to prep "
     "meetings and answer pipeline questions, and log notes as you work.",
-    "google_drive": "Search, browse, and read files across your Drive. "
-    "Multiple accounts connect side by side.",
+    "google_drive": "Search, browse, and read files across your Drive. Multiple accounts connect side by side.",
     "monday": "Work with your monday.com boards — read items, summarize and "
     "aggregate board data, create items, and post updates. One-click sign-in "
     "runs entirely on this computer against monday.com's own agent service; agents "
@@ -138,8 +137,7 @@ ACCESS: dict[str, list[str]] = {
     ],
     "hubspot": [
         "Reads contacts, companies, deals, and tickets.",
-        "Read & write adds: log notes and tasks, update records, create "
-        "contacts — never delete.",
+        "Read & write adds: log notes and tasks, update records, create contacts — never delete.",
         "Properties you hide are stripped before an agent ever sees a record.",
     ],
     "dropbox": [
@@ -187,8 +185,7 @@ ACCESS: dict[str, list[str]] = {
         "Logs notes — records are never created or changed.",
     ],
     "posthog": [
-        "Runs read-only queries on the connected project: events, funnels, "
-        "insights.",
+        "Runs read-only queries on the connected project: events, funnels, insights.",
     ],
     "mixpanel": [
         "Runs read-only queries on the connected project.",
@@ -197,7 +194,7 @@ ACCESS: dict[str, list[str]] = {
         "Runs read-only chart queries: active users, event totals.",
     ],
     "apollo": [
-        "Searches and enriches people and companies, using your Apollo " "credits.",
+        "Searches and enriches people and companies, using your Apollo credits.",
     ],
     "hunter": [
         "Finds and verifies email addresses, using your Hunter quota.",

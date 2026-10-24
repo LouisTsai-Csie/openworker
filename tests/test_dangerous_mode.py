@@ -196,17 +196,15 @@ def test_dangerous_mode_clears_the_downloaded_file_floor_and_records_it(tmp_path
     finished = [e for e in events if e.type is EventType.TOOL_FINISHED]
     assert [e.data["status"] for e in finished] == ["ok", "ok"]
     cleared = [
-        r for r in rows
+        r
+        for r in rows
         if r.get("stage") == "auto_allowed"
         and str(r.get("reason", "")).startswith(f"{CLEARED_BY_MODE}: file the agent downloaded")
     ]
     assert len(cleared) == 1 and "setup.sh" in cleared[0]["reason"]
     # The transcript chip names the clearance too.
     tool_msgs = [m for m in engine.messages if m.get("role") == "tool"]
-    assert any(
-        (m.get("_display") or {}).get("approval_note", "").startswith(CLEARED_BY_MODE)
-        for m in tool_msgs
-    )
+    assert any((m.get("_display") or {}).get("approval_note", "").startswith(CLEARED_BY_MODE) for m in tool_msgs)
 
 
 def test_warning_is_recorded_once_per_engine(tmp_path):

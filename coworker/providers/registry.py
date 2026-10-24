@@ -79,12 +79,8 @@ class ProviderDescriptor:
     needs_key: bool
     fields: list[ProviderField]
     build: Callable[[dict[str, Any], Any], ProviderClient] = field(repr=False)
-    recommended_model: str | None = (
-        None  # pre-filled in the UI; auto-added on configure
-    )
-    env_key: str | None = (
-        None  # env var that can supply the API key (e.g. ANTHROPIC_API_KEY)
-    )
+    recommended_model: str | None = None  # pre-filled in the UI; auto-added on configure
+    env_key: str | None = None  # env var that can supply the API key (e.g. ANTHROPIC_API_KEY)
     # One-line note under the provider title (e.g. "Connects through X's OpenAI-compatible API").
     blurb: str = ""
     # "oauth" → no key form at all: the provider is configured by a browser sign-in
@@ -154,9 +150,7 @@ def _build_anthropic(profile: dict[str, Any], secrets: Any) -> ProviderClient:
         thinking_budget = int(str((profile or {}).get("thinking_budget") or "").strip())
     except ValueError:
         thinking_budget = DEFAULT_THINKING_BUDGET
-    return AnthropicProvider(
-        api_key=api_key, secrets=secrets, thinking_budget=thinking_budget
-    )
+    return AnthropicProvider(api_key=api_key, secrets=secrets, thinking_budget=thinking_budget)
 
 
 def _build_gemini(profile: dict[str, Any], secrets: Any) -> ProviderClient:
@@ -259,9 +253,7 @@ def _openai_compat(vendor: str, default_base_url: str, env_key: str | None = Non
             os.environ.get(env_key, "").strip() if env_key else ""
         )
         if not api_key:
-            raise RuntimeError(
-                f"No {vendor} API key configured — add it in Settings ▸ Models."
-            )
+            raise RuntimeError(f"No {vendor} API key configured — add it in Settings ▸ Models.")
         return OpenAIProvider(api_key=api_key, base_url=base_url)
 
     return build
@@ -286,9 +278,7 @@ def _openai_responses_compat(
             os.environ.get(env_key, "").strip() if env_key else ""
         )
         if not api_key:
-            raise RuntimeError(
-                f"No {vendor} API key configured — add it in Settings ▸ Models."
-            )
+            raise RuntimeError(f"No {vendor} API key configured — add it in Settings ▸ Models.")
         return OpenAIResponsesProvider(
             api_key=api_key,
             base_url=base_url,
@@ -363,8 +353,7 @@ def _responses_compat(
                 required=False,
                 default=base_url,
                 placeholder=base_url,
-                help=endpoint_help
-                or f"Prefilled with {title}'s official Responses endpoint.",
+                help=endpoint_help or f"Prefilled with {title}'s official Responses endpoint.",
             ),
         ],
         build=_openai_responses_compat(
@@ -815,9 +804,7 @@ def get_descriptor(name: str) -> ProviderDescriptor | None:
     return _BY_NAME.get(name)
 
 
-def build_provider_client(
-    name: str, profile: dict[str, Any], secrets: Any
-) -> ProviderClient:
+def build_provider_client(name: str, profile: dict[str, Any], secrets: Any) -> ProviderClient:
     """Build a `ProviderClient` for `name` from its stored profile. Unknown → OpenAI default."""
     descriptor = _BY_NAME.get(name) or _BY_NAME["openai"]
     return descriptor.build(profile or {}, secrets)
@@ -836,9 +823,7 @@ def descriptor_configured(d: ProviderDescriptor, profile: dict[str, Any]) -> boo
         return True  # keyless (Ollama) — usable out of the box
     profile = profile or {}
     if any(f.key == "api_key" for f in d.fields):
-        return bool(profile.get("api_key")) or bool(
-            d.env_key and os.environ.get(d.env_key)
-        )
+        return bool(profile.get("api_key")) or bool(d.env_key and os.environ.get(d.env_key))
     return all(profile.get(f.key) for f in d.fields if f.required)
 
 
@@ -873,13 +858,9 @@ def _verify_bedrock(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
     # before importing boto3 so the test suite (and users) get a helpful missing-field
     # message even when the optional `bedrock` extra is not installed.
     method = get("auth_method") or "api_key"
-    if method == "api_key" and not (
-        get("bedrock_api_key") or os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
-    ):
+    if method == "api_key" and not (get("bedrock_api_key") or os.environ.get("AWS_BEARER_TOKEN_BEDROCK")):
         return {"ok": False, "error": "Enter a Bedrock API key to test."}
-    if method == "iam" and not (
-        get("aws_access_key_id") and get("aws_secret_access_key")
-    ):
+    if method == "iam" and not (get("aws_access_key_id") and get("aws_secret_access_key")):
         return {"ok": False, "error": "Enter an access key ID and secret access key."}
     try:
         import boto3
@@ -944,10 +925,7 @@ def _verify_bedrock(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
             if code == "ExpiredTokenException":
                 return {"ok": False, "error": "The credentials have expired — generate a new key."}
             return {"ok": False, "error": f"AWS Bedrock returned {code}."}
-        return {
-            "ok": False,
-            "error": f"Couldn't reach AWS Bedrock ({_describe_transport_error(exc)})."
-        }
+        return {"ok": False, "error": f"Couldn't reach AWS Bedrock ({_describe_transport_error(exc)})."}
     return {"ok": True}
 
 
@@ -977,8 +955,7 @@ def _verify_vertex(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
         try:
             # Express mode is global — no region host, no project in the path.
             resp = httpx.post(
-                "https://aiplatform.googleapis.com/v1/publishers/google/models/"
-                f"{_VERTEX_PROBE_MODEL}:countTokens",
+                f"https://aiplatform.googleapis.com/v1/publishers/google/models/{_VERTEX_PROBE_MODEL}:countTokens",
                 headers={"x-goog-api-key": key},
                 json=_VERTEX_PROBE_BODY,
                 timeout=timeout,
@@ -1002,9 +979,7 @@ def _verify_vertex(fields: dict[str, Any], timeout: float) -> dict[str, Any]:
         if creds is None:
             import google.auth
 
-            creds, _ = google.auth.default(
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
+            creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         from google.auth.transport.requests import Request
 
         creds.refresh(Request())
@@ -1127,9 +1102,7 @@ def verify_provider_key(
             headers = {"Authorization": f"Bearer {key}"} if key else {}
             resp = httpx.get(v1_base(name, base_url) + "/models", headers=headers, timeout=timeout)
         elif name in ("ark", "ark-agent-plan-cn"):
-            default_base = next(
-                (f.default for f in d.fields if f.key == "base_url" and f.default), ""
-            )
+            default_base = next((f.default for f in d.fields if f.key == "base_url" and f.default), "")
             base = (base_url or "").strip().rstrip("/") or default_base.rstrip("/")
             resp = httpx.post(
                 base + "/responses",
@@ -1143,14 +1116,8 @@ def verify_provider_key(
                 timeout=timeout,
             )
         else:  # openai + any OpenAI-compatible endpoint (Azure, OpenRouter, vendors, vLLM…)
-            default_base = next(
-                (f.default for f in d.fields if f.key == "base_url" and f.default), ""
-            )
-            base = (
-                (base_url or "").strip().rstrip("/")
-                or default_base.rstrip("/")
-                or "https://api.openai.com/v1"
-            )
+            default_base = next((f.default for f in d.fields if f.key == "base_url" and f.default), "")
+            base = (base_url or "").strip().rstrip("/") or default_base.rstrip("/") or "https://api.openai.com/v1"
             resp = httpx.get(
                 base + "/models",
                 headers={"Authorization": f"Bearer {key}"},

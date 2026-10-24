@@ -64,6 +64,7 @@ def add_cloud_shims(app: FastAPI) -> None:
         }
 
     for path, payload in _EMPTY_STUBS.items():
+
         def _stub(payload=payload) -> dict[str, Any]:
             return payload
 
@@ -76,11 +77,7 @@ def add_cloud_shims(app: FastAPI) -> None:
         # retry loop (and behind a StaticFiles mount the handshake 500s).
         # Accept and stay silent until the client hangs up. Selecting the
         # offered subprotocol matters: browsers close an unanswered offer.
-        offered = {
-            part.strip()
-            for part in ws.headers.get("sec-websocket-protocol", "").split(",")
-            if part.strip()
-        }
+        offered = {part.strip() for part in ws.headers.get("sec-websocket-protocol", "").split(",") if part.strip()}
         await ws.accept(subprotocol="openworker" if "openworker" in offered else None)
         try:
             while True:
@@ -97,9 +94,7 @@ def create_cloud_app(data_dir: str | Path) -> FastAPI:
 
     def _request_authenticated(request: Request) -> bool:
         provided = request.headers.get("x-openworker-token", "")
-        return bool(
-            api_token and provided and pysecrets.compare_digest(provided, api_token)
-        )
+        return bool(api_token and provided and pysecrets.compare_digest(provided, api_token))
 
     @app.middleware("http")
     async def require_token(request: Request, call_next):
@@ -123,11 +118,7 @@ def create_cloud_app(data_dir: str | Path) -> FastAPI:
     def _ws_authenticated(ws) -> bool:
         if not api_token:
             return True
-        protocols = {
-            part.strip()
-            for part in ws.headers.get("sec-websocket-protocol", "").split(",")
-            if part.strip()
-        }
+        protocols = {part.strip() for part in ws.headers.get("sec-websocket-protocol", "").split(",") if part.strip()}
         return any(pysecrets.compare_digest(part, api_token) for part in protocols)
 
     @app.get("/v1/capabilities")

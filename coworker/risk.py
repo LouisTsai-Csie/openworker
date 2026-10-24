@@ -115,9 +115,7 @@ def _mcp_floor(tool_name: str, metadata: Any) -> RiskClass | None:
     return None
 
 
-def classify(
-    tool_name: str, metadata: Any = None, overrides: RiskOverrides | None = None
-) -> RiskClass:
+def classify(tool_name: str, metadata: Any = None, overrides: RiskOverrides | None = None) -> RiskClass:
     """Effective risk of a tool call. A user override may *relax* a metadata tool (the
     intended use — quieting an over-cautious plug-in), but may only ever **tighten** a
     built-in write/exec/egress tool, a connector-catalog write, or a third-party MCP tool
@@ -125,11 +123,7 @@ def classify(
     scoping AND the read-only gate at once, so it is refused here. Precedence otherwise:
     the by-name base table, then aisuite metadata (`requires_approval` → external),
     else read."""
-    base = (
-        _BASE.get(tool_name)
-        or _catalog_floor(tool_name)
-        or _mcp_floor(tool_name, metadata)
-    )
+    base = _BASE.get(tool_name) or _catalog_floor(tool_name) or _mcp_floor(tool_name, metadata)
     if overrides is not None:
         ov = overrides(tool_name)
         if ov is not None and (base is None or _STRICTNESS[ov] >= _STRICTNESS[base]):

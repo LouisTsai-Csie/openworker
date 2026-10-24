@@ -82,11 +82,18 @@ def sandbox_image() -> str:
 def _cli(*args: str, timeout: float = _CLI_TIMEOUT, check: bool = True) -> subprocess.CompletedProcess:
     exe = shutil.which("openshell")
     if exe is None:
-        raise OpenShellUnavailable("OpenShell is not installed on this machine (no `openshell` command). Run `openworker machine sandbox setup`, or install OpenShell yourself.")
+        raise OpenShellUnavailable(
+            "OpenShell is not installed on this machine (no `openshell` command). Run `openworker machine sandbox setup`, or install OpenShell yourself."
+        )
     # stdin must be closed: without a terminal, `openshell sandbox exec` reads ALL of stdin
     # before it sends anything (spike finding B), so an inherited open stdin hangs it.
     done = subprocess.run(
-        [exe, *args], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout, env={**os.environ, "NO_COLOR": "1"}
+        [exe, *args],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env={**os.environ, "NO_COLOR": "1"},
     )
     if check and done.returncode != 0:
         raise RuntimeError(f"`openshell {' '.join(args[:3])}` failed: {(done.stderr or done.stdout).strip()[-400:]}")
@@ -97,10 +104,14 @@ def preflight() -> dict[str, Any]:
     """Refuse early, with a message a person can act on."""
     version = _cli("--version", timeout=15).stdout.strip().split()[-1]
     if version != PINNED_VERSION:
-        raise OpenShellUnavailable(f"OpenShell {version} is installed; OpenWorker is tested with {PINNED_VERSION} only. Install that version (`openworker machine sandbox setup`).")
+        raise OpenShellUnavailable(
+            f"OpenShell {version} is installed; OpenWorker is tested with {PINNED_VERSION} only. Install that version (`openworker machine sandbox setup`)."
+        )
     status = _cli("status", timeout=30, check=False)
     if status.returncode != 0 or "Connected" not in status.stdout:
-        raise OpenShellUnavailable("The OpenShell gateway is not running or cannot be reached (`openshell status`). On a headless machine, check `systemctl --user status openshell-gateway` and `loginctl enable-linger`.")
+        raise OpenShellUnavailable(
+            "The OpenShell gateway is not running or cannot be reached (`openshell status`). On a headless machine, check `systemctl --user status openshell-gateway` and `loginctl enable-linger`."
+        )
     if image_present() is False:
         raise OpenShellImageMissing(
             f"{IMAGE_MISSING_PREFIX} (about 5 GB, one time). Run `openworker machine sandbox setup`, "
@@ -175,7 +186,10 @@ def image_present(image: str | None = None) -> bool | None:
         return None
     done = subprocess.run(
         [tool, "image", "inspect", image or sandbox_image()],
-        stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     return done.returncode == 0
 
@@ -309,7 +323,9 @@ class OpenShellProvider:
         registry's clean-up may delete it."""
         if not roots:
             raise ValueError("an OpenShell sandbox needs at least one folder")
-        self.roots = [{"path": str(Path(r["path"]).expanduser().resolve()), "writable": bool(r.get("writable"))} for r in roots]
+        self.roots = [
+            {"path": str(Path(r["path"]).expanduser().resolve()), "writable": bool(r.get("writable"))} for r in roots
+        ]
         self.cwd = str(Path(cwd).expanduser().resolve()) if cwd else self.roots[0]["path"]
         self.profile = policy.network_profiles.check(profile)
         self.extra_hosts = list(extra_hosts)
@@ -366,7 +382,16 @@ class OpenShellProvider:
         self._identity = (uid, gid, home)
         policy_file = self._write_policy()
         driver_config = json.dumps(policy.mounts(self.roots, str(self._runner.parent), home))
-        command = [policy.PYTHON, "-S", f"{policy.RUNNER_MOUNT}/{self._runner.name}", "serve", "--socket", _SOCKET, "--cwd", self.cwd]
+        command = [
+            policy.PYTHON,
+            "-S",
+            f"{policy.RUNNER_MOUNT}/{self._runner.name}",
+            "serve",
+            "--socket",
+            _SOCKET,
+            "--cwd",
+            self.cwd,
+        ]
         env = {"HOME": policy.RUNTIME_DIR, **(self.copied.env if self.copied is not None else {})}
         args = [
             "sandbox", "create", "--name", self.sandbox_name, "--from", self.image,
@@ -381,7 +406,9 @@ class OpenShellProvider:
         except RuntimeError as exc:
             log.warning("sandbox create failed for %s: %s", self.sandbox_name, exc)
             if "bind" in str(exc).lower() and "enable" in str(exc).lower():
-                raise OpenShellUnavailable("The OpenShell gateway does not allow bind mounts, so it cannot give a sandbox your folders. Set `enable_bind_mounts = true` under `[openshell.drivers.docker]` in the gateway config (`openworker machine sandbox setup` does this).") from exc
+                raise OpenShellUnavailable(
+                    "The OpenShell gateway does not allow bind mounts, so it cannot give a sandbox your folders. Set `enable_bind_mounts = true` under `[openshell.drivers.docker]` in the gateway config (`openworker machine sandbox setup` does this)."
+                ) from exc
             if "ContainerExited" in str(exc) and sys.platform == "darwin":
                 # The container's own log says why; the CLI does not. The usual reason on a
                 # Mac is a Docker Desktop kernel without Landlock, which can be asked.
@@ -402,7 +429,19 @@ class OpenShellProvider:
         # Spike finding K: the first exec after a sandbox turns Ready hangs until it times
         # out, and the next one works. Spend that on a throwaway call.
         try:
-            _cli("sandbox", "exec", "--name", self.sandbox_name, "--no-tty", "--timeout", "5", "--", "true", timeout=10, check=False)
+            _cli(
+                "sandbox",
+                "exec",
+                "--name",
+                self.sandbox_name,
+                "--no-tty",
+                "--timeout",
+                "5",
+                "--",
+                "true",
+                timeout=10,
+                check=False,
+            )
         except subprocess.TimeoutExpired:
             pass
 
@@ -443,7 +482,13 @@ class OpenShellProvider:
         uid, gid, home = self._identity
         extra_hosts = sorted({*self.extra_hosts, *(self.copied.hosts if self.copied is not None else [])})
         policy_file = Path(self._tmp) / "policy.yaml"
-        policy_file.write_text(yaml.safe_dump(policy.render(self.roots, profile=self.profile, uid=uid, gid=gid, home=home, extra_hosts=extra_hosts), sort_keys=False), encoding="utf-8")
+        policy_file.write_text(
+            yaml.safe_dump(
+                policy.render(self.roots, profile=self.profile, uid=uid, gid=gid, home=home, extra_hosts=extra_hosts),
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
         return policy_file
 
     def add_hosts(self, hosts: Sequence[str]) -> None:
@@ -491,7 +536,9 @@ class OpenShellProvider:
         `before_create` runs once the new name is chosen and before the sandbox exists: the
         workspace reserves the name in the registry there (see RunnerWorkspace)."""
         self._delete()
-        self.roots = [{"path": str(Path(r["path"]).expanduser().resolve()), "writable": bool(r.get("writable"))} for r in roots]
+        self.roots = [
+            {"path": str(Path(r["path"]).expanduser().resolve()), "writable": bool(r.get("writable"))} for r in roots
+        ]
         self.sandbox_name = f"ow-{uuid.uuid4().hex[:12]}"
         self.sandbox_id = None
         if before_create is not None:
@@ -535,7 +582,9 @@ class GrpcExecTransport:
         try:
             import grpc
         except ImportError as exc:  # an optional extra, needed for this provider only
-            raise OpenShellUnavailable("The OpenShell provider needs the `grpcio` package: pip install 'openworker[openshell]'.") from exc
+            raise OpenShellUnavailable(
+                "The OpenShell provider needs the `grpcio` package: pip install 'openworker[openshell]'."
+            ) from exc
         endpoint, certs = _gateway()
         credentials = grpc.ssl_channel_credentials(
             root_certificates=(certs / "ca.crt").read_bytes(),
@@ -549,7 +598,9 @@ class GrpcExecTransport:
         self._incoming: queue.Queue[bytes | None] = queue.Queue()
         self._buffer = b""
         self._closed = False
-        call = self._channel.stream_stream(wire.METHOD, request_serializer=lambda b: b, response_deserializer=lambda b: b)
+        call = self._channel.stream_stream(
+            wire.METHOD, request_serializer=lambda b: b, response_deserializer=lambda b: b
+        )
         # The same workspace the CLI calls above used (its `--workspace`, from the environment).
         workspace = os.environ.get("OPENSHELL_WORKSPACE", "").strip() or wire.DEFAULT_WORKSPACE
         self._call = call(self._requests(wire.encode_start(sandbox, command, workspace)))

@@ -201,18 +201,14 @@ def test_channel_sender_resolves_on_ack(tmp_path):
     async def send_frame(frame):
         frames.append(frame)
         # The controller answers out of band; simulate it.
-        asyncio.get_running_loop().call_soon(
-            exp.ack, {"type": "audit_ack", "id": frame["id"], "accepted": True}
-        )
+        asyncio.get_running_loop().call_soon(exp.ack, {"type": "audit_ack", "id": frame["id"], "accepted": True})
 
     send = exp.channel_sender(send_frame)
     assert asyncio.run(send([{"x": 1}])) is True
     assert frames[0]["type"] == "audit" and frames[0]["events"] == [{"x": 1}]
 
     async def send_frame_refused(frame):
-        asyncio.get_running_loop().call_soon(
-            exp.ack, {"type": "audit_ack", "id": frame["id"], "accepted": False}
-        )
+        asyncio.get_running_loop().call_soon(exp.ack, {"type": "audit_ack", "id": frame["id"], "accepted": False})
 
     assert asyncio.run(exp.channel_sender(send_frame_refused)([{"x": 2}])) is False
     store.close()
@@ -361,8 +357,15 @@ async def test_desktop_controller_sends_no_policy_and_refuses_audit(tmp_path):
         state = tmp_path / "box-state"
         state.mkdir()
         task = asyncio.create_task(
-            run_joined(state=state, controller=server.base, name="lap", token=token,
-                       app=box_app, once=True, log=lambda *_: None)
+            run_joined(
+                state=state,
+                controller=server.base,
+                name="lap",
+                token=token,
+                app=box_app,
+                once=True,
+                log=lambda *_: None,
+            )
         )
         try:
             for _ in range(100):
@@ -429,8 +432,9 @@ async def test_box_checks_every_interval_and_controller_records_status(tmp_path,
         state = tmp_path / "box-state"
         state.mkdir()
         task = asyncio.create_task(
-            run_joined(state=state, controller=server.base, name="vm", token=token,
-                       app=box_app, once=True, log=lambda *_: None)
+            run_joined(
+                state=state, controller=server.base, name="vm", token=token, app=box_app, once=True, log=lambda *_: None
+            )
         )
         try:
             for _ in range(100):
@@ -481,7 +485,16 @@ def test_approver_is_stamped_on_the_gated_tool_row(tmp_path):
     assert m.inbox.resolver_of("s1", "call_77") == "erin@l.com"
     assert m.inbox.resolver_of("s1", "call_nope") == ""
     m.note_session_actor("s1", "rohit@l.com")
-    m._audit_sink_for("s1")({"session_id": "s1", "tool": "github_push", "arguments": {}, "call_id": "call_77", "approval": "allow", "status": "ok"})
+    m._audit_sink_for("s1")(
+        {
+            "session_id": "s1",
+            "tool": "github_push",
+            "arguments": {},
+            "call_id": "call_77",
+            "approval": "allow",
+            "status": "ok",
+        }
+    )
     row = m.audit_store.list(session_id="s1")[0]
     assert row["actor"] == "rohit@l.com" and row["approved_by"] == "erin@l.com"
     ev = to_ocsf(row)

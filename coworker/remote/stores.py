@@ -195,6 +195,4 @@ class InMemoryEphemera:
     def _prune(self) -> None:
         now = time.time()
         self._tokens = {t: e for t, e in self._tokens.items() if e[0] > now}
-        self._grants = {
-            c: g for c, g in self._grants.items() if float(g.get("expires_at", 0)) > now
-        }
+        self._grants = {c: g for c, g in self._grants.items() if float(g.get("expires_at", 0)) > now}

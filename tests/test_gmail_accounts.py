@@ -105,9 +105,7 @@ def test_last_disconnect_keeps_filters_only(secrets):
     gmail_accounts.disconnect_account(secrets, "one@x.com")
     listed = {c["name"]: c for c in connector_list(secrets)}
     assert not listed["gmail"]["connected"]
-    assert gmail_accounts.get_filters(secrets)["senders"] == [
-        "@spam.com"
-    ]  # policy survives
+    assert gmail_accounts.get_filters(secrets)["senders"] == ["@spam.com"]  # policy survives
 
 
 def test_full_disconnect_drops_every_account(secrets):
@@ -142,9 +140,7 @@ def _fake_gmail(monkeypatch, responses: dict[str, dict]):
 def test_tools_pick_the_requested_account_token(secrets, monkeypatch):
     gmail_accounts.managed_connect_account(secrets, _account("one@x.com"))
     gmail_accounts.managed_connect_account(secrets, _account("two@y.com"))
-    calls = _fake_gmail(
-        monkeypatch, {"/messages": {"ok": True, "data": {"messages": []}}}
-    )
+    calls = _fake_gmail(monkeypatch, {"/messages": {"ok": True, "data": {"messages": []}}})
     search = _tool(secrets, "gmail_search_messages")
 
     out = search("from:bob")  # default account
@@ -160,9 +156,7 @@ def test_tools_pick_the_requested_account_token(secrets, monkeypatch):
 def test_legacy_single_account_still_works_via_tools(secrets, monkeypatch):
     # Pre-migration store: tokens on gmail:default (manual paste era).
     secrets.put("gmail:default", {"access_token": "legacy-tok", "account": "me@x.com"})
-    calls = _fake_gmail(
-        monkeypatch, {"/messages": {"ok": True, "data": {"messages": []}}}
-    )
+    calls = _fake_gmail(monkeypatch, {"/messages": {"ok": True, "data": {"messages": []}}})
     out = _tool(secrets, "gmail_search_messages")("q")
     assert out["ok"] and out["account"] == "me@x.com"
     assert calls[0][1] == "Bearer legacy-tok"
@@ -208,16 +202,11 @@ def test_search_omits_filtered_senders_and_counts_hidden(secrets, monkeypatch):
 def test_get_filtered_message_reads_like_a_real_404(secrets, monkeypatch):
     gmail_accounts.managed_connect_account(secrets, _account("me@x.com"))
     gmail_accounts.set_filters(secrets, senders=["ceo@corp.com"])
-    _fake_gmail(
-        monkeypatch, {"/messages/m1": {"ok": True, "data": _msg("m1", "ceo@corp.com")}}
-    )
+    _fake_gmail(monkeypatch, {"/messages/m1": {"ok": True, "data": _msg("m1", "ceo@corp.com")}})
     out = _tool(secrets, "gmail_get_message")("m1")
     assert out["error"] == "HTTP 404"
     assert out["_display"] == {"hidden_by_filters": 1, "connector": "gmail"}
-    assert (
-        "filter"
-        not in json.dumps({k: v for k, v in out.items() if k != "_display"}).lower()
-    )
+    assert "filter" not in json.dumps({k: v for k, v in out.items() if k != "_display"}).lower()
 
 
 def test_label_filter_uses_label_names(secrets, monkeypatch):
@@ -268,9 +257,7 @@ def test_sender_rule_matching():
 def test_account_profile_refreshes_in_place(secrets, monkeypatch):
     from coworker import cloud
 
-    secrets.put(
-        cloud.CLOUD_AUTH_PROFILE, {"access_token": "jwt", "expires": time.time() + 3600}
-    )
+    secrets.put(cloud.CLOUD_AUTH_PROFILE, {"access_token": "jwt", "expires": time.time() + 3600})
     gmail_accounts.managed_connect_account(
         secrets,
         _account(

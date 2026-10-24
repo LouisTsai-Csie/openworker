@@ -30,7 +30,16 @@ def _wait(job: setup_job.SetupJob, seconds: float = 5.0) -> dict:
 
 def _steps(*rows: tuple[str, bool]) -> list[Step]:
     # A failing row the app may fix carries nothing; one it may not carries the command.
-    return [Step(key, setup_cmd.ROWS[key], ok, fixable=key in setup_cmd.FIXABLE, command="" if ok or key in setup_cmd.FIXABLE else f"fix {key}") for key, ok in rows]
+    return [
+        Step(
+            key,
+            setup_cmd.ROWS[key],
+            ok,
+            fixable=key in setup_cmd.FIXABLE,
+            command="" if ok or key in setup_cmd.FIXABLE else f"fix {key}",
+        )
+        for key, ok in rows
+    ]
 
 
 def test_steps_carry_keys_and_say_which_the_app_may_fix(monkeypatch):
@@ -72,30 +81,49 @@ def test_the_app_never_installs_openshell_it_points_at_the_guide(monkeypatch):
     monkeypatch.setattr(setup_cmd.getpass, "getuser", lambda: "sam")
     monkeypatch.setattr(setup_cmd, "openshell_problem", lambda fresh=False: "OpenShell is not installed")
     monkeypatch.setattr(setup_cmd, "landlock_available", lambda: True)
-    monkeypatch.setattr(setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 1, "stdout": ""})())  # no loginctl here
+    monkeypatch.setattr(
+        setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 1, "stdout": ""})()
+    )  # no loginctl here
     monkeypatch.setattr(setup_cmd, "admin_prefix", lambda: ["sudo", "-n"])  # even where it could
     rows = {s.key: s for s in setup_cmd.steps()}
-    assert not rows["openshell"].fixable and rows["openshell"].command == "" and rows["openshell"].docs == setup_cmd.GUIDE_URL
+    assert (
+        not rows["openshell"].fixable
+        and rows["openshell"].command == ""
+        and rows["openshell"].docs == setup_cmd.GUIDE_URL
+    )
     assert rows["linger"].fixable and rows["linger"].command == "sudo loginctl enable-linger sam"
     # Another version than the pinned one is said, as a note.
     monkeypatch.setattr(setup_cmd.shutil, "which", lambda name: "/usr/bin/openshell" if name == "openshell" else None)
-    monkeypatch.setattr(setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 0, "stdout": "openshell 0.0.1\n"})())
+    monkeypatch.setattr(
+        setup_cmd,
+        "_run",
+        lambda argv, timeout=600: type("Done", (), {"returncode": 0, "stdout": "openshell 0.0.1\n"})(),
+    )
     rows = {s.key: s for s in setup_cmd.steps()}
     assert rows["openshell"].hint == "found 0.0.1, not the tested release" and not rows["openshell"].fixable
+
 
 def test_admin_prefix_prefers_passwordless_sudo_then_the_desktop_prompt_never_wsl(monkeypatch):
     monkeypatch.setattr(setup_cmd.sys, "platform", "linux")
     monkeypatch.setattr(setup_cmd.getpass, "getuser", lambda: "sam")
     monkeypatch.setattr(setup_cmd.shutil, "which", lambda name: f"/usr/bin/{name}")
-    monkeypatch.setattr(setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 0, "stdout": ""})())
+    monkeypatch.setattr(
+        setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 0, "stdout": ""})()
+    )
     assert setup_cmd.admin_prefix() == ["sudo", "-n"]
     # sudo wants a password: the desktop's prompt (pkexec) when there is a display and
     # this is not WSL, which has no polkit agent to show one.
-    monkeypatch.setattr(setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 1, "stdout": ""})())
+    monkeypatch.setattr(
+        setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 1, "stdout": ""})()
+    )
     monkeypatch.setenv("DISPLAY", ":0")
     monkeypatch.setattr(setup_cmd, "is_wsl", lambda: False)
     prefix = setup_cmd.admin_prefix()
-    assert prefix is not None and prefix[:3] == ["pkexec", "env", "SUDO_USER=sam"]  # the installer sets up sam's gateway, not root's
+    assert prefix is not None and prefix[:3] == [
+        "pkexec",
+        "env",
+        "SUDO_USER=sam",
+    ]  # the installer sets up sam's gateway, not root's
     monkeypatch.setattr(setup_cmd, "is_wsl", lambda: True)
     assert setup_cmd.admin_prefix() is None
     monkeypatch.setattr(setup_cmd, "is_wsl", lambda: False)
@@ -115,7 +143,14 @@ def test_the_job_fixes_what_it_may_and_stops_at_what_needs_an_administrator(monk
     def steps():
         calls["n"] += 1
         after = calls["n"] > 1  # the second read (the final re-check) sees the fixes
-        return _steps(("docker", True), ("openshell", True), ("bind_mounts", after), ("gateway", True), ("grpcio", True), ("config", after))
+        return _steps(
+            ("docker", True),
+            ("openshell", True),
+            ("bind_mounts", after),
+            ("gateway", True),
+            ("grpcio", True),
+            ("config", after),
+        )
 
     job = setup_job.SetupJob(steps)
     job.start()
@@ -127,7 +162,9 @@ def test_the_job_fixes_what_it_may_and_stops_at_what_needs_an_administrator(monk
 
     # An administrator step in the way: the job hands it over and does not go past it.
     fixed.clear()
-    job = setup_job.SetupJob(lambda: _steps(("docker", True), ("openshell", False), ("bind_mounts", False), ("config", False)))
+    job = setup_job.SetupJob(
+        lambda: _steps(("docker", True), ("openshell", False), ("bind_mounts", False), ("config", False))
+    )
     job.start()
     state = _wait(job)
     assert state["status"] == "needs_you" and fixed == []  # nothing after the handover ran
@@ -192,7 +229,15 @@ def test_a_refused_linger_is_handed_over_and_the_walk_goes_on(monkeypatch):
 
 
 def test_pull_image_parses_docker_output_and_streams_progress(monkeypatch):
-    lines = ["c6cd9b8593e5: Pulling fs layer\n", "a6c5096124c1: Pulling fs layer\n", "c6cd9b8593e5: Downloading\n", "c6cd9b8593e5: Pull complete\n", "a6c5096124c1: Pull complete\n", "Digest: sha256:abc\n", "Status: Downloaded newer image\n"]
+    lines = [
+        "c6cd9b8593e5: Pulling fs layer\n",
+        "a6c5096124c1: Pulling fs layer\n",
+        "c6cd9b8593e5: Downloading\n",
+        "c6cd9b8593e5: Pull complete\n",
+        "a6c5096124c1: Pull complete\n",
+        "Digest: sha256:abc\n",
+        "Status: Downloaded newer image\n",
+    ]
 
     class Proc:
         stdout = iter(lines)
@@ -221,7 +266,10 @@ def test_the_readiness_endpoint_and_the_job_endpoints(tmp_path, monkeypatch):
     client = TestClient(create_app(_mgr(tmp_path, monkeypatch)))
     ready = client.get("/v1/settings/sandbox/readiness").json()
     assert ready["supported"] and not ready["all_ok"]
-    assert [(s["key"], s["ok"], s["fixable"], s["command"]) for s in ready["steps"]] == [("docker", True, False, ""), ("openshell", False, False, "fix openshell")]
+    assert [(s["key"], s["ok"], s["fixable"], s["command"]) for s in ready["steps"]] == [
+        ("docker", True, False, ""),
+        ("openshell", False, False, "fix openshell"),
+    ]
     assert client.get("/v1/settings/sandbox/setup").json()["status"] == "idle"
     started = client.post("/v1/settings/sandbox/setup").json()
     assert started["status"] in ("running", "needs_you")
@@ -230,9 +278,16 @@ def test_the_readiness_endpoint_and_the_job_endpoints(tmp_path, monkeypatch):
         time.sleep(0.02)
     final = client.get("/v1/settings/sandbox/setup").json()
     assert final["status"] == "needs_you" and final["rows"][1]["state"] == "needs_you"
-    assert client.post("/v1/settings/sandbox/setup/cancel").json()["status"] == "needs_you"  # nothing running: unchanged
+    assert (
+        client.post("/v1/settings/sandbox/setup/cancel").json()["status"] == "needs_you"
+    )  # nothing running: unchanged
     monkeypatch.setattr(settings.sys, "platform", "win32")
-    assert client.get("/v1/settings/sandbox/readiness").json() == {"platform": "win32", "supported": False, "steps": [], "all_ok": False}
+    assert client.get("/v1/settings/sandbox/readiness").json() == {
+        "platform": "win32",
+        "supported": False,
+        "steps": [],
+        "all_ok": False,
+    }
 
 
 def test_the_folder_step_restarts_the_gateway_and_the_check_reads_the_config_in_use(tmp_path, monkeypatch):
@@ -242,7 +297,9 @@ def test_the_folder_step_restarts_the_gateway_and_the_check_reads_the_config_in_
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     ran: list[list[str]] = []
-    listing = {"out": "/bin/zsh\n/opt/homebrew/opt/openshell/bin/openshell-gateway --config /opt/homebrew/var/openshell/gateway.toml\n"}
+    listing = {
+        "out": "/bin/zsh\n/opt/homebrew/opt/openshell/bin/openshell-gateway --config /opt/homebrew/var/openshell/gateway.toml\n"
+    }
 
     def fake_run(argv, timeout=600):
         ran.append(argv)
@@ -257,7 +314,9 @@ def test_the_folder_step_restarts_the_gateway_and_the_check_reads_the_config_in_
     assert ["brew", "services", "restart", "nvidia/openshell/openshell"] in ran
     ours = tmp_path / "openshell" / "gateway.toml"
     written = ours.read_text()
-    assert "version = 2" in written and "allow_driver_config = true" in written and "enable_bind_mounts = true" in written
+    assert (
+        "version = 2" in written and "allow_driver_config = true" in written and "enable_bind_mounts = true" in written
+    )
     assert "[openshell.drivers.docker.resource_admission]\nenabled = false" in written
     # Restarted: no --config, so `gateway.env` names the file, and the check is satisfied.
     listing["out"] = "/opt/homebrew/opt/openshell/bin/openshell-gateway\n"
@@ -326,7 +385,7 @@ def test_a_gateway_config_with_other_settings_is_not_rewritten(tmp_path, monkeyp
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     theirs = tmp_path / "openshell" / "gateway.toml"
     theirs.parent.mkdir(parents=True)
-    theirs.write_text("[openshell]\nversion = 2\n\n[openshell.gateway]\ncompute_driver = \"docker\"\n")
+    theirs.write_text('[openshell]\nversion = 2\n\n[openshell.gateway]\ncompute_driver = "docker"\n')
     said = setup_cmd.apply_bind_mounts()
     assert said and "by hand" in said and "allow_driver_config = true" in said
     assert "compute_driver" in theirs.read_text() and "enable_bind_mounts" not in theirs.read_text()
@@ -383,5 +442,9 @@ def test_a_mac_is_asked_whether_docker_desktops_host_networking_is_on(monkeypatc
     monkeypatch.setattr(setup_cmd, "docker_host_network", lambda: False)
     monkeypatch.setattr(setup_cmd, "openshell_problem", lambda fresh=False: "OpenShell is not installed")
     row = {s.key: s for s in setup_cmd.steps()}["docker_host_network"]
-    assert not row.ok and not row.fixable and "Enable host networking" in row.hint and row.docs == setup_cmd.DOCKER_HOST_NETWORK_URL
-
+    assert (
+        not row.ok
+        and not row.fixable
+        and "Enable host networking" in row.hint
+        and row.docs == setup_cmd.DOCKER_HOST_NETWORK_URL
+    )

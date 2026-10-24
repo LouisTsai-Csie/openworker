@@ -4,6 +4,7 @@ sees its name or schema, so there is nothing to invoke, trick, or approve. And b
 include_tools is an include-list, tools a server ships later are excluded until the
 user opts them in (fail-closed growth).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,9 +26,7 @@ def _tool(name: str) -> SimpleNamespace:
 def _build(server: MCPServerDef, tool_names: list[str]):
     loop = asyncio.new_event_loop()
     try:
-        return build_callables(
-            server, [_tool(n) for n in tool_names], lambda t, a: None, loop
-        )
+        return build_callables(server, [_tool(n) for n in tool_names], lambda t, a: None, loop)
     finally:
         loop.close()
 
@@ -50,9 +49,7 @@ def test_unchecked_tools_are_absent_from_the_registry():
 
 
 def test_no_include_list_means_everything_registers():
-    server = MCPServerDef(
-        name="jirax", transport="http", url="https://mcp.example.com/v1/mcp"
-    )
+    server = MCPServerDef(name="jirax", transport="http", url="https://mcp.example.com/v1/mcp")
     assert len(_build(server, OFFERED)) == 3
 
 
@@ -74,9 +71,7 @@ def test_fail_closed_growth_a_new_server_tool_stays_out():
 def test_destination_stamp_travels_with_every_callable():
     # OPE-136 finding 4 plumbing: the card's scope chip reads this — from the user's
     # own server config, never the server's claims.
-    http_server = MCPServerDef(
-        name="jirax", transport="http", url="https://MCP.Example.com/v1/mcp"
-    )
+    http_server = MCPServerDef(name="jirax", transport="http", url="https://MCP.Example.com/v1/mcp")
     (fn, *_) = _build(http_server, ["getIssue"])
     assert fn.__coworker_mcp_destination__ == {
         "transport": "http",

@@ -23,7 +23,9 @@ def _state(tmp_path, monkeypatch):
 def _fake_http(monkeypatch, handler):
     fake = httpx.Client(transport=httpx.MockTransport(handler))
     monkeypatch.setattr(httpx, "get", lambda url, headers=None, timeout=None: fake.get(url, headers=headers))
-    monkeypatch.setattr(httpx, "post", lambda url, json=None, headers=None, timeout=None: fake.post(url, json=json, headers=headers))
+    monkeypatch.setattr(
+        httpx, "post", lambda url, json=None, headers=None, timeout=None: fake.post(url, json=json, headers=headers)
+    )
 
 
 def test_descriptors_carry_a_kind_for_grouping():
@@ -56,11 +58,22 @@ def test_the_builder_sends_a_placeholder_key_when_none_is_set():
 def test_llamacpp_facts_come_from_models_and_props(monkeypatch):
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/models":
-            return httpx.Response(200, json={"data": [{"id": "/models/nemotron-3.5-lightning-30b-q4_k_m.gguf",
-                                                         "meta": {"n_ctx_train": 1048576, "size": 25 * local_machine.GB}}]})
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "id": "/models/nemotron-3.5-lightning-30b-q4_k_m.gguf",
+                            "meta": {"n_ctx_train": 1048576, "size": 25 * local_machine.GB},
+                        }
+                    ]
+                },
+            )
         if request.url.path == "/props":
-            return httpx.Response(200, json={"default_generation_settings": {"n_ctx": 32768},
-                                             "chat_template": "{% if tools %}...{% endif %}"})
+            return httpx.Response(
+                200,
+                json={"default_generation_settings": {"n_ctx": 32768}, "chat_template": "{% if tools %}...{% endif %}"},
+            )
         return httpx.Response(404)
 
     _fake_http(monkeypatch, handler)
@@ -81,10 +94,20 @@ def test_vllm_facts_probe_whether_tool_calling_is_on(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/models":
-            return httpx.Response(200, json={"data": [{"id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4", "max_model_len": 131072}]})
+            return httpx.Response(
+                200,
+                json={"data": [{"id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4", "max_model_len": 131072}]},
+            )
         if request.url.path == "/v1/chat/completions":
             calls.append(json.loads(request.content))
-            return httpx.Response(400, json={"error": {"message": '"auto" tool choice requires --enable-auto-tool-choice and --tool-call-parser to be set'}})
+            return httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "message": '"auto" tool choice requires --enable-auto-tool-choice and --tool-call-parser to be set'
+                    }
+                },
+            )
         return httpx.Response(404)
 
     _fake_http(monkeypatch, handler)

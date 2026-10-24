@@ -66,9 +66,7 @@ def test_members_filtered_ranked_and_guest_tagged(secrets, monkeypatch):
 
     out = slack_directory.list_members(secrets, "T1", query="ro")
     assert [m["id"] for m in out["members"]] == ["U2"]  # prefix beats substring
-    out = slack_directory.list_members(
-        secrets, "T1", query="maya"
-    )  # handle matches too
+    out = slack_directory.list_members(secrets, "T1", query="maya")  # handle matches too
     assert [m["id"] for m in out["members"]] == ["U1"]
 
 
@@ -133,9 +131,7 @@ def test_allow_with_name_seeds_people_directory(tmp_path, monkeypatch):
             return ModelCapabilities()
 
     manager = SessionManager(workspace=tmp_path, provider=_Provider())
-    manager.secrets.put(
-        "slack:team:T1", {"bot_token": "xoxb", "team_id": "T1", "allowed_users": []}
-    )
+    manager.secrets.put("slack:team:T1", {"bot_token": "xoxb", "team_id": "T1", "allowed_users": []})
     out = manager.allow_user("slack", "U2", "T1", display_name="Rohit Prasad")
     assert out["ok"]
     assert manager.secrets.get("slack:team:T1")["allowed_users"] == ["U2"]

@@ -53,7 +53,9 @@ def _history(turns=8, bulk=1500):
                 "content": f"answer {i} " + "x" * bulk,
                 "ts": 1.0,
                 "reasoning": "private thinking " + "r" * 200,
-                "tool_calls": [{"id": f"c{i}", "function": {"name": "run_shell", "arguments": '{"command": "ls -la"}'}}],
+                "tool_calls": [
+                    {"id": f"c{i}", "function": {"name": "run_shell", "arguments": '{"command": "ls -la"}'}}
+                ],
             }
         )
         msgs.append({"role": "tool", "tool_call_id": f"c{i}", "content": f"listing {i}: file_{i}.txt", "ts": 1.0})

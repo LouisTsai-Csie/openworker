@@ -82,14 +82,10 @@ def test_allow_then_disallow_mutates_list(tmp_path):
     client = TestClient(create_app(mgr))
 
     client.post("/v1/connectors/slack/allow", json={"user_id": "U_NEW"})
-    assert _slack(client.get("/v1/connectors").json()["connectors"])[
-        "allowed_users"
-    ] == ["U_NEW"]
+    assert _slack(client.get("/v1/connectors").json()["connectors"])["allowed_users"] == ["U_NEW"]
 
     client.post("/v1/connectors/slack/disallow", json={"user_id": "U_NEW"})
-    assert (
-        _slack(client.get("/v1/connectors").json()["connectors"])["allowed_users"] == []
-    )
+    assert _slack(client.get("/v1/connectors").json()["connectors"])["allowed_users"] == []
 
 
 def test_recent_absent_when_no_gateway(tmp_path):

@@ -13,12 +13,32 @@ from __future__ import annotations
 
 import sys
 
-CODE_HOSTS = ["github.com", "api.github.com", "codeload.github.com", "objects.githubusercontent.com", "raw.githubusercontent.com", "gitlab.com"]
-PACKAGE_REGISTRIES = ["pypi.org", "files.pythonhosted.org", "registry.npmjs.org", "crates.io", "static.crates.io", "index.crates.io", "proxy.golang.org", "sum.golang.org"]
+CODE_HOSTS = [
+    "github.com",
+    "api.github.com",
+    "codeload.github.com",
+    "objects.githubusercontent.com",
+    "raw.githubusercontent.com",
+    "gitlab.com",
+]
+PACKAGE_REGISTRIES = [
+    "pypi.org",
+    "files.pythonhosted.org",
+    "registry.npmjs.org",
+    "crates.io",
+    "static.crates.io",
+    "index.crates.io",
+    "proxy.golang.org",
+    "sum.golang.org",
+]
 SEARCH_APIS = ["api.search.brave.com", "api.tavily.com", "html.duckduckgo.com", "duckduckgo.com"]
 
 # The page's catalogue, by group. None is allowed until ticked.
-SITES: dict[str, list[str]] = {"code-hosts": CODE_HOSTS, "package-registries": PACKAGE_REGISTRIES, "search-apis": SEARCH_APIS}
+SITES: dict[str, list[str]] = {
+    "code-hosts": CODE_HOSTS,
+    "package-registries": PACKAGE_REGISTRIES,
+    "search-apis": SEARCH_APIS,
+}
 
 # name of the group -> hosts, per profile. Neither profile carries hosts of its own: the
 # allow list is the machine's, and `open` has none.
@@ -54,7 +74,12 @@ def clean_host(item: str) -> str:
         host, port = text, "443"
     name = host[2:] if host.startswith("*.") else host
     labels = name.split(".")
-    if not port.isdigit() or not 0 < int(port) < 65536 or len(labels) < 2 or not all(label and all(c.isalnum() or c == "-" for c in label) for label in labels):
+    if (
+        not port.isdigit()
+        or not 0 < int(port) < 65536
+        or len(labels) < 2
+        or not all(label and all(c.isalnum() or c == "-" for c in label) for label in labels)
+    ):
         raise ValueError(f"not a host name: {item!r} (for example api.example.com:443)")
     return f"{host}:{int(port)}"
 

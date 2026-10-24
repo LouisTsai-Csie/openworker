@@ -109,9 +109,7 @@ def test_install_refuses_a_tampered_download(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="checksum mismatch"):
         toolchain.install("gitleaks")
-    assert not (tmp_path / "tools").exists() or not list(
-        (tmp_path / "tools").rglob("gitleaks")
-    )
+    assert not (tmp_path / "tools").exists() or not list((tmp_path / "tools").rglob("gitleaks"))
 
 
 def test_install_writes_a_verified_binary(tmp_path, monkeypatch):
@@ -129,9 +127,7 @@ def test_install_writes_a_verified_binary(tmp_path, monkeypatch):
                 version="2.5.0",
                 summary="checks lockfiles",
                 downloads={
-                    "darwin_arm64": toolchain.Download(
-                        url="https://example.invalid/osv-scanner", sha256=digest
-                    )
+                    "darwin_arm64": toolchain.Download(url="https://example.invalid/osv-scanner", sha256=digest)
                 },
             )
         },

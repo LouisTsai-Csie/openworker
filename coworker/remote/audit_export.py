@@ -108,28 +108,24 @@ def save_policy(state: Path, policy: dict[str, Any]) -> None:
 # -- OCSF -----------------------------------------------------------------------
 
 
-def to_ocsf(
-    row: dict[str, Any], *, machine_id: str = "", machine_name: str = "", org_id: str = ""
-) -> dict[str, Any]:
+def to_ocsf(row: dict[str, Any], *, machine_id: str = "", machine_name: str = "", org_id: str = "") -> dict[str, Any]:
     """One local audit row → one OCSF API Activity event. Content columns are
     dropped here, structurally, not by a filter someone could forget."""
     status = str(row.get("status") or "")
-    status_id = 1 if status in ("ok", "ran", "success", "allow") else 2 if status in (
-        "error", "denied", "deny", "failed", "blocked"
-    ) else 99
-    tokens = {
-        k: int(row.get(k) or 0)
-        for k in ("tokens_in", "tokens_out", "cache_read", "cache_write")
-    }
+    status_id = (
+        1
+        if status in ("ok", "ran", "success", "allow")
+        else 2
+        if status in ("error", "denied", "deny", "failed", "blocked")
+        else 99
+    )
+    tokens = {k: int(row.get(k) or 0) for k in ("tokens_in", "tokens_out", "cache_read", "cache_write")}
     try:
         ts = row.get("timestamp") or ""
         # SQLite CURRENT_TIMESTAMP is UTC "YYYY-MM-DD HH:MM:SS".
         from datetime import datetime
 
-        t_ms = int(
-            datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp()
-            * 1000
-        )
+        t_ms = int(datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp() * 1000)
     except (TypeError, ValueError):
         t_ms = int(time.time() * 1000)
     workspace = str(row.get("workspace") or "")

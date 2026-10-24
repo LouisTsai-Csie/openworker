@@ -46,10 +46,14 @@ def request_network_access_tool(permissions: PermissionEngine) -> object:
         ready = [_name(entry) for entry in allowed if _name(entry) not in failed]
         result: dict[str, Any] = {"allowed": ready}
         if ready:
-            result["message"] = f"{', '.join(ready)} can be reached by this session's commands now. Run the command again."
+            result["message"] = (
+                f"{', '.join(ready)} can be reached by this session's commands now. Run the command again."
+            )
         if failed:
             result["not_opened"] = failed
-            result["note"] = "The user allowed these, but the running sandbox could not take them. Tell the user; a new session will have them."
+            result["note"] = (
+                "The user allowed these, but the running sandbox could not take them. Tell the user; a new session will have them."
+            )
         return result
 
     request_network_access.__name__ = NETWORK_ACCESS_TOOL

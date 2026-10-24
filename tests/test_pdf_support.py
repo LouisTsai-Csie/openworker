@@ -98,13 +98,9 @@ def test_adapt_scanned_pdf_yields_visible_note():
 def test_adapt_images_mode_needs_vision():
     url = _blank_pdf_url(pages=2)
     pdf_support.set_fallback_mode("images")
-    with_vision = pdf_support.adapt_content(
-        [_file_part(url)], ModelCapabilities(vision=True, pdf=False)
-    )
+    with_vision = pdf_support.adapt_content([_file_part(url)], ModelCapabilities(vision=True, pdf=False))
     assert [p["type"] for p in with_vision] == ["text", "image_url", "image_url"]
-    without_vision = pdf_support.adapt_content(
-        [_file_part(url)], ModelCapabilities(vision=False, pdf=False)
-    )
+    without_vision = pdf_support.adapt_content([_file_part(url)], ModelCapabilities(vision=False, pdf=False))
     assert all(p["type"] == "text" for p in without_vision)  # degrades to text
 
 

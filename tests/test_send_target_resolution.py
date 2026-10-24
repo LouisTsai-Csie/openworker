@@ -21,22 +21,12 @@ def test_registry_kinds_are_exhaustive_and_drive_approval():
 def test_integration_tools_reads_are_free_writes_gate(tmp_path):
     from coworker.connectors.integration_tools import make_integration_tools
 
-    tools = {
-        t.__name__: t
-        for t in make_integration_tools(SecretStore(tmp_path / "secrets.json"))
-    }
+    tools = {t.__name__: t for t in make_integration_tools(SecretStore(tmp_path / "secrets.json"))}
     assert tools["github_search"].__aisuite_tool_metadata__.requires_approval is False
-    assert (
-        tools["github_list_commits"].__aisuite_tool_metadata__.requires_approval
-        is False
-    )
+    assert tools["github_list_commits"].__aisuite_tool_metadata__.requires_approval is False
     # OPE-111: a model-chosen URL fetch is egress, not a read — it gates like web_fetch.
-    assert (
-        tools["browser_read_page"].__aisuite_tool_metadata__.requires_approval is False
-    )
-    assert (
-        tools["github_create_issue"].__aisuite_tool_metadata__.requires_approval is True
-    )
+    assert tools["browser_read_page"].__aisuite_tool_metadata__.requires_approval is False
+    assert tools["github_create_issue"].__aisuite_tool_metadata__.requires_approval is True
     # github_clone and github_pull write to disk (clone creates a directory, pull
     # fast-forwards an existing repo), so they must gate despite being GitHub tools.
     assert tools["github_clone"].__aisuite_tool_metadata__.requires_approval is True
@@ -47,13 +37,9 @@ def test_browser_automation_reads_are_free_interactions_gate():
     from coworker.connectors.browser_automation import make_browser_automation_tools
 
     tools = {t.__name__: t for t in make_browser_automation_tools()}
-    assert (
-        tools["browser_read_page"].__aisuite_tool_metadata__.requires_approval is False
-    )
+    assert tools["browser_read_page"].__aisuite_tool_metadata__.requires_approval is False
     # OPE-111: opening a model-chosen URL is egress, not a read — it gates.
-    assert (
-        tools["browser_open_url"].__aisuite_tool_metadata__.requires_approval is True
-    )
+    assert tools["browser_open_url"].__aisuite_tool_metadata__.requires_approval is True
     assert tools["browser_click"].__aisuite_tool_metadata__.requires_approval is True
     assert tools["browser_type"].__aisuite_tool_metadata__.requires_approval is True
 
@@ -111,9 +97,7 @@ def test_channel_name_resolves_to_team_qualified_address(tmp_path, monkeypatch):
     out = tool("slack:#all-openworker", "Hi")
     assert out["ok"] is True
     assert record[0]["chat_id"] == "T1/C9"
-    assert (
-        record[0]["token"] == "xoxb-t1"
-    )  # the resolved team's token, not slack:default
+    assert record[0]["token"] == "xoxb-t1"  # the resolved team's token, not slack:default
 
 
 def test_bare_channel_names_coerce_to_slack(tmp_path, monkeypatch):
@@ -189,11 +173,7 @@ def test_send_file_resolves_names_too(tmp_path, monkeypatch):
     (ws / "r.pdf").write_bytes(b"%PDF")
     _fake_roster(
         monkeypatch,
-        {
-            "T1": [
-                {"id": "C9", "name": "general", "is_private": False, "is_member": True}
-            ]
-        },
+        {"T1": [{"id": "C9", "name": "general", "is_private": False, "is_member": True}]},
     )
     record: list = []
 
@@ -201,8 +181,6 @@ def test_send_file_resolves_names_too(tmp_path, monkeypatch):
         record.append({"chat_id": chat_id, "filename": filename})
         return SendResult(True, message_id="F1")
 
-    tool = make_send_file_tool(
-        secrets, workspace=ws, file_senders={"slack": file_sender}
-    )
+    tool = make_send_file_tool(secrets, workspace=ws, file_senders={"slack": file_sender})
     out = tool("slack:#general", "r.pdf")
     assert out["ok"] is True and record[0]["chat_id"] == "T1/C9"

@@ -317,19 +317,16 @@ def build_messages(
         rendered_args = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
     except (TypeError, ValueError):
         rendered_args = str(arguments)
-    suffix = (
-        "USER REQUEST (verbatim)\n"
-        f"  {request}\n"
-        "\n"
-        "PROPOSED ACTION\n"
-        f"  {tool_name} {rendered_args}"
-    )
+    suffix = f"USER REQUEST (verbatim)\n  {request}\n\nPROPOSED ACTION\n  {tool_name} {rendered_args}"
     if provenance:
         # Engine-authored, fixed vocabulary - never file contents (§8.2). Lives in the
         # varying suffix so the cached prefix is untouched.
         suffix += f"\n  NOTE  {provenance}"
     if action_context:
-        suffix += "\n\nWORKER ACTION CONTEXT / APPROVAL CONTEXT (source-labelled; no transcript or inspected file contents)\n" + json.dumps(action_context, ensure_ascii=False, sort_keys=True)
+        suffix += (
+            "\n\nWORKER ACTION CONTEXT / APPROVAL CONTEXT (source-labelled; no transcript or inspected file contents)\n"
+            + json.dumps(action_context, ensure_ascii=False, sort_keys=True)
+        )
     return [
         {"role": "system", "content": "\n\n".join(prefix_parts)},
         {"role": "user", "content": suffix},
@@ -385,8 +382,13 @@ class Reviewer:
         # deterministic size limit, not a scope classifier; oversized input asks a human.
         if action_context and action_context.get("context_unavailable"):
             return self._count(_fail_closed("approval context is unavailable", error=True))
-        if len(json.dumps({"request": request, "history": history, "context": action_context}, ensure_ascii=False)) > APPROVAL_CONTEXT_MAX_CHARS:
-            return self._count(_fail_closed("approval context exceeds the review limit; a human must decide", error=True))
+        if (
+            len(json.dumps({"request": request, "history": history, "context": action_context}, ensure_ascii=False))
+            > APPROVAL_CONTEXT_MAX_CHARS
+        ):
+            return self._count(
+                _fail_closed("approval context exceeds the review limit; a human must decide", error=True)
+            )
         messages = build_messages(
             known_world=self.known_world,
             history=history,
@@ -415,9 +417,7 @@ class Reviewer:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            return self._count(
-                _fail_closed(f"reviewer error: {type(exc).__name__}", error=True)
-            )
+            return self._count(_fail_closed(f"reviewer error: {type(exc).__name__}", error=True))
 
         verdict = parse_verdict(getattr(turn, "text", "") or "")
         usage = getattr(turn, "usage", None)

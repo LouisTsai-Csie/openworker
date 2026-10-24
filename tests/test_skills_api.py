@@ -91,12 +91,7 @@ def test_create_duplicate_and_blank_rejected(tmp_path):
 def test_patch_edit_and_toggle(tmp_path):
     client, _m, _p = _client(tmp_path)
     client.post("/v1/skills", json=GREET)
-    assert (
-        client.patch(
-            "/v1/skills/greet", json={"description": "hi", "enabled": False}
-        ).json()["ok"]
-        is True
-    )
+    assert client.patch("/v1/skills/greet", json={"description": "hi", "enabled": False}).json()["ok"] is True
     row = client.get("/v1/skills").json()["skills"][0]
     assert row["description"] == "hi" and row["enabled"] is False
     unknown = client.patch("/v1/skills/ghost", json={"description": "x"}).json()
@@ -116,14 +111,10 @@ def test_move_happy_and_collision(tmp_path):
     ws = tmp_path / "proj"
     ws.mkdir()
     client.post("/v1/skills", json=GREET)
-    moved = client.post(
-        "/v1/skills/greet/move", json={"scope": "project", "workspace": str(ws)}
-    ).json()
+    moved = client.post("/v1/skills/greet/move", json={"scope": "project", "workspace": str(ws)}).json()
     assert moved["ok"] is True and moved["skill"]["scope"] == "project"
     client.post("/v1/skills", json=GREET)  # recreate global → collision on move back
-    res = client.post(
-        "/v1/skills/greet/move", json={"scope": "global", "workspace": str(ws)}
-    ).json()
+    res = client.post("/v1/skills/greet/move", json={"scope": "global", "workspace": str(ws)}).json()
     assert res["ok"] is False and "already exists" in res["error"]
 
 
@@ -152,15 +143,11 @@ def test_scratch_workspace_rejected_for_skill_writes(tmp_path):
     assert res["ok"] is False and "temporary" in res["error"].lower()
 
     client.post("/v1/skills", json=GREET)  # global
-    res = client.post(
-        "/v1/skills/greet/move", json={"scope": "project", "workspace": str(scratch_ws)}
-    ).json()
+    res = client.post("/v1/skills/greet/move", json={"scope": "project", "workspace": str(scratch_ws)}).json()
     assert res["ok"] is False and "temporary" in res["error"].lower()
 
     md = "---\nname: zipped\ndescription: d\n---\nbody\n"
-    preview = client.post(
-        "/v1/skills/upload", json={"data_b64": _zip_b64({"zipped/SKILL.md": md})}
-    ).json()
+    preview = client.post("/v1/skills/upload", json={"data_b64": _zip_b64({"zipped/SKILL.md": md})}).json()
     res = client.post(
         "/v1/skills/upload/confirm",
         json={"token": preview["token"], "scope": "project", "workspace": str(scratch_ws)},
@@ -169,8 +156,11 @@ def test_scratch_workspace_rejected_for_skill_writes(tmp_path):
 
     # Rescue path: a skill already stranded in scratch can still move OUT to global.
     manager.skill_store.create(
-        name="stranded", description="", instructions="x",
-        scope="project", workspace=scratch_ws,
+        name="stranded",
+        description="",
+        instructions="x",
+        scope="project",
+        workspace=scratch_ws,
     )
     res = client.post(
         "/v1/skills/stranded/move",
@@ -193,14 +183,10 @@ def test_path_traversal_names_rejected(tmp_path):
 def test_upload_preview_then_confirm(tmp_path):
     client, _m, _p = _client(tmp_path)
     md = "---\nname: greet\ndescription: says hello\n---\nSay hello.\n"
-    preview = client.post(
-        "/v1/skills/upload", json={"data_b64": _zip_b64({"greet/SKILL.md": md})}
-    ).json()
+    preview = client.post("/v1/skills/upload", json={"data_b64": _zip_b64({"greet/SKILL.md": md})}).json()
     assert preview["ok"] is True and preview["name"] == "greet"
     assert client.get("/v1/skills").json()["skills"] == []  # preview installs nothing
-    confirmed = client.post(
-        "/v1/skills/upload/confirm", json={"token": preview["token"]}
-    ).json()
+    confirmed = client.post("/v1/skills/upload/confirm", json={"token": preview["token"]}).json()
     assert confirmed["ok"] is True
     row = client.get("/v1/skills").json()["skills"][0]
     assert row["source"] == "uploaded"
@@ -220,9 +206,7 @@ def test_upload_invalid_archive_friendly(tmp_path):
     ).json()
     assert bare["ok"] is False and "frontmatter" in bare["error"].lower()
     assert client.post("/v1/skills/upload", json={}).json()["ok"] is False
-    assert (
-        client.post("/v1/skills/upload", json={"data_b64": "!!!"}).json()["ok"] is False
-    )
+    assert client.post("/v1/skills/upload", json={"data_b64": "!!!"}).json()["ok"] is False
 
 
 def test_draft_endpoint_is_gone(tmp_path):
@@ -241,22 +225,14 @@ def test_session_mute_roundtrip(tmp_path):
     client, _m, _p = _client(tmp_path)
     client.post("/v1/skills", json=GREET)
     view = client.get("/v1/sessions/s1/skills").json()["skills"]
-    assert view == [
-        {"name": "greet", "description": "says hello", "scope": "global", "enabled": True}
-    ]
-    after = client.post(
-        "/v1/sessions/s1/skills", json={"skill": "greet", "enabled": False}
-    ).json()["skills"]
+    assert view == [{"name": "greet", "description": "says hello", "scope": "global", "enabled": True}]
+    after = client.post("/v1/sessions/s1/skills", json={"skill": "greet", "enabled": False}).json()["skills"]
     assert after[0]["enabled"] is False
     other = client.get("/v1/sessions/s2/skills").json()["skills"]
     assert other[0]["enabled"] is True  # mute is per-session
-    cleared = client.post(
-        "/v1/sessions/s1/skills", json={"skill": "greet", "clear": True}
-    ).json()["skills"]
+    cleared = client.post("/v1/sessions/s1/skills", json={"skill": "greet", "clear": True}).json()["skills"]
     assert cleared[0]["enabled"] is True
-    assert (
-        client.post("/v1/sessions/s1/skills", json={}).json()["ok"] is False
-    )  # null input
+    assert client.post("/v1/sessions/s1/skills", json={}).json()["ok"] is False  # null input
 
 
 # -- engine integration (ScriptedProvider, no LLM) --------------------------------------
@@ -265,9 +241,7 @@ def test_session_mute_roundtrip(tmp_path):
 def test_engine_catalog_respects_settings_disable(tmp_path):
     client, manager, _p = _client(tmp_path)
     client.post("/v1/skills", json=GREET)
-    client.post(
-        "/v1/skills", json={"name": "hidden", "description": "off", "instructions": "x"}
-    )
+    client.post("/v1/skills", json={"name": "hidden", "description": "off", "instructions": "x"})
     client.patch("/v1/skills/hidden", json={"enabled": False})
 
     from coworker.agent import build_engine
@@ -344,12 +318,7 @@ def test_ws_force_run_unknown_and_muted_error_without_killing_socket(tmp_path):
         assert "turn_done" in types
     # No force-run framing ever reached the model (the catalog line in the system prompt
     # legitimately mentions load_skill — the invariant is about USER messages only).
-    users = [
-        str(m.get("content"))
-        for msgs in provider.seen
-        for m in msgs
-        if m.get("role") == "user"
-    ]
+    users = [str(m.get("content")) for msgs in provider.seen for m in msgs if m.get("role") == "user"]
     assert all("Use the skill" not in u for u in users)
     assert any("plain" in u for u in users)
 

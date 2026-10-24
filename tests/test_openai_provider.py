@@ -38,9 +38,7 @@ class _FakeClient:
 
 class _StreamClient:
     def __init__(self, chunks):
-        self.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=lambda **kwargs: iter(chunks))
-        )
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: iter(chunks)))
 
 
 def _response(content=None, tool_calls=None, finish_reason="stop"):
@@ -50,9 +48,7 @@ def _response(content=None, tool_calls=None, finish_reason="stop"):
 
 
 def _chunk(content=None, tool_call=None, finish=None):
-    delta = SimpleNamespace(
-        content=content, tool_calls=[tool_call] if tool_call else None
-    )
+    delta = SimpleNamespace(content=content, tool_calls=[tool_call] if tool_call else None)
     return SimpleNamespace(choices=[SimpleNamespace(delta=delta, finish_reason=finish)])
 
 
@@ -202,9 +198,7 @@ def test_coerce_param():
 def test_complete_salvages_text_form_tool_call():
     content = '<tool_call>{"name": "list_files", "arguments": {"recursive": true}}</tool_call>'
     provider = OpenAIProvider(client=_FakeClient(_response(content=content)))
-    turn = provider.complete(
-        model="qwen3", messages=[{"role": "user", "content": "ls"}], tools=_FS_TOOLS
-    )
+    turn = provider.complete(model="qwen3", messages=[{"role": "user", "content": "ls"}], tools=_FS_TOOLS)
     assert turn.text is None  # salvaged calls replace the text
     assert [c.name for c in turn.tool_calls] == ["list_files"]
     assert turn.tool_calls[0].arguments == {"recursive": True}
@@ -221,16 +215,10 @@ def test_complete_keeps_text_when_no_tools_offered():
 
 def test_complete_prefers_structured_tool_calls_over_text():
     # When the server DID populate tool_calls, text is never reinterpreted.
-    tc = SimpleNamespace(
-        id="call_1", function=SimpleNamespace(name="list_files", arguments="{}")
-    )
+    tc = SimpleNamespace(id="call_1", function=SimpleNamespace(name="list_files", arguments="{}"))
     content = '{"name": "write_file", "arguments": {"path": "x", "content": "y"}}'
-    provider = OpenAIProvider(
-        client=_FakeClient(_response(content=content, tool_calls=[tc]))
-    )
-    turn = provider.complete(
-        model="gpt-5.5", messages=[{"role": "user", "content": "go"}], tools=_FS_TOOLS
-    )
+    provider = OpenAIProvider(client=_FakeClient(_response(content=content, tool_calls=[tc])))
+    turn = provider.complete(model="gpt-5.5", messages=[{"role": "user", "content": "go"}], tools=_FS_TOOLS)
     assert turn.text == content
     assert [c.name for c in turn.tool_calls] == ["list_files"]
 
@@ -252,25 +240,17 @@ def test_stream_salvages_text_form_tool_call_at_end():
 
 
 def test_stream_bad_tool_args_surface_raw():
-    tc = SimpleNamespace(
-        index=0, id="call_1", function=SimpleNamespace(name="f", arguments="{not json")
-    )
+    tc = SimpleNamespace(index=0, id="call_1", function=SimpleNamespace(name="f", arguments="{not json"))
     chunks = [_chunk(tool_call=tc), _chunk(finish="tool_calls")]
     provider = OpenAIProvider(client=_StreamClient(chunks))
     turn = list(provider.stream(model="gpt-5.5", messages=[]))[-1].turn
-    assert turn.tool_calls == [
-        ToolCall(id="call_1", name="f", arguments={"_raw": "{not json"})
-    ]
+    assert turn.tool_calls == [ToolCall(id="call_1", name="f", arguments={"_raw": "{not json"})]
 
 
 def test_stream_orders_parallel_tool_calls_by_index():
     # Chunks may interleave; the final list is ordered by tool-call index.
-    second = SimpleNamespace(
-        index=1, id="call_b", function=SimpleNamespace(name="b", arguments="{}")
-    )
-    first = SimpleNamespace(
-        index=0, id="call_a", function=SimpleNamespace(name="a", arguments="")
-    )
+    second = SimpleNamespace(index=1, id="call_b", function=SimpleNamespace(name="b", arguments="{}"))
+    first = SimpleNamespace(index=0, id="call_a", function=SimpleNamespace(name="a", arguments=""))
     chunks = [_chunk(tool_call=second), _chunk(tool_call=first), _chunk(finish="tool_calls")]
     provider = OpenAIProvider(client=_StreamClient(chunks))
     turn = list(provider.stream(model="gpt-5.5", messages=[]))[-1].turn
@@ -290,9 +270,7 @@ def test_stream_skips_chunks_without_choices():
 def test_stream_reasoning_attr_variant():
     # xAI/OpenRouter put thinking text on `reasoning` (not `reasoning_content`).
     delta = SimpleNamespace(content=None, tool_calls=None, reasoning="thinking…")
-    chunk = SimpleNamespace(
-        choices=[SimpleNamespace(delta=delta, finish_reason=None)]
-    )
+    chunk = SimpleNamespace(choices=[SimpleNamespace(delta=delta, finish_reason=None)])
     chunks = [chunk, _chunk(content="hi"), _chunk(finish="stop")]
     provider = OpenAIProvider(client=_StreamClient(chunks))
     out = list(provider.stream(model="grok-4", messages=[]))
@@ -305,9 +283,7 @@ def test_stream_reasoning_attr_variant():
 def test_complete_picks_up_reasoning_attr():
     message = SimpleNamespace(content="answer", tool_calls=None, reasoning="because")
     choice = SimpleNamespace(message=message, finish_reason="stop")
-    provider = OpenAIProvider(
-        client=_FakeClient(SimpleNamespace(choices=[choice]))
-    )
+    provider = OpenAIProvider(client=_FakeClient(SimpleNamespace(choices=[choice])))
     turn = provider.complete(model="grok-4", messages=[{"role": "user", "content": "?"}])
     assert turn.reasoning == "because"
     assert turn.text == "answer"

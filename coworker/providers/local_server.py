@@ -149,7 +149,9 @@ def _vllm_tools_on(base: str, headers: dict[str, str], model: str) -> bool | Non
         "model": model,
         "messages": [{"role": "user", "content": "hi"}],
         "max_tokens": 1,
-        "tools": [{"type": "function", "function": {"name": "noop", "parameters": {"type": "object", "properties": {}}}}],
+        "tools": [
+            {"type": "function", "function": {"name": "noop", "parameters": {"type": "object", "properties": {}}}}
+        ],
     }
     try:
         resp = httpx.post(base + "/chat/completions", json=probe, headers=headers, timeout=30.0)

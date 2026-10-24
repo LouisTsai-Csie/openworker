@@ -47,6 +47,4 @@ class LocalProvisioner:
         return {"token": token, "expires_at": expiry}
 
     async def launch(self, spec: dict[str, Any]) -> dict[str, Any]:
-        raise NotImplementedError(
-            "no managed sandboxes on desktop — run `openworker join` on the machine"
-        )
+        raise NotImplementedError("no managed sandboxes on desktop — run `openworker join` on the machine")

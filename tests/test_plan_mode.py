@@ -76,10 +76,7 @@ def test_plan_mode_blocks_writes_without_asking(tmp_path):
     assert not (tmp_path / "x.py").exists()
     finished = next(e for e in events if e.type == EventType.TOOL_FINISHED)
     assert finished.data["status"] == "denied"
-    assert any(
-        m.get("role") == "tool" and "plan mode is read-only" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "plan mode is read-only" in m["content"] for m in engine.messages)
 
 
 def test_plan_approval_flips_mode_and_executes(tmp_path):
@@ -124,10 +121,7 @@ def test_plan_rejection_keeps_plan_mode_and_returns_feedback(tmp_path):
     assert permissions.mode is Mode.PLAN  # still read-only
     finished = next(e for e in events if e.type == EventType.TOOL_FINISHED)
     assert finished.data["status"] == "denied"
-    assert any(
-        m.get("role") == "tool" and "fix y.py instead" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "fix y.py instead" in m["content"] for m in engine.messages)
 
 
 def test_propose_plan_without_approver_noops(tmp_path):
@@ -138,10 +132,7 @@ def test_propose_plan_without_approver_noops(tmp_path):
     events = _collect(engine, "go")
     assert EventType.PLAN_PROPOSED not in [e.type for e in events]
     assert permissions.mode is Mode.PLAN
-    assert any(
-        m.get("role") == "tool" and "isn't available" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "isn't available" in m["content"] for m in engine.messages)
 
 
 # -- build_engine wiring ----------------------------------------------------------
@@ -159,9 +150,7 @@ def test_build_engine_plan_mode_wiring(tmp_path):
     from coworker.agent import build_engine
     from coworker.agents import code_agent
 
-    engine = build_engine(
-        agent=code_agent(), workspace=tmp_path, provider=_Stub(), mode=Mode.PLAN
-    )
+    engine = build_engine(agent=code_agent(), workspace=tmp_path, provider=_Stub(), mode=Mode.PLAN)
     try:
         assert "propose_plan" in engine.registry.names()
         # the per-turn reminder is live while planning, gone after the flip
@@ -197,10 +186,7 @@ def test_discuss_mode_blocks_writes_without_plan_pressure(tmp_path):
     permissions.mode = Mode.DISCUSS
     _collect(engine, "tweak x.py")
     assert not (tmp_path / "x.py").exists()
-    assert any(
-        m.get("role") == "tool" and "discuss mode is read-only" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "discuss mode is read-only" in m["content"] for m in engine.messages)
 
 
 def test_propose_plan_in_discuss_mode_says_describe_instead(tmp_path):
@@ -211,19 +197,14 @@ def test_propose_plan_in_discuss_mode_says_describe_instead(tmp_path):
     permissions.mode = Mode.DISCUSS
     events = _collect(engine, "go")
     assert EventType.PLAN_PROPOSED not in [e.type for e in events]
-    assert any(
-        m.get("role") == "tool" and "describe the proposed changes" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "describe the proposed changes" in m["content"] for m in engine.messages)
 
 
 def test_build_engine_discuss_reminder_not_plan_contract(tmp_path):
     from coworker.agent import build_engine
     from coworker.agents import code_agent
 
-    engine = build_engine(
-        agent=code_agent(), workspace=tmp_path, provider=_Stub(), mode=Mode.DISCUSS
-    )
+    engine = build_engine(agent=code_agent(), workspace=tmp_path, provider=_Stub(), mode=Mode.DISCUSS)
     try:
         ctx = engine.context_provider()
         assert "Discuss mode is active" in ctx
@@ -244,7 +225,4 @@ def test_propose_plan_outside_plan_mode_is_rejected(tmp_path):
     permissions.mode = Mode.INTERACTIVE  # session was flipped out of plan mode
     events = _collect(engine, "go")
     assert EventType.PLAN_PROPOSED not in [e.type for e in events]
-    assert any(
-        m.get("role") == "tool" and "not in plan mode" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "not in plan mode" in m["content"] for m in engine.messages)

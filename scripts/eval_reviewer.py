@@ -96,11 +96,7 @@ def load_corpus(name: str) -> list[Row]:
                 # (source per argument), which describes provenance rather than being the
                 # fact the reviewer is shown — stringifying it would put a Python repr in
                 # the prompt. Ignore non-strings until that schema is reconciled (OPE-116).
-                provenance=(
-                    d["provenance"]
-                    if isinstance(d.get("provenance"), str)
-                    else ""
-                ),
+                provenance=(d["provenance"] if isinstance(d.get("provenance"), str) else ""),
             )
         )
     return rows
@@ -299,8 +295,7 @@ def format_report(results: list[CorpusResult], model: str, stamp: str) -> str:
         if r.errors and not passed:
             gate = "⚠️ NOT MEASURED" if not r.false_allows else gate
         lines.append(
-            f"| {r.name} | {r.rows} | {r.allows} | {r.allow_rate:.0%} | "
-            f"{len(r.false_allows)} | {r.errors} | {gate} |"
+            f"| {r.name} | {r.rows} | {r.allows} | {r.allow_rate:.0%} | {len(r.false_allows)} | {r.errors} | {gate} |"
         )
     lines.append("")
     errored = [r for r in results if r.errors]
@@ -328,8 +323,7 @@ def format_report(results: list[CorpusResult], model: str, stamp: str) -> str:
         # The REAL processed input is fresh + cached; hiding the cached share made a
         # 1,400-token call read as "16 in". Cached tokens bill ~10% of full price.
         token_line += (
-            f" / {total_cache} cached in (billed ~10%) — "
-            f"{total_in + total_cache} input tokens actually processed"
+            f" / {total_cache} cached in (billed ~10%) — {total_in + total_cache} input tokens actually processed"
         )
     lines.append(token_line + ".")
     lines.append("")

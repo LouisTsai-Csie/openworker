@@ -233,7 +233,11 @@ def test_live_output_is_a_view_and_the_result_is_the_record(runner, tmp_path):
     ex = RunnerExecutor(client, cwd=str(tmp_path), on_output=seen.append)
     fast = ex.run("echo instant")
     assert fast["output"].startswith("instant") and seen == []  # too quick for a live frame
-    ticks = f'foreach ($i in 1..3) {{ "tick $i"; {_sleep(0.4)} }}' if _WIN else "for i in 1 2 3; do echo tick $i; sleep 0.4; done"
+    ticks = (
+        f'foreach ($i in 1..3) {{ "tick $i"; {_sleep(0.4)} }}'
+        if _WIN
+        else "for i in 1 2 3; do echo tick $i; sleep 0.4; done"
+    )
     slow = ex.run(ticks)
     assert "tick 1" in "".join(seen)  # the view arrived while it ran
     assert all(f"tick {i}" in slow["output"] for i in (1, 2, 3))  # the record is complete
@@ -271,9 +275,7 @@ def test_a_cut_stream_resumes_and_no_result_is_lost(runner, tmp_path):
     box: dict = {}
     started = tmp_path / "started"
     worker = threading.Thread(
-        target=lambda: box.update(
-            ex.run(f"{_marker(started)}; {_sleep(1.5)}; echo finished-while-away")
-        )
+        target=lambda: box.update(ex.run(f"{_marker(started)}; {_sleep(1.5)}; echo finished-while-away"))
     )
     worker.start()
     _await_started(started)
@@ -298,9 +300,7 @@ def test_the_same_request_id_runs_once(runner, tmp_path):
     assert target.read_text() == "x\n"
 
 
-def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_folder(
-    runner, tmp_path, monkeypatch
-):
+def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_folder(runner, tmp_path, monkeypatch):
     # A reconnect attempt waits `_HELLO_TIMEOUT` (60 s in production, sized for a cold VM
     # whose disk is still warming up) before it gives up and retries. A restart reliably
     # loses the first attempt or two -- the old workspace is closing, and the new daemon is
@@ -314,9 +314,7 @@ def test_a_restarted_sandbox_fails_the_running_command_and_reopens_in_the_last_f
     ex.run(_cd_and_set("work", "GONE", "soon"))
     box: dict = {}
     started = tmp_path / "started"
-    worker = threading.Thread(
-        target=lambda: box.update(ex.run(f"{_marker(started)}; {_sleep(30)}", timeout=60))
-    )
+    worker = threading.Thread(target=lambda: box.update(ex.run(f"{_marker(started)}; {_sleep(30)}", timeout=60)))
     worker.start()
     _await_started(started)
     provider.restart_daemon()  # a new runner instance, as after a sandbox restart
@@ -367,7 +365,9 @@ def test_files_are_read_in_pages_and_written_with_a_precondition(runner, tmp_pat
     written = client.call("fs.write", {"path": str(note), "text": "one\n"}, timeout=10)
     client.call("fs.write", {"path": str(note), "text": "two\n", "if_match_sha256": written["sha256"]}, timeout=10)
     with pytest.raises(P.RunnerError) as err:  # based on content that is no longer there
-        client.call("fs.write", {"path": str(note), "text": "three\n", "if_match_sha256": written["sha256"]}, timeout=10)
+        client.call(
+            "fs.write", {"path": str(note), "text": "three\n", "if_match_sha256": written["sha256"]}, timeout=10
+        )
     assert err.value.code == P.FS_ERROR and note.read_text() == "two\n"
 
     found = client.call("fs.search", {"path": str(tmp_path), "pattern": r"^line 99\d$"}, timeout=10)
@@ -463,5 +463,10 @@ def test_the_server_binary_can_run_as_the_runner(tmp_path):
         launch.maybe_run_runner(["sandbox-runner", "--help"])
     # From source the runner is the zipapp under -S; frozen it is the binary itself.
     assert launch.runner_command(tmp_path / "r.pyz")[:2] == [sys.executable, "-S"]
-    done = subprocess.run([sys.executable, "-m", "coworker.server.run", "sandbox-runner", "--help"], capture_output=True, text=True, timeout=60)
+    done = subprocess.run(
+        [sys.executable, "-m", "coworker.server.run", "sandbox-runner", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     assert done.returncode == 0 and "serve" in done.stdout and "attach" in done.stdout

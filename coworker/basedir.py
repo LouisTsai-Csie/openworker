@@ -37,7 +37,5 @@ def ensure_under_base(path: str | os.PathLike, what: str = "folder") -> Path:
         return resolved
     root = base.resolve()
     if resolved != root and not resolved.is_relative_to(root):
-        raise OutsideBaseDir(
-            f"this machine only works under {root} — pick a {what} inside it"
-        )
+        raise OutsideBaseDir(f"this machine only works under {root} — pick a {what} inside it")
     return resolved

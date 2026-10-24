@@ -146,6 +146,11 @@ exclude_lines = [
 # Counts measured 2026-10-20 against 79k lines of coworker/ + 57k lines of tests/.
 # ---------------------------------------------------------------------------
 [tool.ruff]
+# 120, not the 88 default: measured against the tree, 88 leaves 7482 lines over and the
+# formatter can only reflow about half of them — the rest are string literals, URLs and
+# comments it will not touch. At 120 the formatter gets the residue down to 144, which is
+# small enough to clear by hand, so E501 can be a live gate instead of an exemption.
+line-length = 120
 target-version = "py312"  # matches requires-python
 # surfaces/ is the TypeScript + Rust GUI project; everything else Python is linted,
 # so a new top-level directory is covered the day it appears.

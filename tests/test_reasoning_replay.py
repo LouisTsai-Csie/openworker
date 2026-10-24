@@ -42,7 +42,12 @@ def _chunks(field, parts):
     for p in parts:
         delta = SimpleNamespace(content=None, tool_calls=None, **{field: p})
         out.append(SimpleNamespace(choices=[SimpleNamespace(delta=delta, finish_reason=None)], usage=None))
-    out.append(SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="ok", tool_calls=None), finish_reason="stop")], usage=None))
+    out.append(
+        SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content="ok", tool_calls=None), finish_reason="stop")],
+            usage=None,
+        )
+    )
     return out
 
 
@@ -139,17 +144,28 @@ def test_engine_persists_the_sidecar_and_the_provider_gets_it_back(tmp_path):
     def _delta(**fields):
         base = {"content": None, "tool_calls": None}
         base.update(fields)
-        return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(**base), finish_reason=fields.pop("finish", None))], usage=None)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(**base), finish_reason=fields.pop("finish", None))],
+            usage=None,
+        )
 
     # The engine streams: turn 1 thinks then calls read_file; turn 2 thinks then answers.
     call = SimpleNamespace(index=0, id="c1", function=SimpleNamespace(name="read_file", arguments='{"path": "a.txt"}'))
     first = [
         _delta(reasoning_content="I should read the file"),
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=None, tool_calls=[call]), finish_reason="tool_calls")], usage=None),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(delta=SimpleNamespace(content=None, tool_calls=[call]), finish_reason="tool_calls")
+            ],
+            usage=None,
+        ),
     ]
     second = [
         _delta(reasoning_content="it said hello"),
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="ok", tool_calls=None), finish_reason="stop")], usage=None),
+        SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content="ok", tool_calls=None), finish_reason="stop")],
+            usage=None,
+        ),
     ]
     responses = [first, second]
     fake = _FakeOpenAI()

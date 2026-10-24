@@ -109,9 +109,7 @@ def test_tool_turn_order_and_execution(tmp_path):
     ]
     finished = next(e for e in events if e.type == EventType.TOOL_FINISHED)
     assert finished.data["status"] == "ok"
-    assert any(
-        m.get("role") == "tool" and "hello" in m["content"] for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "hello" in m["content"] for m in engine.messages)
 
 
 def test_write_requires_approval_then_approved(tmp_path):
@@ -148,16 +146,11 @@ def test_denied_tool_yields_error_and_continues(tmp_path):
     finished = next(e for e in events if e.type == EventType.TOOL_FINISHED)
     assert finished.data["status"] == "denied"
     assert _types(events)[-1] == EventType.TURN_END
-    assert any(
-        m.get("role") == "tool" and "not executed" in m["content"]
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "tool" and "not executed" in m["content"] for m in engine.messages)
 
 
 def test_max_iterations_rail(tmp_path):
-    engine, provider = _engine(
-        tmp_path, [_tool_turn("list_files", {})], loop=True, max_iterations=3
-    )
+    engine, provider = _engine(tmp_path, [_tool_turn("list_files", {})], loop=True, max_iterations=3)
     events = _collect(engine, "loop forever")
     end = events[-1]
     assert end.type == EventType.TURN_END
@@ -191,10 +184,7 @@ def test_steering_injects_next_turn(tmp_path):
     engine.queue_steering("actually, also do this")
     events = _collect(engine, "do the first thing")
     assert provider.calls == 2
-    assert any(
-        m.get("role") == "user" and m["content"] == "actually, also do this"
-        for m in engine.messages
-    )
+    assert any(m.get("role") == "user" and m["content"] == "actually, also do this" for m in engine.messages)
     assert events[-1].data["status"] == "completed"
 
 
@@ -203,10 +193,7 @@ def test_steering_injects_next_turn(tmp_path):
 
 def _multi_tool_turn(calls):
     return AssistantTurn(
-        tool_calls=[
-            ToolCall(id=f"call_{i}", name=name, arguments=args)
-            for i, (name, args) in enumerate(calls)
-        ],
+        tool_calls=[ToolCall(id=f"call_{i}", name=name, arguments=args) for i, (name, args) in enumerate(calls)],
         finish_reason="tool_calls",
     )
 
@@ -253,17 +240,13 @@ def test_low_risk_tool_calls_run_concurrently(tmp_path):
     assert len(finished) == 2
     assert all(e.data["status"] == "ok" for e in finished)
     # a tool result message exists for every call id
-    tool_ids = {
-        m.get("tool_call_id") for m in engine.messages if m.get("role") == "tool"
-    }
+    tool_ids = {m.get("tool_call_id") for m in engine.messages if m.get("role") == "tool"}
     assert tool_ids == {"call_0", "call_1"}
 
 
 def test_non_low_risk_tool_calls_stay_sequential(tmp_path):
     order = []
-    medium = ai.ToolMetadata(
-        category="filesystem", risk_level="medium", requires_approval=False
-    )
+    medium = ai.ToolMetadata(category="filesystem", risk_level="medium", requires_approval=False)
 
     def first():
         """Record start/end with a delay."""
@@ -462,11 +445,7 @@ def test_new_turn_repairs_dangling_tool_calls(tmp_path):
     )
     events = _collect(engine, "follow-up")
     assert events[-1].data["status"] == "completed"
-    idx = next(
-        i
-        for i, m in enumerate(engine.messages)
-        if m.get("role") == "assistant" and m.get("tool_calls")
-    )
+    idx = next(i for i, m in enumerate(engine.messages) if m.get("role") == "assistant" and m.get("tool_calls"))
     stub = engine.messages[idx + 1]
     assert stub["role"] == "tool" and stub["tool_call_id"] == "call_lost"
     assert "interrupted" in stub["content"]
@@ -519,9 +498,7 @@ def test_every_audit_row_carries_the_tool_call_id(tmp_path):
     so this covers the lifecycle stages that never pass it themselves."""
     (tmp_path / "a.txt").write_text("hello", encoding="utf-8")
     rows: list[dict] = []
-    provider = ScriptedProvider(
-        [_tool_turn("read_file", {"path": "a.txt"}, call_id="call_a"), _text_turn("done")]
-    )
+    provider = ScriptedProvider([_tool_turn("read_file", {"path": "a.txt"}, call_id="call_a"), _text_turn("done")])
     registry = ToolRegistry()
     registry.register_all(ai.toolkits.files(root=str(tmp_path), allow_write=True))
     engine = TurnEngine(

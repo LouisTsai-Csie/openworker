@@ -31,8 +31,6 @@ def contract():
     return json.loads(CONTRACT.read_text())["cards"]
 
 
-
-
 def _kind(value) -> str:
     if isinstance(value, bool):
         return "bool"
@@ -59,7 +57,11 @@ async def _parked(gallery_manager, start, title_prefix):
     task = asyncio.create_task(start)
     for _ in range(100):
         await asyncio.sleep(0.02)
-        items = [i for i in gallery_manager.inbox.list(session_id="lead-sid", state="pending") if i.title.startswith(title_prefix)]
+        items = [
+            i
+            for i in gallery_manager.inbox.list(session_id="lead-sid", state="pending")
+            if i.title.startswith(title_prefix)
+        ]
         if items:
             return task, items[0]
     raise AssertionError(f"nothing parked for {title_prefix!r}")
@@ -76,7 +78,13 @@ async def test_staffing_card_payload_matches_the_gallery(gallery_manager, contra
     approve = gallery_manager.inbox_team_approver("lead-sid", "swe-lead")
     args = {
         "members": [
-            {"persona": "swe-worker", "name": "nia", "reason": "builds it", "connectors": ["github"], "connector_reasons": {"github": "pushes the branch"}},
+            {
+                "persona": "swe-worker",
+                "name": "nia",
+                "reason": "builds it",
+                "connectors": ["github"],
+                "connector_reasons": {"github": "pushes the branch"},
+            },
             {"persona": "test-worker", "name": "checks", "reason": "verifies it"},
         ],
         "note": "Two workers.",
@@ -90,10 +98,17 @@ async def test_staffing_card_payload_matches_the_gallery(gallery_manager, contra
     gallery_members = [m for s in states for m in s.get("members", [])]
     canonical_member = dict(canonical["members"][0].items())
     for member in data["members"]:
-        problems += _compare("team member", member, {k: canonical_member[k] for k in ("persona", "name", "resolved_model")}, gallery_members)
+        problems += _compare(
+            "team member",
+            member,
+            {k: canonical_member[k] for k in ("persona", "name", "resolved_model")},
+            gallery_members,
+        )
     # The inline event carries the same fields minus the gate marker.
     event_canonical = card["states"][card["canonical"]]
-    problems += _compare("team_proposed", {k: v for k, v in data.items() if k != "gate"}, event_canonical, list(card["states"].values()))
+    problems += _compare(
+        "team_proposed", {k: v for k, v in data.items() if k != "gate"}, event_canonical, list(card["states"].values())
+    )
     gallery_manager.inbox.resolve(item.id, '{"approved": false}')
     await task
     assert not problems, "\n".join(problems)
@@ -103,7 +118,10 @@ async def test_staffing_card_payload_matches_the_gallery(gallery_manager, contra
 async def test_work_items_payload_matches_the_gallery(gallery_manager, contract):
     card = contract["work-items"]
     approve = gallery_manager.inbox_items_approver("lead-sid", "swe-lead")
-    args = {"items": [{"title": "Cap the backoff", "criteria": "no wait exceeds maxDelayMs", "description": "in retry.ts"}], "note": "one item"}
+    args = {
+        "items": [{"title": "Cap the backoff", "criteria": "no wait exceeds maxDelayMs", "description": "in retry.ts"}],
+        "note": "one item",
+    }
     args = work_proposal(args["items"])
     task, item = await _parked(gallery_manager, approve(args, "t2"), "Approve the proposed")
     canonical, states = _inbox_data(card)
@@ -119,7 +137,9 @@ async def test_work_items_payload_matches_the_gallery(gallery_manager, contract)
 async def test_connector_request_payload_matches_the_gallery(gallery_manager, contract):
     card = contract["connector-request"]
     ask = gallery_manager.inbox_connector_requester("lead-sid", "swe-lead")
-    task, item = await _parked(gallery_manager, ask({"connector": "jira", "reason": "track the work"}, "t3"), "Connect jira?")
+    task, item = await _parked(
+        gallery_manager, ask({"connector": "jira", "reason": "track the work"}, "t3"), "Connect jira?"
+    )
     canonical, states = _inbox_data(card)
     problems = _compare("connector request", item.data or {}, canonical, states)
     # The gallery writes the same title the server does.
@@ -138,7 +158,9 @@ def test_approval_prompt_data_matches_the_gallery(gallery_manager, contract):
         metadata = None
 
     canonical, states = _inbox_data(card)
-    problems = _compare("parked approval", gallery_manager.approval_prompt_data("lead-sid", Request()), canonical, states)
+    problems = _compare(
+        "parked approval", gallery_manager.approval_prompt_data("lead-sid", Request()), canonical, states
+    )
     assert not problems, "\n".join(problems)
 
 
@@ -160,24 +182,40 @@ def test_lead_decision_payload_matches_the_gallery(gallery_manager, contract):
     """`decide_worker_call`: the parked approval carries the worker's call the card shows."""
     card = contract["worker-decision"]
     from coworker.teams.registry import TeamWorker
-    gallery_manager.teams.create(space="acme", lead_session="lead-sid", lead_actor="lead",
-        workers=[TeamWorker(actor="nia", persona="swe-worker", session_id="worker-sid")])
+
+    gallery_manager.teams.create(
+        space="acme",
+        lead_session="lead-sid",
+        lead_actor="lead",
+        workers=[TeamWorker(actor="nia", persona="swe-worker", session_id="worker-sid")],
+    )
     parked = gallery_manager.inbox.add_approval(
-        "worker-sid", "Run `run_shell`?", body="requires approval\ncommand: npm run build",
+        "worker-sid",
+        "Run `run_shell`?",
+        body="requires approval\ncommand: npm run build",
         data={"tool": "run_shell", "arguments": {"command": "npm run build"}},
     )
 
     class Request:
         tool_name = "decide_worker_call"
-        arguments: ClassVar[dict[str, str]] = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
+        arguments: ClassVar[dict[str, str]] = {
+            "worker": "nia",
+            "call_id": parked.id,
+            "decision": "deny",
+            "note": "wrong worktree",
+        }
         metadata = None
 
     data = gallery_manager.approval_prompt_data("lead-sid", Request())
     canonical, states = _inbox_data(card)
     problems = _compare("lead decision", data, canonical, states)
     problems += _compare(
-        "worker call", data["worker_call"], canonical["worker_call"],
+        "worker call",
+        data["worker_call"],
+        canonical["worker_call"],
         [s["worker_call"] for s in states if "worker_call" in s],
     )
-    problems += _compare("decision arguments", data["arguments"], canonical["arguments"], [s["arguments"] for s in states])
+    problems += _compare(
+        "decision arguments", data["arguments"], canonical["arguments"], [s["arguments"] for s in states]
+    )
     assert not problems, "\n".join(problems)

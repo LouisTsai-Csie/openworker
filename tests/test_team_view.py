@@ -32,9 +32,7 @@ def store(tmp_path):
 
 
 def assigned(store):
-    item = store.create_item(
-        "acme", LEAD, title="Invoice PDF", criteria="Download verified"
-    )
+    item = store.create_item("acme", LEAD, title="Invoice PDF", criteria="Download verified")
     return store.assign("acme", LEAD, item["id"], WORKER.id)
 
 
@@ -104,12 +102,8 @@ def test_mention_escapes_markdown_and_does_not_mutate():
 
 
 def test_role_filtered_tool_surface(store):
-    assert "set_status" in {
-        t.__name__ for t in board_tools(store, space="acme", actor=WORKER)
-    }
-    assert "set_status" not in {
-        t.__name__ for t in board_tools(store, space="acme", actor=LEAD)
-    }
+    assert "set_status" in {t.__name__ for t in board_tools(store, space="acme", actor=WORKER)}
+    assert "set_status" not in {t.__name__ for t in board_tools(store, space="acme", actor=LEAD)}
 
 
 def test_waiting_requires_a_current_pending_prompt():
@@ -134,24 +128,23 @@ def test_waiting_requires_a_current_pending_prompt():
 
 
 def test_parallel_time_is_wall_clock_union():
-    result = breakdown(
-        [(0, 5, "tool_ms"), (2, 8, "tool_ms"), (8, 9, "model_ms")], 0, 10
-    )
+    result = breakdown([(0, 5, "tool_ms"), (2, 8, "tool_ms"), (8, 9, "model_ms")], 0, 10)
     assert result == {"model_ms": 1000, "tool_ms": 8000, "waited_ms": 0, "queued_ms": 1000}
     assert sum(result.values()) == 10000
 
 
 def test_waiting_has_priority_and_intervals_are_clipped():
-    result = breakdown(
-        [(-5, 20, "model_ms"), (3, 6, "waited_ms"), (2, 7, "tool_ms")], 0, 10
-    )
+    result = breakdown([(-5, 20, "model_ms"), (3, 6, "waited_ms"), (2, 7, "tool_ms")], 0, 10)
     assert result == {"model_ms": 5000, "tool_ms": 2000, "waited_ms": 3000, "queued_ms": 0}
 
 
 def test_usage_is_normalized_defensively():
-    assert tokens(
-        {"input": -1, "output": "12", "cache_read": None, "cache_write": "bad"}
-    ) == {"input": 0, "output": 12, "cache_read": 0, "cache_write": 0}
+    assert tokens({"input": -1, "output": "12", "cache_read": None, "cache_write": "bad"}) == {
+        "input": 0,
+        "output": 12,
+        "cache_read": 0,
+        "cache_write": 0,
+    }
 
 
 def test_event_reader_paginates(store):
@@ -176,13 +169,9 @@ def test_real_manager_summary_and_current_wait(tmp_path, monkeypatch):
         space=manager._board_space("lead-session"),
         lead_session="lead-session",
         lead_actor="lead",
-        workers=[
-            TeamWorker(actor="sam", persona="swe-worker", session_id="worker-session")
-        ],
+        workers=[TeamWorker(actor="sam", persona="swe-worker", session_id="worker-session")],
     )
-    item = manager.team_store.create_item(
-        team.space, LEAD, title="Invoice PDF", criteria="Verified"
-    )
+    item = manager.team_store.create_item(team.space, LEAD, title="Invoice PDF", criteria="Verified")
     manager.team_store.assign(team.space, LEAD, item["id"], WORKER.id)
     manager.team_store.transition(team.space, WORKER, item["id"], "in_progress")
     manager.team_store.set_status(team.space, WORKER, item["id"], "Running tests")
@@ -221,9 +210,7 @@ def test_engine_records_and_strips_timing(tmp_path):
     from test_engine import _engine, _tool_turn, _text_turn, _collect
 
     (tmp_path / "sample.txt").write_text("sample")
-    engine, _ = _engine(
-        tmp_path, [_tool_turn("read_file", {"path": "sample.txt"}), _text_turn("Read")]
-    )
+    engine, _ = _engine(tmp_path, [_tool_turn("read_file", {"path": "sample.txt"}), _text_turn("Read")])
     _collect(engine, "read")
     model = next(m for m in engine.messages if m["role"] == "assistant")
     tool = next(m for m in engine.messages if m["role"] == "tool")
@@ -283,17 +270,11 @@ def test_call_after_review_is_not_attributed_to_the_previous_item():
     )
     manager = SimpleNamespace(
         session_board=lambda sid: {"items": [item]},
-        team_store=SimpleNamespace(
-            events=lambda space, since_seq, limit: [
-                e for e in events if e["seq"] > since_seq
-            ]
-        ),
+        team_store=SimpleNamespace(events=lambda space, since_seq, limit: [e for e in events if e["seq"] > since_seq]),
         inbox=InboxStore(),
         _engines={},
         is_running=lambda sid: False,
-        session_store=SimpleNamespace(
-            load=lambda sid: worker if sid == "worker" else None
-        ),
+        session_store=SimpleNamespace(load=lambda sid: worker if sid == "worker" else None),
     )
     team = SimpleNamespace(
         lead_session="lead",
@@ -315,10 +296,7 @@ def test_call_after_review_is_not_attributed_to_the_previous_item():
 def test_chart_bucketing_preserves_all_tokens_by_role():
     from coworker.teams.summary import compact_usage_points
 
-    points = [
-        {"ts": n, "role": "lead" if n % 2 else "swe-worker", "tokens": 3}
-        for n in range(10000)
-    ]
+    points = [{"ts": n, "role": "lead" if n % 2 else "swe-worker", "tokens": 3} for n in range(10000)]
     result = compact_usage_points(points)
     assert len(result) <= 240
     assert sum(p["tokens"] for p in result) == 30000

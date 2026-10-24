@@ -161,9 +161,7 @@ def _stub_gallery(monkeypatch, markdown=SALES_MANIFEST, *, hash_ok=True):
     }
     events = []
     monkeypatch.setattr(cloud, "gallery_manifest", lambda s, c, slug: manifest)
-    monkeypatch.setattr(
-        cloud, "gallery_install_event", lambda s, c, slug: events.append(slug)
-    )
+    monkeypatch.setattr(cloud, "gallery_install_event", lambda s, c, slug: events.append(slug))
     return events
 
 
@@ -202,9 +200,7 @@ def test_cloud_gallery_endpoint_signed_out(client):
 
 def test_delete_persona_after_gallery_install(client, monkeypatch):
     _stub_gallery(monkeypatch)
-    assert client.post("/v1/personas/install", json={"gallery_slug": "sales"}).json()[
-        "ok"
-    ]
+    assert client.post("/v1/personas/install", json={"gallery_slug": "sales"}).json()["ok"]
     body = client.delete("/v1/personas/sales").json()
     assert body["ok"]
     assert "sales" not in {p["id"] for p in body["personas"]}
@@ -272,9 +268,7 @@ def test_store_managed_grant_stages_into_ephemeral_store():
     assert staging.profiles()["notion:default"]["default_account"] == "w"
 
 
-def test_machine_targeted_callback_stores_nothing_on_delegation_failure(
-    client, monkeypatch
-):
+def test_machine_targeted_callback_stores_nothing_on_delegation_failure(client, monkeypatch):
     """One grant, one holder: if the delegation step fails the grant is stored
     NOWHERE — not locally as a fallback — and the page says so."""
     from coworker import cloud

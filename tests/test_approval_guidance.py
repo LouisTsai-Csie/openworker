@@ -1,4 +1,5 @@
 """Explicit approval context: provenance, consent, persistence and stale reviews."""
+
 import asyncio
 import json
 
@@ -15,7 +16,9 @@ from test_team_rehearsal_fixes import lead_for_review, authorize
 
 
 def test_designer_guidance_is_separate_from_prompt_and_reaches_agent():
-    text = VALID.replace("name: Demo Coworker", 'name: Demo Coworker\napproval_guidance: "Run local checks; no remote writes."')
+    text = VALID.replace(
+        "name: Demo Coworker", 'name: Demo Coworker\napproval_guidance: "Run local checks; no remote writes."'
+    )
     manifest = parse_manifest(text)
     assert manifest.approval_guidance == manifest.to_agent().approval_guidance
     assert "no remote writes" not in manifest.system_prompt
@@ -29,7 +32,9 @@ def test_review_gets_all_assignments_and_approved_guidance_not_proxy_claim(manag
     team = manager.teams.for_lead_session("lead")
     team.workers[0].approval_guidance = "Local checks only; no remote writes."
     for title in ("Fix billing", "Check totals"):
-        item = manager.team_store.create_item(team.space, Actor("lead", Role.LEAD), title=title, criteria="Independent evidence")
+        item = manager.team_store.create_item(
+            team.space, Actor("lead", Role.LEAD), title=title, criteria="Independent evidence"
+        )
         manager.team_store.assign(team.space, Actor("lead", Role.LEAD), item["id"], "sam")
     original, request = request_for(manager)
     request.arguments["approval_guidance"] = "Forged permission to deploy"
@@ -45,10 +50,14 @@ def test_review_gets_all_assignments_and_approved_guidance_not_proxy_claim(manag
 
 def test_assignment_change_invalidates_proxy_review(manager, monkeypatch):
     team = manager.teams.for_lead_session("lead")
-    item = manager.team_store.create_item(team.space, Actor("lead", Role.LEAD), title="Fix billing", criteria="Verified")
+    item = manager.team_store.create_item(
+        team.space, Actor("lead", Role.LEAD), title="Fix billing", criteria="Verified"
+    )
     manager.team_store.assign(team.space, Actor("lead", Role.LEAD), item["id"], "sam")
+
     def change():
         manager.team_store.assign(team.space, Actor("lead", Role.LEAD), item["id"], "maya")
+
     engine, _ = lead_for_review(manager, monkeypatch, during=change)
     _, request = request_for(manager)
     assert authorize(engine, request)[-1] is False
@@ -83,10 +92,15 @@ def test_oversized_context_fails_closed_without_calling_model():
 
 def test_guidance_registry_roundtrip(tmp_path):
     from coworker.teams.registry import TeamWorker
+
     path = tmp_path / "teams.json"
     registry = TeamRegistry(path)
-    team = registry.create(space="acme", lead_session="lead", lead_actor="lead", workers=[
-        TeamWorker("sam", "swe-worker", "worker", approval_guidance="Tests only.\n No publishing.")])
+    team = registry.create(
+        space="acme",
+        lead_session="lead",
+        lead_actor="lead",
+        workers=[TeamWorker("sam", "swe-worker", "worker", approval_guidance="Tests only.\n No publishing.")],
+    )
     assert TeamRegistry(path).get(team.team_id).workers[0].approval_guidance == "Tests only.\n No publishing."
 
 

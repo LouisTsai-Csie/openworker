@@ -38,10 +38,23 @@ def handoff(tmp_path, monkeypatch):
 
     def git(path, *args, check=True):
         return subprocess.run(
-            ["git", "-c", "user.name=Rohit C Prasad", "-c", "user.email=rohit.prasad15@gmail.com",
-             "-c", "commit.gpgsign=false", "-c", f"core.hooksPath={tmp_path / 'no-hooks'}",
-             "-C", str(path), *args],
-            check=check, capture_output=True, text=True,
+            [
+                "git",
+                "-c",
+                "user.name=Rohit C Prasad",
+                "-c",
+                "user.email=rohit.prasad15@gmail.com",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                f"core.hooksPath={tmp_path / 'no-hooks'}",
+                "-C",
+                str(path),
+                *args,
+            ],
+            check=check,
+            capture_output=True,
+            text=True,
         )
 
     def commit(path, filename, content):

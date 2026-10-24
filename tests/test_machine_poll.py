@@ -58,9 +58,7 @@ async def test_transport_unseals_and_orders_frames(tmp_path):
 async def test_transport_skips_garbage_keeps_going(tmp_path):
     identity = load_or_create(tmp_path / "box-id")
     good = _sealed(identity, {"provider": "slack", "n": 1})
-    t, _ = _transport(
-        tmp_path, [[{"event_key": "bad", "sealed_b64": "not-a-blob"}, good]]
-    )
+    t, _ = _transport(tmp_path, [[{"event_key": "bad", "sealed_b64": "not-a-blob"}, good]])
     await t.open()
     # The garbage blob is logged and dropped; the good frame still arrives.
     assert (await t.recv())["n"] == 1
@@ -124,9 +122,7 @@ def test_make_adapter_prefers_poll_transport_on_boxes(tmp_path):
     transport = adapter._hub._transport_factory()
     assert isinstance(transport, MachinePollTransport)
     # Desktop (no unseal): the stamped profile alone never takes this branch.
-    assert (
-        make_adapter("slack", profile, secrets=secrets, machine_poll_base="x") is None
-    )
+    assert make_adapter("slack", profile, secrets=secrets, machine_poll_base="x") is None
 
 
 # --- delegation stamping (the sidecar side that arms the transport) -----------
@@ -149,9 +145,7 @@ def test_slack_delegate_dedupes_and_stamps_pointer(client, monkeypatch):
     from coworker import cloud
 
     secrets = client.manager.secrets
-    secrets.put(
-        "slack:default", {"type": "oauth", "managed": True, "mode": "relay", "enabled": True}
-    )
+    secrets.put("slack:default", {"type": "oauth", "managed": True, "mode": "relay", "enabled": True})
     for team in ("T1", "T2"):
         secrets.put(
             f"slack:team:{team}",
@@ -170,9 +164,7 @@ def test_slack_delegate_dedupes_and_stamps_pointer(client, monkeypatch):
         return {"user_id": "usr_1", "machine_credential": "mc_minted"}
 
     monkeypatch.setattr(cloud, "delegate_connection", fake_delegate)
-    r = client.post(
-        "/v1/connectors/slack/delegate", json={"seal_pubkey": "SEALPUB"}
-    )
+    r = client.post("/v1/connectors/slack/delegate", json={"seal_pubkey": "SEALPUB"})
     assert r.status_code == 200, r.text
     assert r.json()["ok"] is True
     assert calls == [("conn_slack", "SEALPUB")]  # deduped: one call, key passed
@@ -192,9 +184,7 @@ def test_slack_relay_handoff_is_portable_now(client):
     from coworker.connectors.setup import connector_handoff_info
 
     secrets = client.manager.secrets
-    secrets.put(
-        "slack:default", {"type": "oauth", "managed": True, "mode": "relay", "enabled": True}
-    )
+    secrets.put("slack:default", {"type": "oauth", "managed": True, "mode": "relay", "enabled": True})
     secrets.put(
         "slack:team:T1",
         {
@@ -217,9 +207,7 @@ def test_revoke_connector_connections_by_name(client, monkeypatch):
     connector NAME, since the desktop forgot the profiles at handoff."""
     from coworker import cloud
 
-    client.manager.secrets.put(
-        cloud.CLOUD_AUTH_PROFILE, {"access_token": "sess", "expires": 9999999999}
-    )
+    client.manager.secrets.put(cloud.CLOUD_AUTH_PROFILE, {"access_token": "sess", "expires": 9999999999})
     calls: list[str] = []
 
     class _Resp:
@@ -445,9 +433,7 @@ def test_send_message_github_posts_issue_comment(monkeypatch):
     )
     from coworker import cloud
 
-    monkeypatch.setattr(
-        cloud, "github_installation_token", lambda *a, **k: "ghs_MINTED"
-    )
+    monkeypatch.setattr(cloud, "github_installation_token", lambda *a, **k: "ghs_MINTED")
     seen = {}
 
     class _Resp:
@@ -476,7 +462,6 @@ def test_send_message_github_posts_issue_comment(monkeypatch):
     assert seen["auth"] == "Bearer ghs_MINTED"
 
 
-
 async def test_github_frame_carries_the_broker_target_session():
     """Connectors-across-machines spec §3: a subscribed repo's events name
     the responder; the adapter passes it through untouched."""
@@ -490,8 +475,15 @@ async def test_github_frame_carries_the_broker_target_session():
         seen.append(event)
 
     adapter.handle_message = capture
-    base = {"provider": "github", "kind": "mention", "installation_id": "9001",
-            "owner_repo": "o/r", "number": 1, "sender": "rohit", "body": "@ow hi"}
+    base = {
+        "provider": "github",
+        "kind": "mention",
+        "installation_id": "9001",
+        "owner_repo": "o/r",
+        "number": 1,
+        "sender": "rohit",
+        "body": "@ow hi",
+    }
     await adapter._on_event({**base, "target_session_id": "lead-1"})
     await adapter._on_event(base)
     assert [e.target_session_id for e in seen] == ["lead-1", None]
@@ -503,11 +495,15 @@ def test_cursor_persists_across_transports(tmp_path):
     from coworker.connectors.machine_poll import MachinePollTransport
 
     path = tmp_path / "poll-cursors" / "conn.cursor"
-    t = MachinePollTransport("http://x", connection_id="c", user_id="u", credential="mc", unseal=lambda b: b"", cursor_path=path)
+    t = MachinePollTransport(
+        "http://x", connection_id="c", user_id="u", credential="mc", unseal=lambda b: b"", cursor_path=path
+    )
     assert t._cursor == ""
     t._cursor = "1788574089744#81997fbe"
     t._save_cursor()
-    t2 = MachinePollTransport("http://x", connection_id="c", user_id="u", credential="mc", unseal=lambda b: b"", cursor_path=path)
+    t2 = MachinePollTransport(
+        "http://x", connection_id="c", user_id="u", credential="mc", unseal=lambda b: b"", cursor_path=path
+    )
     assert t2._cursor == "1788574089744#81997fbe"
 
 

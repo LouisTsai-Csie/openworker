@@ -22,7 +22,9 @@ from coworker.sandbox.transport import PipeTransport, Transport
 class RunnerLocalProvider:
     name = "runner-local"
 
-    def __init__(self, *, cwd: str | Path, runner_path: Path | None = None, relay_silence_seconds: float | None = None) -> None:
+    def __init__(
+        self, *, cwd: str | Path, runner_path: Path | None = None, relay_silence_seconds: float | None = None
+    ) -> None:
         self.cwd = str(Path(cwd).expanduser().resolve())
         self._runner = Path(runner_path) if runner_path is not None else build_runner_zipapp()
         self._relay_silence = relay_silence_seconds
@@ -30,11 +32,22 @@ class RunnerLocalProvider:
         self._daemon: subprocess.Popen | None = None
 
     def describe(self) -> dict[str, Any]:
-        return {"provider": self.name, "enforcement": "none", "reason": "a local process without any sandbox (developer mode)"}
+        return {
+            "provider": self.name,
+            "enforcement": "none",
+            "reason": "a local process without any sandbox (developer mode)",
+        }
 
     def create(self) -> None:
         self._daemon = subprocess.Popen(
-            [*runner_command(self._runner), "serve", *serve_arguments(self.socket_path, self._dir), "--cwd", self.cwd, "--exit-with-parent"],
+            [
+                *runner_command(self._runner),
+                "serve",
+                *serve_arguments(self.socket_path, self._dir),
+                "--cwd",
+                self.cwd,
+                "--exit-with-parent",
+            ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -47,7 +60,14 @@ class RunnerLocalProvider:
         if self._relay_silence is not None:
             argv += ["--silence-seconds", str(self._relay_silence)]
         return PipeTransport(
-            subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0, **spawn_kwargs())
+            subprocess.Popen(
+                argv,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                bufsize=0,
+                **spawn_kwargs(),
+            )
         )
 
     def restart_daemon(self) -> None:

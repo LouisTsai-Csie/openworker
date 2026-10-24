@@ -110,9 +110,7 @@ class PersonaManifest:
     # gates behavior, so a third-party persona claiming "security" is harmless.
     group: str = "general"
     builtin: bool = False
-    source: str | None = (
-        None  # where it was loaded from (path / url), for provenance
-    )
+    source: str | None = None  # where it was loaded from (path / url), for provenance
 
     @property
     def recommended_models(self) -> list[str]:
@@ -173,9 +171,7 @@ def _connectors(
         declared = tuple(sorted(refs)) if refs else False
     elif isinstance(raw, str):
         if raw.strip().lower() != "all":
-            raise ManifestError(
-                f"{persona_id}: `connectors` must be a list of connector ids or 'all'"
-            )
+            raise ManifestError(f"{persona_id}: `connectors` must be a list of connector ids or 'all'")
         if not builtin:
             raise ManifestError(
                 f"{persona_id}: `connectors: all` is reserved for built-in coworkers — "
@@ -183,13 +179,9 @@ def _connectors(
             )
         declared = True
     elif isinstance(raw, list):
-        declared = tuple(
-            dict.fromkeys(s for s in (str(x).strip() for x in raw) if s)
-        )
+        declared = tuple(dict.fromkeys(s for s in (str(x).strip() for x in raw) if s))
     else:
-        raise ManifestError(
-            f"{persona_id}: `connectors` must be a list of connector ids or 'all'"
-        )
+        raise ManifestError(f"{persona_id}: `connectors` must be a list of connector ids or 'all'")
 
     if declared is not True:
         granted = set(declared or ())
@@ -243,13 +235,9 @@ def _models(persona_id: str, meta: dict) -> list[str]:
     new = _strlist(meta, "models")
     old = _strlist(meta, "recommended_models")
     if old and new and old != new:
-        raise ManifestError(
-            f"persona {persona_id!r}: `models` and `recommended_models` (deprecated) differ"
-        )
+        raise ManifestError(f"persona {persona_id!r}: `models` and `recommended_models` (deprecated) differ")
     if old and not new:
-        logging.getLogger(__name__).info(
-            "persona %s uses `recommended_models` — rename it to `models`", persona_id
-        )
+        logging.getLogger(__name__).info("persona %s uses `recommended_models` — rename it to `models`", persona_id)
     return list(dict.fromkeys(new or old))
 
 
@@ -262,26 +250,18 @@ def _recommends(persona_id: str, meta: dict) -> list[Recommendation]:
     out: list[Recommendation] = []
     for item in raw:
         if not isinstance(item, dict):
-            raise ManifestError(
-                f"persona {persona_id!r}: each `recommends` item must be a mapping"
-            )
+            raise ManifestError(f"persona {persona_id!r}: each `recommends` item must be a mapping")
         if "connector" in item:
             kind, ref = "connector", str(item.get("connector") or "").strip()
         elif "mcp" in item:
             kind, ref = "mcp", str(item.get("mcp") or "").strip()
         else:
-            raise ManifestError(
-                f"persona {persona_id!r}: each `recommends` item needs a `connector:` or `mcp:` key"
-            )
+            raise ManifestError(f"persona {persona_id!r}: each `recommends` item needs a `connector:` or `mcp:` key")
         if not ref:
-            raise ManifestError(
-                f"persona {persona_id!r}: a `recommends` item has an empty {kind}"
-            )
+            raise ManifestError(f"persona {persona_id!r}: a `recommends` item has an empty {kind}")
         tier = str(item.get("tier", "optional")).strip().lower()
         if tier not in VALID_REC_TIERS:
-            raise ManifestError(
-                f"persona {persona_id!r}: recommend tier must be one of {sorted(VALID_REC_TIERS)}"
-            )
+            raise ManifestError(f"persona {persona_id!r}: recommend tier must be one of {sorted(VALID_REC_TIERS)}")
         out.append(
             Recommendation(
                 kind=kind,
@@ -315,9 +295,7 @@ def parse_manifest(
         # so `My Persona.md` without an explicit id still installs (as `my-persona`).
         persona_id = _slugify(str(fallback_id or ""))
         if not persona_id:
-            raise ManifestError(
-                "manifest needs an `id` (or a filename to derive one from)"
-            )
+            raise ManifestError("manifest needs an `id` (or a filename to derive one from)")
     if not body.strip():
         raise ManifestError(f"persona {persona_id!r} has no body (the system prompt)")
 
@@ -327,9 +305,7 @@ def parse_manifest(
     # profile so an old bundle keeps its gate. New keys always win.
     legacy_family = str(meta.get("family", "")).strip().lower()
     if legacy_family and legacy_family not in VALID_FAMILIES:
-        raise ManifestError(
-            f"persona {persona_id!r}: family (legacy) must be one of {sorted(VALID_FAMILIES)}"
-        )
+        raise ManifestError(f"persona {persona_id!r}: family (legacy) must be one of {sorted(VALID_FAMILIES)}")
     legacy_code = legacy_family == "code"
     requires_folder = bool(meta.get("requires_folder", legacy_code))
     subagents = bool(meta.get("subagents", legacy_code))
@@ -339,21 +315,16 @@ def parse_manifest(
 
     mode = str(meta.get("default_permission_mode", "interactive")).strip().lower()
     if mode not in VALID_MODES:
-        raise ManifestError(
-            f"persona {persona_id!r}: default_permission_mode must be one of {sorted(VALID_MODES)}"
-        )
+        raise ManifestError(f"persona {persona_id!r}: default_permission_mode must be one of {sorted(VALID_MODES)}")
 
     group = str(meta.get("group", "general") or "general").strip().lower()
     if group not in VALID_GROUPS:
-        raise ManifestError(
-            f"persona {persona_id!r}: group must be one of {sorted(VALID_GROUPS)}"
-        )
+        raise ManifestError(f"persona {persona_id!r}: group must be one of {sorted(VALID_GROUPS)}")
 
     team_raw = str(meta.get("team", "") or "").strip().lower()
     if team_raw and team_raw not in VALID_TEAM:
         raise ManifestError(
-            f"persona {persona_id!r}: team must be one of {sorted(VALID_TEAM)}"
-            " (omit for a solo coworker)"
+            f"persona {persona_id!r}: team must be one of {sorted(VALID_TEAM)} (omit for a solo coworker)"
         )
 
     approval_guidance = meta.get("approval_guidance", "")
@@ -400,8 +371,7 @@ def _validate_tools(persona_id: str, tools: list[str]) -> None:
     unknown = [t for t in tools if t not in CATALOG]
     if unknown:
         raise ManifestError(
-            f"persona {persona_id!r} references unknown tool capabilities: {unknown}. "
-            f"Known: {sorted(CATALOG)}"
+            f"persona {persona_id!r} references unknown tool capabilities: {unknown}. Known: {sorted(CATALOG)}"
         )
 
 

@@ -86,8 +86,7 @@ def test_every_recommended_model_is_in_the_matrix():
     missing = [
         _matrix_key(d.name, d.recommended_model)
         for d in DESCRIPTORS
-        if d.name != "ollama" and d.recommended_model
-        and _matrix_key(d.name, d.recommended_model) not in MATRIX
+        if d.name != "ollama" and d.recommended_model and _matrix_key(d.name, d.recommended_model) not in MATRIX
     ]
     assert not missing, f"recommended models without a matrix row: {missing}"
 
@@ -99,8 +98,7 @@ def test_recommended_models_without_a_window_are_exactly_the_known_set():
     without = {
         _matrix_key(d.name, d.recommended_model)
         for d in DESCRIPTORS
-        if d.name != "ollama" and d.recommended_model
-        and _matrix_key(d.name, d.recommended_model) not in windows
+        if d.name != "ollama" and d.recommended_model and _matrix_key(d.name, d.recommended_model) not in windows
     }
     assert without == _KNOWN_UNVERIFIED_RECOMMENDATIONS
 

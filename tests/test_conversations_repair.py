@@ -20,13 +20,12 @@ from coworker.conversations import ConversationStore
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 def _assistant_with_calls(call_id: str = "c1") -> dict:
     return {
         "role": "assistant",
         "content": None,
-        "tool_calls": [
-            {"id": call_id, "type": "function", "function": {"name": "run_shell", "arguments": "{}"}}
-        ],
+        "tool_calls": [{"id": call_id, "type": "function", "function": {"name": "run_shell", "arguments": "{}"}}],
     }
 
 
@@ -39,6 +38,7 @@ def _user(text: str = "continue") -> dict:
 
 
 # ── tests ────────────────────────────────────────────────────────────────────
+
 
 def test_passthrough_well_formed():
     """A well-formed thread with tool results immediately after calls is unchanged."""
@@ -58,7 +58,7 @@ def test_interleaved_user_between_call_and_result():
     messages = [
         _user("go"),
         _assistant_with_calls("c1"),
-        _user("continue"),          # interleaved — this caused the 400
+        _user("continue"),  # interleaved — this caused the 400
         _tool_result("c1"),
     ]
     repaired = ConversationStore._repair_tool_pairing(messages)
@@ -171,8 +171,7 @@ def test_load_repairs_corrupt_jsonl(tmp_path):
     ]
     # Insert the session row so load() can find it.
     store._conn.execute(
-        "INSERT INTO sessions (session_id, workspace, model, mode, n_msgs) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO sessions (session_id, workspace, model, mode, n_msgs) VALUES (?, ?, ?, ?, ?)",
         (sid, str(tmp_path), "test-model", "interactive", len(corrupt_messages)),
     )
     store._conn.commit()

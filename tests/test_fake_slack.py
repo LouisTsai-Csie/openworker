@@ -48,9 +48,7 @@ async def test_connect_resolves_bot_and_receives_hello(fake_slack):
     adapter._socket.client.message_listeners.append(_cap)
     try:
         assert ok is True
-        assert (
-            adapter._bot_user_id == "U_BOT"
-        )  # resolved via auth.test against the fake
+        assert adapter._bot_user_id == "U_BOT"  # resolved via auth.test against the fake
         await fake_slack.wait_socket()
         await asyncio.wait_for(got_hello.wait(), timeout=5)
         assert hello[0]["type"] == "hello"
@@ -62,9 +60,7 @@ async def test_connect_resolves_bot_and_receives_hello(fake_slack):
 #    from the registered user table (exercises users.info caching). Plus a direct assertion that
 #    conversations.info serves the registered channel (Phase 1 builds _channel_name on this).
 async def test_inbound_resolves_user_name_and_serves_channel(fake_slack):
-    fake_slack.add_user(
-        "U1", "alice", real_name="Alice Real", display_name="Alice Display"
-    )
+    fake_slack.add_user("U1", "alice", real_name="Alice Real", display_name="Alice Display")
     fake_slack.add_channel("C1", "general", is_im=False)
 
     got: list[MessageEvent] = []
@@ -112,15 +108,11 @@ async def test_send_and_send_interactive_recorded(fake_slack):
     fake_slack.add_channel("C1", "general")
     adapter = SlackAdapter("xoxb-test", "xapp-test")
 
-    r1 = await _send_offloop(
-        adapter.send("C1", "outbound text", thread_id="1700000000.000100")
-    )
+    r1 = await _send_offloop(adapter.send("C1", "outbound text", thread_id="1700000000.000100"))
     assert r1.ok is True and r1.message_id
 
     r2 = await _send_offloop(
-        adapter.send_interactive(
-            "C1", "approve?", [Button("Approve", "v1"), Button("Deny", "v2")]
-        )
+        adapter.send_interactive("C1", "approve?", [Button("Approve", "v1"), Button("Deny", "v2")])
     )
     assert r2.ok is True and r2.message_id
 
@@ -202,9 +194,7 @@ async def test_control_reset_clears_state(fake_slack):
         assert fake_slack.users == {}
         assert fake_slack.channels == {}
         # conversations.info no longer resolves the (now-cleared) channel
-        info = await client.get(
-            f"{base.replace('/control', '/api')}/conversations.info?channel=C1"
-        )
+        info = await client.get(f"{base.replace('/control', '/api')}/conversations.info?channel=C1")
         assert info.json() == {"ok": False, "error": "channel_not_found"}
 
 
@@ -286,9 +276,7 @@ async def test_inbound_rewrites_mention_tokens(fake_slack):
     await adapter.connect()
     try:
         await fake_slack.wait_socket()
-        await fake_slack.inbound(
-            channel="C1", user="U1", text="<@UOCW99> hi — ask <@UGHOST99> too"
-        )
+        await fake_slack.inbound(channel="C1", user="U1", text="<@UOCW99> hi — ask <@UGHOST99> too")
         await asyncio.wait_for(delivered.wait(), timeout=5)
         # The known mention resolves; the unknown id keeps its token.
         assert got[0].text == "@ocw hi — ask <@UGHOST99> too"

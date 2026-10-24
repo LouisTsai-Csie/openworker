@@ -180,9 +180,7 @@ def seal_b64(recipient_pub_b64: str, plaintext: bytes) -> str:
     return _b64(ephemeral_pub + ciphertext)
 
 
-def verify_seal_attestation(
-    pubkey_b64: str, seal_pubkey_b64: str, signature_b64: str
-) -> bool:
+def verify_seal_attestation(pubkey_b64: str, seal_pubkey_b64: str, signature_b64: str) -> bool:
     """True iff the identity key behind pubkey_b64 signed this sealing key."""
     try:
         seal_raw = _unb64(seal_pubkey_b64)
@@ -193,9 +191,7 @@ def verify_seal_attestation(
 
 def verify_b64(pubkey_b64: str, data: bytes, signature_b64: str) -> bool:
     try:
-        Ed25519PublicKey.from_public_bytes(_unb64(pubkey_b64)).verify(
-            _unb64(signature_b64), data
-        )
+        Ed25519PublicKey.from_public_bytes(_unb64(pubkey_b64)).verify(_unb64(signature_b64), data)
         return True
     except (InvalidSignature, ValueError, KeyError, TypeError):
         return False

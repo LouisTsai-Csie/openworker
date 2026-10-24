@@ -89,13 +89,55 @@ def test_reviewer_stats_aggregates_by_stage(tmp_path):
     store = AuditStore(tmp_path / "audit.db")
     sid = "s1"
     rows = [
-        {"session_id": sid, "tool": "run_shell", "stage": "reviewer_verdict", "status": "allow", "tokens_in": 100, "tokens_out": 20},
-        {"session_id": sid, "tool": "run_shell", "stage": "reviewer_verdict", "status": "allow", "tokens_in": 110, "tokens_out": 25},
-        {"session_id": sid, "tool": "web_fetch", "stage": "reviewer_verdict", "status": "deny", "tokens_in": 90, "tokens_out": 30},
-        {"session_id": sid, "tool": "write_file", "stage": "reviewer_verdict", "status": "unsure", "tokens_in": 80, "tokens_out": 15},
-        {"session_id": sid, "tool": "write_file", "stage": "reviewer_shadow", "status": "allow", "tokens_in": 70, "tokens_out": 10},
+        {
+            "session_id": sid,
+            "tool": "run_shell",
+            "stage": "reviewer_verdict",
+            "status": "allow",
+            "tokens_in": 100,
+            "tokens_out": 20,
+        },
+        {
+            "session_id": sid,
+            "tool": "run_shell",
+            "stage": "reviewer_verdict",
+            "status": "allow",
+            "tokens_in": 110,
+            "tokens_out": 25,
+        },
+        {
+            "session_id": sid,
+            "tool": "web_fetch",
+            "stage": "reviewer_verdict",
+            "status": "deny",
+            "tokens_in": 90,
+            "tokens_out": 30,
+        },
+        {
+            "session_id": sid,
+            "tool": "write_file",
+            "stage": "reviewer_verdict",
+            "status": "unsure",
+            "tokens_in": 80,
+            "tokens_out": 15,
+        },
+        {
+            "session_id": sid,
+            "tool": "write_file",
+            "stage": "reviewer_shadow",
+            "status": "allow",
+            "tokens_in": 70,
+            "tokens_out": 10,
+        },
         # Other sessions and stages must not leak in.
-        {"session_id": "other", "tool": "run_shell", "stage": "reviewer_verdict", "status": "allow", "tokens_in": 999, "tokens_out": 999},
+        {
+            "session_id": "other",
+            "tool": "run_shell",
+            "stage": "reviewer_verdict",
+            "status": "allow",
+            "tokens_in": 999,
+            "tokens_out": 999,
+        },
         {"session_id": sid, "tool": "run_shell", "stage": "finished", "status": "ok"},
     ]
     for r in rows:
@@ -103,9 +145,14 @@ def test_reviewer_stats_aggregates_by_stage(tmp_path):
 
     stats = store.reviewer_stats(sid)
     assert stats["live"] == {
-        "checks": 4, "allow": 2, "deny": 1, "unsure": 1,
-        "tokens_in": 380, "tokens_out": 90,
-        "cache_read": 0, "cache_write": 0,
+        "checks": 4,
+        "allow": 2,
+        "deny": 1,
+        "unsure": 1,
+        "tokens_in": 380,
+        "tokens_out": 90,
+        "cache_read": 0,
+        "cache_write": 0,
     }
     assert stats["shadow"]["checks"] == 1 and stats["shadow"]["allow"] == 1
     store.close()
@@ -126,16 +173,21 @@ def test_audit_migration_adds_columns_to_a_legacy_db(tmp_path):
             stage TEXT, status TEXT, approval TEXT, args TEXT, result_preview TEXT,
             reason TEXT, resource TEXT)"""
     )
-    conn.execute(
-        "INSERT INTO audit_events (session_id, tool, stage, status) VALUES ('s1','t','finished','ok')"
-    )
+    conn.execute("INSERT INTO audit_events (session_id, tool, stage, status) VALUES ('s1','t','finished','ok')")
     conn.commit()
     conn.close()
 
     store = AuditStore(db)  # opening migrates
     store.append(
-        {"session_id": "s1", "tool": "run_shell", "stage": "reviewer_verdict",
-         "status": "allow", "tokens_in": 50, "tokens_out": 9, "call_id": "c1"}
+        {
+            "session_id": "s1",
+            "tool": "run_shell",
+            "stage": "reviewer_verdict",
+            "status": "allow",
+            "tokens_in": 50,
+            "tokens_out": 9,
+            "call_id": "c1",
+        }
     )
     stats = store.reviewer_stats("s1")
     assert stats["live"]["checks"] == 1 and stats["live"]["tokens_in"] == 50

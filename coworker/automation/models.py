@@ -72,9 +72,7 @@ class Schedule:
     kind: str  # "cron" | "once"
     cron: str | None = None
     fire_at: str | None = None  # ISO datetime for one-time
-    timezone: str = (
-        "local"  # 'local' = the machine's clock (a local-first tool default)
-    )
+    timezone: str = "local"  # 'local' = the machine's clock (a local-first tool default)
 
     def human(self) -> str:
         """Best-effort human label ('Every day at ~7:10 PM'); falls back to the raw cron."""
@@ -170,11 +168,7 @@ class ScheduledTask:
 
     def name_allowed_tools(self) -> set[str]:
         """Legacy name-only entries (no target binding) — back-compatible behavior."""
-        return {
-            tool
-            for tool, target in map(rule_parts, self.always_allowed_tools)
-            if tool and target is None
-        }
+        return {tool for tool, target in map(rule_parts, self.always_allowed_tools) if tool and target is None}
 
     def add_rule(self, tool: str, target: str) -> bool:
         entry = rule_entry(tool, target)
@@ -210,9 +204,7 @@ class ScheduledTask:
             # Structured for the task page's revoke list; `entry` is the revoke handle.
             "always_allowed": [
                 {"entry": e, "tool": t, "target": tg}
-                for e, (t, tg) in (
-                    (e, rule_parts(e)) for e in sorted(set(self.always_allowed_tools))
-                )
+                for e, (t, tg) in ((e, rule_parts(e)) for e in sorted(set(self.always_allowed_tools)))
             ],
         }
 

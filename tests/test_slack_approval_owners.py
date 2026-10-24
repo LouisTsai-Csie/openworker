@@ -43,22 +43,16 @@ def test_manual_owner_is_required_for_binding_and_implies_allowed(tmp_path):
     manager = _manager(tmp_path)
     _manual_profile(manager)
 
-    denied = manager.set_inbox_binding(
-        "default", channel="slack", target="C_APPROVALS"
-    )
+    denied = manager.set_inbox_binding("default", channel="slack", target="C_APPROVALS")
     assert denied["ok"] is False
 
-    added = manager.set_slack_approval_owner(
-        "U_OWNER", add=True, display_name="Owner"
-    )
+    added = manager.set_slack_approval_owner("U_OWNER", add=True, display_name="Owner")
     assert added["ok"] is True
     profile = manager.secrets.get("slack:default")
     assert profile["approval_owner_ids"] == ["U_OWNER"]
     assert profile["allowed_users"] == ["U_OWNER"]
 
-    bound = manager.set_inbox_binding(
-        "default", channel="slack", target="C_APPROVALS"
-    )
+    bound = manager.set_inbox_binding("default", channel="slack", target="C_APPROVALS")
     assert bound["ok"] is True
     assert manager.disallow_user("slack", "U_OWNER")["ok"] is False
     assert manager.set_slack_approval_owner("U_OWNER", add=False)["ok"] is False
@@ -79,11 +73,7 @@ def test_manual_owner_rest_flow_surfaces_identity_and_binding(tmp_path):
     ).json()
     assert added["ok"] is True
 
-    slack = next(
-        row
-        for row in client.get("/v1/connectors").json()["connectors"]
-        if row["name"] == "slack"
-    )
+    slack = next(row for row in client.get("/v1/connectors").json()["connectors"] if row["name"] == "slack")
     assert slack["approval_owner_ids"] == ["U_OWNER"]
     assert slack["approval_owner_names"] == {"U_OWNER": "Ada"}
 
@@ -96,9 +86,7 @@ def test_manual_owner_rest_flow_surfaces_identity_and_binding(tmp_path):
 
 def test_relay_binding_uses_installer_identity(tmp_path):
     manager = _manager(tmp_path)
-    manager.secrets.put(
-        "slack:default", {"mode": "relay", "enabled": True, "managed": True}
-    )
+    manager.secrets.put("slack:default", {"mode": "relay", "enabled": True, "managed": True})
     manager.secrets.put(
         "slack:team:T1",
         {
@@ -108,17 +96,13 @@ def test_relay_binding_uses_installer_identity(tmp_path):
             "allowed_users": ["U_INSTALLER"],
         },
     )
-    assert manager.set_inbox_binding(
-        "default", channel="slack", target="T1/C_APPROVALS"
-    )["ok"]
+    assert manager.set_inbox_binding("default", channel="slack", target="T1/C_APPROVALS")["ok"]
 
     manager.secrets.put(
         "slack:team:T2",
         {"bot_token": "xoxb-team-2", "managed": True},
     )
-    assert not manager.set_inbox_binding(
-        "default", channel="slack", target="T2/C_APPROVALS"
-    )["ok"]
+    assert not manager.set_inbox_binding("default", channel="slack", target="T2/C_APPROVALS")["ok"]
 
 
 def test_relay_does_not_reuse_dormant_manual_owners_for_bare_target(tmp_path):
@@ -135,9 +119,7 @@ def test_relay_does_not_reuse_dormant_manual_owners_for_bare_target(tmp_path):
         },
     )
     assert manager.slack_approval_owner_ids() == set()
-    assert not manager.set_inbox_binding(
-        "default", channel="slack", target="C_AMBIGUOUS"
-    )["ok"]
+    assert not manager.set_inbox_binding("default", channel="slack", target="C_AMBIGUOUS")["ok"]
 
 
 def test_nonowner_cannot_resolve_approval_but_can_answer_question(tmp_path):
@@ -200,9 +182,7 @@ def test_owner_click_from_a_different_bound_channel_is_rejected(tmp_path):
         allowed_users=["U_OWNER"],
         approval_owner_ids=["U_OWNER"],
     )
-    assert manager.set_inbox_binding(
-        "default", channel="slack", target="C_EXPECTED"
-    )["ok"]
+    assert manager.set_inbox_binding("default", channel="slack", target="C_EXPECTED")["ok"]
     item = manager.inbox.add_approval("s1", "Run it?")
 
     class GatewayStub:
@@ -325,9 +305,7 @@ def test_slack_reply_token_is_owner_only_for_approvals(tmp_path):
 def test_ownerless_legacy_binding_does_not_mirror(tmp_path):
     manager = _manager(tmp_path)
     _manual_profile(manager, allowed_users=["U_MEMBER"])
-    manager.inbox_routing.set_binding(
-        "default", channel="slack", target="C_APPROVALS"
-    )
+    manager.inbox_routing.set_binding("default", channel="slack", target="C_APPROVALS")
     item = manager.inbox.add_approval("s1", "Run it?")
 
     class GatewayStub:

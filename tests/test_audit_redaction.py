@@ -70,9 +70,7 @@ def test_a_credential_below_the_walk_limit_is_dropped_not_copied(tmp_path):
 
 
 def test_browser_typing_is_still_redacted_input(tmp_path):
-    row = _row(
-        tmp_path, {"tool": "browser_type", "arguments": {"text": "hunter2"}}
-    )
+    row = _row(tmp_path, {"tool": "browser_type", "arguments": {"text": "hunter2"}})
     assert row["args"]["text"] == "[redacted input]"
 
 
@@ -117,6 +115,6 @@ def test_result_preview_drops_shell_output_and_keeps_the_command(tmp_path):
 def test_preview_without_a_raw_result_is_still_stored(tmp_path):
     row = _row(
         tmp_path,
-        {"stage": "finished", "result_preview": "{\"ok\": true}"},
+        {"stage": "finished", "result_preview": '{"ok": true}'},
     )
     assert row["result_preview"] == '{"ok": true}'

@@ -26,9 +26,7 @@ def manager(tmp_path):
 
 
 def _request(tool: str, arguments=None, metadata=None):
-    return SimpleNamespace(
-        tool_name=tool, arguments=arguments or {}, metadata=metadata, reason=""
-    )
+    return SimpleNamespace(tool_name=tool, arguments=arguments or {}, metadata=metadata, reason="")
 
 
 def _stages(manager, session_id: str) -> list[str]:
@@ -38,43 +36,30 @@ def _stages(manager, session_id: str) -> list[str]:
 
 # -- grants the UI never offers are downgraded ----------------------------------
 def test_always_tool_refused_for_shell(manager):
-    out = manager.approval_outcome(
-        "always_tool", _request("run_shell", {"command": "rm -rf /"}), "s1"
-    )
+    out = manager.approval_outcome("always_tool", _request("run_shell", {"command": "rm -rf /"}), "s1")
     assert out is ApprovalOutcome.ONCE, "a session-wide any-command shell grant must not stand"
     assert "grant_refused" in _stages(manager, "s1")
 
 
 def test_always_tool_refused_for_connector_and_external(manager):
     connector = SimpleNamespace(requires_approval=True, category="connector")
-    assert (
-        manager.approval_outcome("always_tool", _request("gmail_send", {}, connector), "s2")
-        is ApprovalOutcome.ONCE
-    )
+    assert manager.approval_outcome("always_tool", _request("gmail_send", {}, connector), "s2") is ApprovalOutcome.ONCE
     # An MCP tool is not category=connector but is still external — same reasoning applies:
     # the grant would be unbounded over every future argument.
     mcp = SimpleNamespace(requires_approval=True, category="mcp")
     assert (
-        manager.approval_outcome(
-            "always_tool", _request("mcp__github__create_issue", {}, mcp), "s3"
-        )
+        manager.approval_outcome("always_tool", _request("mcp__github__create_issue", {}, mcp), "s3")
         is ApprovalOutcome.ONCE
     )
 
 
 def test_always_tool_refused_for_save_skill(manager):
-    assert (
-        manager.approval_outcome("always_tool", _request("save_skill", {}), "s4")
-        is ApprovalOutcome.ONCE
-    )
+    assert manager.approval_outcome("always_tool", _request("save_skill", {}), "s4") is ApprovalOutcome.ONCE
 
 
 def test_always_command_only_for_shell(manager):
     assert (
-        manager.approval_outcome(
-            "always_command", _request("write_file", {"path": "a"}), "s5"
-        )
-        is ApprovalOutcome.ONCE
+        manager.approval_outcome("always_command", _request("write_file", {"path": "a"}), "s5") is ApprovalOutcome.ONCE
     )
 
 
@@ -82,17 +67,13 @@ def test_always_tool_refused_for_url_carrying_egress(manager):
     # §1.9: "always allow web_fetch" would cover every future destination — the
     # domain-scoped grant is the one the card offers, so tool-wide is refused here.
     assert (
-        manager.approval_outcome(
-            "always_tool", _request("web_fetch", {"url": "https://bbc.com/x"}), "s13"
-        )
+        manager.approval_outcome("always_tool", _request("web_fetch", {"url": "https://bbc.com/x"}), "s13")
         is ApprovalOutcome.ONCE
     )
     assert "grant_refused" in _stages(manager, "s13")
     # Fixed-destination egress keeps it: web_search's tool-wide IS provider-wide.
     assert (
-        manager.approval_outcome(
-            "always_tool", _request("web_search", {"query": "x"}), "s14"
-        )
+        manager.approval_outcome("always_tool", _request("web_search", {"query": "x"}), "s14")
         is ApprovalOutcome.ALWAYS_TOOL
     )
 
@@ -117,33 +98,23 @@ def test_provider_change_clears_web_search_session_grant(manager):
 
 def test_always_domain_only_for_egress_with_a_url(manager):
     assert (
-        manager.approval_outcome("always_domain", _request("write_file", {"path": "a"}), "s6")
-        is ApprovalOutcome.ONCE
+        manager.approval_outcome("always_domain", _request("write_file", {"path": "a"}), "s6") is ApprovalOutcome.ONCE
     )
-    assert (
-        manager.approval_outcome("always_domain", _request("web_fetch", {}), "s7")
-        is ApprovalOutcome.ONCE
-    )
+    assert manager.approval_outcome("always_domain", _request("web_fetch", {}), "s7") is ApprovalOutcome.ONCE
 
 
 # -- the legitimate grants still work -------------------------------------------
 def test_legitimate_grants_survive(manager):
     assert (
-        manager.approval_outcome(
-            "always_tool", _request("write_file", {"path": "a.txt"}), "ok1"
-        )
+        manager.approval_outcome("always_tool", _request("write_file", {"path": "a.txt"}), "ok1")
         is ApprovalOutcome.ALWAYS_TOOL
     )
     assert (
-        manager.approval_outcome(
-            "always_command", _request("run_shell", {"command": "npm test"}), "ok2"
-        )
+        manager.approval_outcome("always_command", _request("run_shell", {"command": "npm test"}), "ok2")
         is ApprovalOutcome.ALWAYS_COMMAND
     )
     assert (
-        manager.approval_outcome(
-            "always_domain", _request("web_fetch", {"url": "https://docs.python.org/3"}), "ok3"
-        )
+        manager.approval_outcome("always_domain", _request("web_fetch", {"url": "https://docs.python.org/3"}), "ok3")
         is ApprovalOutcome.ALWAYS_DOMAIN
     )
     assert "grant_refused" not in _stages(manager, "ok1")
@@ -160,10 +131,7 @@ def test_plain_vocabularies_unchanged(manager):
 def test_always_maps_to_tool_grant_and_is_validated(manager):
     # The Inbox/channel vocabulary "always" maps to a tool grant — and is validated too, so
     # a Slack reply cannot mint what the in-app card would refuse.
-    assert (
-        manager.approval_outcome("always", _request("run_shell", {"command": "x"}), "s9")
-        is ApprovalOutcome.ONCE
-    )
+    assert manager.approval_outcome("always", _request("run_shell", {"command": "x"}), "s9") is ApprovalOutcome.ONCE
 
 
 # -- autonomy changes are recorded ----------------------------------------------
@@ -174,9 +142,7 @@ def test_unattended_transition_audited(manager):
     assert rows[0]["status"] == "raised"
 
     manager.set_unattended("s10", False)
-    assert [r["stage"] for r in manager.audit_store.list(session_id="s10")][-1] == (
-        "unattended_changed"
-    )
+    assert [r["stage"] for r in manager.audit_store.list(session_id="s10")][-1] == ("unattended_changed")
 
 
 def test_unattended_no_op_not_audited(manager):

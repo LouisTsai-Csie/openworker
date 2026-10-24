@@ -18,9 +18,7 @@ from zoneinfo import ZoneInfo
 from coworker.automation.models import ScheduledTask, TaskRun
 
 
-def compute_next_run(
-    task: ScheduledTask, *, after: float | None = None
-) -> float | None:
+def compute_next_run(task: ScheduledTask, *, after: float | None = None) -> float | None:
     """Next fire time (epoch seconds), or None if the task is exhausted/one-shot-past."""
     sched = task.schedule
     now = after if after is not None else _epoch_now()
@@ -117,23 +115,17 @@ class TaskStore:
 
     def get(self, task_id: str) -> ScheduledTask | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT data FROM scheduled_tasks WHERE id=?", (task_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT data FROM scheduled_tasks WHERE id=?", (task_id,)).fetchone()
         return ScheduledTask.from_dict(json.loads(row["data"])) if row else None
 
     def list(self) -> list[ScheduledTask]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT data FROM scheduled_tasks ORDER BY next_run IS NULL, next_run"
-            ).fetchall()
+            rows = self._conn.execute("SELECT data FROM scheduled_tasks ORDER BY next_run IS NULL, next_run").fetchall()
         return [ScheduledTask.from_dict(json.loads(r["data"])) for r in rows]
 
     def delete(self, task_id: str) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM scheduled_tasks WHERE id=?", (task_id,)
-            )
+            cur = self._conn.execute("DELETE FROM scheduled_tasks WHERE id=?", (task_id,))
             self._conn.execute("DELETE FROM task_runs WHERE task_id=?", (task_id,))
             self._conn.commit()
             return cur.rowcount > 0
@@ -159,9 +151,7 @@ class TaskStore:
 
     def find_run(self, run_id: str) -> TaskRun | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT data FROM task_runs WHERE run_id=?", (run_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT data FROM task_runs WHERE run_id=?", (run_id,)).fetchone()
         return TaskRun.from_dict(json.loads(row["data"])) if row else None
 
     def task_for_run_session(self, session_id: str) -> ScheduledTask | None:

@@ -29,7 +29,7 @@ async def drain(manager):
 
 async def finish(manager):
     for _ in range(100):
-        await asyncio.sleep(.01)
+        await asyncio.sleep(0.01)
         if not manager._team_inflight and not manager.is_running("lead"):
             return
     raise AssertionError("delivery did not finish")
@@ -77,7 +77,11 @@ def test_user_input_is_verbatim_with_prior_reminder_and_board_context(manager):
     assert "Verify Maya's tests" in user["_activity"]["text"]
     assert "review" in user["_activity"]["text"]
     outbound = engine._outbound_messages()
-    index = next(i for i, m in enumerate(outbound) if isinstance(m.get("content"), str) and m["content"].startswith(user["content"]))
+    index = next(
+        i
+        for i, m in enumerate(outbound)
+        if isinstance(m.get("content"), str) and m["content"].startswith(user["content"])
+    )
     assert outbound[index - 1]["role"] == "assistant"
     assert "newer user instructions take precedence" in outbound[index - 1]["content"]
     assert all("_activity" not in m for m in outbound)
@@ -109,11 +113,13 @@ def test_due_timer_and_board_produce_one_turn(manager):
     manager.provider = ScriptedProvider([_text_turn("Checked")])
     review(manager)
     wake = timer(manager, -1)
+
     async def run():
         assert await drain(manager) == 1
         assert await manager.resume_due_wakes() == 0
         await finish(manager)
         assert await manager.resume_due_wakes() == 0
+
     asyncio.run(run())
     messages = manager.session_store.load("lead").messages
     assert len([m for m in messages if m["role"] == "user"]) == 1
@@ -125,12 +131,14 @@ def test_user_wins_queued_board_dispatch(manager):
     manager.TEAM_BATCH_SECONDS = 0
     review(manager)
     timer(manager)
+
     async def run():
         assert await drain(manager) == 1
         # The board task is scheduled but has not claimed the session yet.
         await manager.deliver_to_session("lead", "User's new scope")
         await finish(manager)
         assert await drain(manager) == 0
+
     asyncio.run(run())
     messages = manager.session_store.load("lead").messages
     assert [m["content"] for m in messages if m["role"] == "user"] == ["User's new scope"]
@@ -152,6 +160,7 @@ def test_stop_cancels_sleep_and_blocks_automatic_board_restart(manager):
 def test_fixed_batch_window_does_not_slide_and_sends_all_items(manager):
     manager.provider = ScriptedProvider([_text_turn("Reviewing both")])
     review(manager)
+
     async def run():
         assert await drain(manager) == 0
         deadline = manager._team_batch_deadlines["lead"]
@@ -161,6 +170,7 @@ def test_fixed_batch_window_does_not_slide_and_sends_all_items(manager):
         manager._team_batch_deadlines["lead"] = 0
         assert await drain(manager) == 1
         await finish(manager)
+
     asyncio.run(run())
     messages = [m for m in manager.session_store.load("lead").messages if m["role"] == "user"]
     assert len(messages) == 1
@@ -175,9 +185,11 @@ def test_approval_bypasses_window_and_keeps_independent_prompt_ids(manager):
         prompt = manager.inbox.add_approval("worker", "Run tests")
         ids.append(prompt.id)
         manager.note_worker_waiting("worker", "run_shell", prompt_id=prompt.id, preview="python -m unittest")
+
     async def run():
         assert await drain(manager) == 1
         await finish(manager)
+
     asyncio.run(run())
     message = next(m for m in manager.session_store.load("lead").messages if m["role"] == "user")
     assert {r["prompt_id"] for r in message["source"]["board"]["rows"]} == set(ids)
@@ -205,17 +217,21 @@ def test_status_only_does_not_cancel_sleep(manager):
 def test_expiry_records_one_receipt_and_no_second_wake(manager):
     manager.provider = ScriptedProvider([_text_turn("Checked")])
     wake = timer(manager, -1)
+
     async def run():
         assert await manager.resume_due_wakes() == 1
         await finish(manager)
         assert await manager.resume_due_wakes() == 0
+
     asyncio.run(run())
     assert wake.state == "fired" and wake.context_delivered
 
 
 def test_reopened_review_no_longer_wakes_lead_for_a_stale_decision(manager):
     space, item = review(manager)
-    manager.team_store.transition(space, Actor(id="lead", role=Role.LEAD), item["id"], "in_progress", comment="Needs another test")
+    manager.team_store.transition(
+        space, Actor(id="lead", role=Role.LEAD), item["id"], "in_progress", comment="Needs another test"
+    )
     text, rows, receipt = manager._pending_board_context("lead")
     assert text == "" and rows == []
     assert receipt["feed"] > 0  # still acknowledged without deleting audit history
@@ -224,9 +240,11 @@ def test_reopened_review_no_longer_wakes_lead_for_a_stale_decision(manager):
 def test_failed_delivery_keeps_due_timer(manager, monkeypatch):
     wake = timer(manager, -1)
     monkeypatch.setattr(manager, "get_engine", lambda *a: None)
+
     async def run():
         assert await manager.resume_due_wakes() == 1
         await finish(manager)
+
     asyncio.run(run())
     assert wake in manager.wakes.due()
     assert wake.state == "pending"
@@ -256,10 +274,14 @@ def test_blocker_bypasses_batch_window(manager):
     manager.provider = ScriptedProvider([_text_turn("Checking blocker")])
     space, _, item = create_item(manager)
     manager.team_store.transition(space, Actor(id="sam", role=Role.WORKER), item["id"], "in_progress")
-    manager.team_store.transition(space, Actor(id="sam", role=Role.WORKER), item["id"], "blocked", comment="Need fixture")
+    manager.team_store.transition(
+        space, Actor(id="sam", role=Role.WORKER), item["id"], "blocked", comment="Need fixture"
+    )
+
     async def run():
         assert await drain(manager) == 1
         await finish(manager)
+
     asyncio.run(run())
 
 
@@ -272,17 +294,21 @@ def test_stop_catches_sleep_registered_late_in_interrupted_turn(manager):
 
 
 def test_idle_batch_flushes_without_waiting_for_scheduler(manager):
-    manager.TEAM_BATCH_SECONDS = .02
+    manager.TEAM_BATCH_SECONDS = 0.02
     manager.provider = ScriptedProvider([_text_turn("Reviewing")])
     review(manager)
+
     async def run():
         assert await drain(manager) == 0
+
         # Limit this test's automatic tick to the lead, not the sample worker.
         async def lead_tick():
             return await drain(manager)
+
         manager.team_tick = lead_tick
-        await asyncio.sleep(.05)
+        await asyncio.sleep(0.05)
         await finish(manager)
+
     asyncio.run(run())
     assert len([m for m in manager.session_store.load("lead").messages if m["role"] == "user"]) == 1
 
@@ -293,6 +319,7 @@ def test_multiple_steering_messages_carry_reminder_and_board_only_once(manager):
     review(manager)
     timer(manager)
     manager.mark_running("lead")
+
     async def run():
         await manager.deliver_to_session("lead", "First instruction")
         await manager.deliver_to_session("lead", "Second instruction")
@@ -309,6 +336,7 @@ def test_multiple_steering_messages_carry_reminder_and_board_only_once(manager):
         manager.reconcile_activity_receipts("lead")
         assert not manager.wakes.cancelled_context("lead")
         assert not manager._pending_board_context("lead")[0]
+
     asyncio.run(run())
 
 
@@ -324,10 +352,16 @@ def test_unsaved_in_memory_receipt_does_not_acknowledge_context(manager):
 def test_legacy_multiple_timers_migrate_to_latest_sleep(tmp_path):
     path = tmp_path / "wakes.json"
     # Fixture construction only: emulate a persisted record from the old runtime.
-    path.write_text(json.dumps({"wakes": [
-        {"id": "old", "session_id": "lead", "kind": "timer", "created_at": "2026-09-19T01:00:00Z"},
-        {"id": "new", "session_id": "lead", "kind": "timer", "created_at": "2026-09-19T02:00:00Z"}
-    ]}))
+    path.write_text(
+        json.dumps(
+            {
+                "wakes": [
+                    {"id": "old", "session_id": "lead", "kind": "timer", "created_at": "2026-09-19T01:00:00Z"},
+                    {"id": "new", "session_id": "lead", "kind": "timer", "created_at": "2026-09-19T02:00:00Z"},
+                ]
+            }
+        )
+    )
     store = WakeStore(path)
     assert [w.id for w in store.pending("lead")] == ["new"]
     assert not store.cancelled_context("lead")

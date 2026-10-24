@@ -79,17 +79,13 @@ def test_complete_login_stores_tokens_and_account(secrets, config, monkeypatch):
     # byte-for-byte (RFC 6749 §4.1.3). The 07-09 broker-bounce change updated only the
     # authorize leg and every real sign-in failed at the exchange; this pin would have
     # caught it.
-    authorize_redirect = urllib.parse.parse_qs(
-        urllib.parse.urlsplit(begun["authorize_url"]).query
-    )["redirect_uri"][0]
+    authorize_redirect = urllib.parse.parse_qs(urllib.parse.urlsplit(begun["authorize_url"]).query)["redirect_uri"][0]
 
     def fake_post(url, **kwargs):
         assert url == "https://tenant.auth0.test/oauth/token"
         assert kwargs["data"]["code_verifier"]
         assert kwargs["data"]["redirect_uri"] == authorize_redirect
-        return FakeResponse(
-            200, {"access_token": "at1", "refresh_token": "rt1", "expires_in": 3600}
-        )
+        return FakeResponse(200, {"access_token": "at1", "refresh_token": "rt1", "expires_in": 3600})
 
     def fake_get(url, **kwargs):
         # Connection restore is NOT part of complete_login (it runs in the
@@ -169,9 +165,7 @@ def test_sync_connections_restores_github_installs(secrets, config, monkeypatch)
             "tenant_metadata": {"installation_id": "999", "github_login": "octocat"},
         },
     ]
-    monkeypatch.setattr(
-        cloud.httpx, "get", lambda url, **k: FakeResponse(200, {"connections": rows})
-    )
+    monkeypatch.setattr(cloud.httpx, "get", lambda url, **k: FakeResponse(200, {"connections": rows}))
 
     out = cloud.sync_connections(secrets, config)
     assert out["ok"] and out["restored"] == ["101", "202"]
@@ -185,25 +179,19 @@ def test_sync_connections_restores_github_installs(secrets, config, monkeypatch)
     assert default["mode"] == "relay" and default["default_install"] == "101"
 
 
-def test_sync_connections_pre_restore_rows_fall_back_to_primary(
-    secrets, config, monkeypatch
-):
+def test_sync_connections_pre_restore_rows_fall_back_to_primary(secrets, config, monkeypatch):
     """Rows written before the broker stored the installations list carry only
     the primary install in tenant_metadata — restore that one."""
     _signed_in(secrets)
     row = _github_connection_row()
     del row["tenant_metadata"]["installations"]
-    monkeypatch.setattr(
-        cloud.httpx, "get", lambda url, **k: FakeResponse(200, {"connections": [row]})
-    )
+    monkeypatch.setattr(cloud.httpx, "get", lambda url, **k: FakeResponse(200, {"connections": [row]}))
     out = cloud.sync_connections(secrets, config)
     assert out["restored"] == ["101"]
     assert secrets.get("github:install:101")["account_login"] == "acme"
 
 
-def test_sync_connections_requires_sign_in_and_survives_errors(
-    secrets, config, monkeypatch
-):
+def test_sync_connections_requires_sign_in_and_survives_errors(secrets, config, monkeypatch):
     assert not cloud.sync_connections(secrets, config)["ok"]  # signed out
     _signed_in(secrets)
     monkeypatch.setattr(cloud.httpx, "get", lambda url, **k: FakeResponse(503, {}))
@@ -227,9 +215,7 @@ def test_every_managed_connector_has_a_provider_mapping():
 
     managed = {d.name for d in DESCRIPTORS if d.managed}
     unmapped = managed - set(cloud.PROVIDER_FOR_CONNECTOR)
-    assert (
-        not unmapped
-    ), f"managed connectors missing an OAuth provider: {sorted(unmapped)}"
+    assert not unmapped, f"managed connectors missing an OAuth provider: {sorted(unmapped)}"
 
 
 def test_begin_managed_connect_requires_sign_in(secrets, config):
@@ -249,9 +235,7 @@ def test_managed_profile_is_field_compatible_with_manual(secrets):
         "scope": "gmail.readonly",
         "account": "a@b.c",
     }
-    result = managed_connect_connector(
-        secrets, "gmail", cloud.managed_profile_from_callback(form)
-    )
+    result = managed_connect_connector(secrets, "gmail", cloud.managed_profile_from_callback(form))
     assert result["ok"] and result["account"] == "a@b.c"
 
     listed = {c["name"]: c for c in connector_list(secrets)}
@@ -291,9 +275,7 @@ def test_managed_connect_redirect_follows_actual_port(secrets, config, monkeypat
 
 
 def test_manual_paste_still_works_and_is_not_managed(secrets):
-    result = connect_connector(
-        secrets, "gmail", {"access_token": "manual-token"}, validate=False
-    )
+    result = connect_connector(secrets, "gmail", {"access_token": "manual-token"}, validate=False)
     assert result["ok"]
     listed = {c["name"]: c for c in connector_list(secrets)}
     assert listed["gmail"]["connected"]
@@ -360,9 +342,7 @@ def test_fresh_profile_not_refreshed(secrets, config, monkeypatch):
             "expires": time.time() + 3600,
         },
     )
-    monkeypatch.setattr(
-        cloud.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError())
-    )
+    monkeypatch.setattr(cloud.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError()))
     cloud.ensure_fresh_connector_token(secrets, config, "gmail")
     assert secrets.get("gmail:default")["access_token"] == "current"
 
@@ -397,9 +377,7 @@ def test_emit_sends_nothing_signed_out(secrets, config, monkeypatch):
 def test_emit_sends_nothing_when_opted_out(secrets, config, monkeypatch):
     _signed_in(secrets)
     cloud.set_telemetry_enabled(secrets, False)
-    monkeypatch.setattr(
-        cloud.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError())
-    )
+    monkeypatch.setattr(cloud.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError()))
     assert not cloud.emit_session_created(
         secrets,
         config,
@@ -483,9 +461,7 @@ You are the Sales Coworker."""
     # `messaging: true` decides nothing (spec §11): the legacy `connectors: true` grants
     # the recommended connectors (hubspot), none of which is a chat platform.
     assert caps["messaging"] is False and caps["connectors"] == ["hubspot"]
-    assert out["recommends"] == [
-        {"kind": "connector", "ref": "hubspot", "reason": "read deals", "tier": "core"}
-    ]
+    assert out["recommends"] == [{"kind": "connector", "ref": "hubspot", "reason": "read deals", "tier": "core"}]
 
 
 def test_gallery_detail_rejects_malformed_manifest(secrets, config, monkeypatch):
@@ -541,9 +517,7 @@ def test_refresh_managed_token_undelegated_box_gives_up(secrets, config, monkeyp
         "notion:default",
         {"managed": True, "provider": "notion", "refresh_token": "1//X"},
     )
-    monkeypatch.setattr(
-        cloud.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no call"))
-    )
+    monkeypatch.setattr(cloud.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no call")))
     assert cloud.refresh_managed_token(secrets, config, "notion") is None
 
 
@@ -558,9 +532,7 @@ def test_delegate_connection_returns_opaque_user_id(secrets, config, monkeypatch
         seen["url"] = url
         seen["json"] = json
         seen["headers"] = headers or {}
-        return FakeResponse(
-            200, {"ok": True, "user_id": "u_opaque", "machine_credential": "mc_x"}
-        )
+        return FakeResponse(200, {"ok": True, "user_id": "u_opaque", "machine_credential": "mc_x"})
 
     monkeypatch.setattr(cloud.httpx, "post", fake_post)
     # Plain delegation: no seal key sent, credential passed through if minted.

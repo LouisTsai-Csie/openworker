@@ -95,27 +95,22 @@ def begin_login(config: Config) -> dict[str, Any]:
     _pending_logins[state] = {"verifier": verifier, "created": _now()}
 
     redirect_uri = config.cloud_base_url.rstrip("/") + "/v1/auth/callback"
-    authorize_url = (
-        f"https://{config.cloud_auth_domain}/authorize?"
-        + urllib.parse.urlencode(
-            {
-                "response_type": "code",
-                "client_id": config.cloud_client_id,
-                "redirect_uri": redirect_uri,
-                "scope": LOGIN_SCOPES,
-                "audience": config.cloud_audience,
-                "state": state,
-                "code_challenge": challenge,
-                "code_challenge_method": "S256",
-            }
-        )
+    authorize_url = f"https://{config.cloud_auth_domain}/authorize?" + urllib.parse.urlencode(
+        {
+            "response_type": "code",
+            "client_id": config.cloud_client_id,
+            "redirect_uri": redirect_uri,
+            "scope": LOGIN_SCOPES,
+            "audience": config.cloud_audience,
+            "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+        }
     )
     return {"authorize_url": authorize_url, "state": state}
 
 
-def complete_login(
-    secrets: SecretStore, config: Config, code: str, state: str
-) -> dict[str, Any]:
+def complete_login(secrets: SecretStore, config: Config, code: str, state: str) -> dict[str, Any]:
     pending = _pending_logins.pop(state, None)
     if pending is None or float(pending["created"]) < _now() - _PENDING_TTL:
         return {"ok": False, "error": "unknown or expired sign-in attempt"}
@@ -327,12 +322,9 @@ def emit_session_created(
         "event": "coworker_session_created",
         "install_id": install_id(secrets),
         "app_version": APP_VERSION,
-        "platform": {"darwin": "macos", "win32": "windows"}.get(
-            sys.platform, _platform.system().lower() or "unknown"
-        ),
+        "platform": {"darwin": "macos", "win32": "windows"}.get(sys.platform, _platform.system().lower() or "unknown"),
         "session": {
-            "session_id_hash": "sha256:"
-            + hashlib.sha256(session_id.encode()).hexdigest(),
+            "session_id_hash": "sha256:" + hashlib.sha256(session_id.encode()).hexdigest(),
             "persona_id": persona_id,
             "persona_family": persona_family,
             "workspace_kind": workspace_kind,
@@ -482,8 +474,7 @@ def delegate_connection(
         body["machine_id"] = machine_id
     try:
         resp = httpx.post(
-            config.cloud_base_url.rstrip("/")
-            + f"/v1/connections/{connection_id}/delegate",
+            config.cloud_base_url.rstrip("/") + f"/v1/connections/{connection_id}/delegate",
             headers={"Authorization": f"Bearer {token}"},
             **({"json": body} if body else {}),
             timeout=20,
@@ -556,10 +547,7 @@ def _renew_managed_token(
         connection_id = str(profile.get("connection_id") or "")
         if not (user_id and connection_id):
             return None
-        url = (
-            config.cloud_base_url.rstrip("/")
-            + f"/v1/oauth/{provider}/refresh-delegated"
-        )
+        url = config.cloud_base_url.rstrip("/") + f"/v1/oauth/{provider}/refresh-delegated"
         headers = {}
         body = {
             "refresh_token": profile["refresh_token"],
@@ -602,9 +590,7 @@ def ensure_fresh_connector_token(
     refresh_managed_token(secrets, config, connector, profile_key=profile_key)
 
 
-def revoke_connector_connections(
-    secrets: SecretStore, config: Config, connector: str
-) -> int:
+def revoke_connector_connections(secrets: SecretStore, config: Config, connector: str) -> int:
     """Revoke every live broker connection for a connector, by NAME.
 
     The machine-held case (machines spec §Managed events, drill finding): a
@@ -662,8 +648,7 @@ def cloud_disconnect(
         return
     try:
         httpx.post(
-            config.cloud_base_url.rstrip("/")
-            + f"/v1/connections/{connection_id}/disconnect",
+            config.cloud_base_url.rstrip("/") + f"/v1/connections/{connection_id}/disconnect",
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
@@ -703,11 +688,7 @@ def github_installation_token(
         # delegated route, using the stamps the handoff wrote to the pointer.
         pointer = secrets.get("github:default") or {}
         credential = str(pointer.get("machine_credential") or "")
-        if not (
-            credential
-            and pointer.get("connection_id")
-            and pointer.get("broker_user_id")
-        ):
+        if not (credential and pointer.get("connection_id") and pointer.get("broker_user_id")):
             return ""
         url = config.cloud_base_url.rstrip("/") + "/v1/machine/github/mint"
         payload = {
@@ -744,9 +725,7 @@ def clear_github_token(installation_id: str) -> None:
     _GITHUB_TOKEN_CACHE.pop(str(installation_id or "").strip(), None)
 
 
-def github_disconnect_installation(
-    secrets: SecretStore, config: Config, installation_id: str
-) -> None:
+def github_disconnect_installation(secrets: SecretStore, config: Config, installation_id: str) -> None:
     """Best-effort: delete this user's relay routing rows for one installation
     so the cloud stops pushing its events. Local profile deletion always
     proceeds regardless (the row only routes)."""
@@ -765,9 +744,7 @@ def github_disconnect_installation(
         pass
 
 
-def slack_disconnect_workspace(
-    secrets: SecretStore, config: Config, team_id: str
-) -> None:
+def slack_disconnect_workspace(secrets: SecretStore, config: Config, team_id: str) -> None:
     """Best-effort: delete this user's relay routing row for one workspace so the
     cloud stops pushing its events. Local token deletion always proceeds regardless
     (the row only routes; without the desktop token nothing can be sent anyway)."""
@@ -820,8 +797,7 @@ def gallery_install_event(secrets: SecretStore, config: Config, slug: str) -> No
         return
     try:
         httpx.post(
-            config.cloud_base_url.rstrip("/")
-            + f"/v1/personas/gallery/{slug}/install-events",
+            config.cloud_base_url.rstrip("/") + f"/v1/personas/gallery/{slug}/install-events",
             json={"platform": __import__("sys").platform},
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
@@ -845,10 +821,7 @@ def gallery_detail(secrets: SecretStore, config: Config, slug: str) -> dict | No
 
         m = parse_manifest(manifest.get("manifest_markdown", ""), fallback_id=slug)
         capabilities = consent_summary(m)
-        recommends = [
-            {"kind": r.kind, "ref": r.ref, "reason": r.reason, "tier": r.tier}
-            for r in m.recommends
-        ]
+        recommends = [{"kind": r.kind, "ref": r.ref, "reason": r.reason, "tier": r.tier} for r in m.recommends]
     except Exception as exc:  # malformed manifest: surface, don't crash
         return {"ok": False, "error": f"manifest failed local validation: {exc}"}
     return {
@@ -874,9 +847,7 @@ def broker_request(
         return 401, {"error": "not signed in"}
     url = config.cloud_base_url.rstrip("/") + path
     try:
-        resp = httpx.request(
-            method, url, json=body, headers={"Authorization": f"Bearer {token}"}, timeout=20
-        )
+        resp = httpx.request(method, url, json=body, headers={"Authorization": f"Bearer {token}"}, timeout=20)
     except httpx.HTTPError:
         return 0, {"error": "cloud unreachable"}
     try:

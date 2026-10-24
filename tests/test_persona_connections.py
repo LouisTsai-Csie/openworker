@@ -103,9 +103,7 @@ def test_persona_set_default_connection(tmp_path, monkeypatch):
     # github starts on (core default) + connected → effective for a fresh ops session
     assert "github" in mgr.effective_connectors("newsess", "ops")
 
-    resp = client.post(
-        "/v1/personas/ops/connections", json={"connector": "github", "enabled": False}
-    ).json()
+    resp = client.post("/v1/personas/ops/connections", json={"connector": "github", "enabled": False}).json()
     assert resp["ok"] is True
     flipped = {d["connector"]: d["enabled"] for d in resp["default_connections"]}
     assert flipped["github"] is False
@@ -114,9 +112,7 @@ def test_persona_set_default_connection(tmp_path, monkeypatch):
 
     # reflected in the next GET
     detail = client.get("/v1/personas/ops").json()
-    assert {d["connector"]: d["enabled"] for d in detail["default_connections"]}[
-        "github"
-    ] is False
+    assert {d["connector"]: d["enabled"] for d in detail["default_connections"]}["github"] is False
 
     # ...and in a brand-new session's effective set (github now off by persona default)
     eff = mgr.effective_connectors("brandnew", "ops")
@@ -138,21 +134,14 @@ def test_persona_enable_toggle(tmp_path, monkeypatch):
     after = {p["id"]: p for p in resp["personas"]}
     assert after["ops"]["enabled"] is True
     # a fresh GET agrees
-    assert {p["id"]: p for p in client.get("/v1/personas").json()["personas"]}["ops"][
-        "enabled"
-    ] is True
+    assert {p["id"]: p for p in client.get("/v1/personas").json()["personas"]}["ops"]["enabled"] is True
 
     # disabling flips it back off; list_all keeps the row (the picker filters on `enabled`)
     assert client.post("/v1/personas/ops/enable", json={"enabled": False}).json()["ok"]
-    assert {p["id"]: p for p in client.get("/v1/personas").json()["personas"]}["ops"][
-        "enabled"
-    ] is False
+    assert {p["id"]: p for p in client.get("/v1/personas").json()["personas"]}["ops"]["enabled"] is False
 
     # unknown id → error
-    assert (
-        client.post("/v1/personas/nope/enable", json={"enabled": False}).json()["ok"]
-        is False
-    )
+    assert client.post("/v1/personas/nope/enable", json={"enabled": False}).json()["ok"] is False
 
 
 # -- §6 per-session connections ------------------------------------------------
@@ -188,9 +177,7 @@ def test_fresh_session_view_uses_persona_hint(tmp_path, monkeypatch):
     mgr = _mgr(tmp_path, monkeypatch)
     _connect_slack(mgr)
     # ops persona default: slack OFF (user's "New sessions get by default" choice)
-    mgr.persona_connections.defaults_for(
-        "ops", mgr.personas.get("ops").manifest, connected={"slack"}
-    )
+    mgr.persona_connections.defaults_for("ops", mgr.personas.get("ops").manifest, connected={"slack"})
     mgr.persona_connections.set("ops", "slack", False)
     client = TestClient(create_app(mgr))
 
@@ -201,9 +188,7 @@ def test_fresh_session_view_uses_persona_hint(tmp_path, monkeypatch):
 
     # without the hint the same fresh session would fall back to the default persona
     fallback = client.get("/v1/sessions/brand-new/connections").json()
-    assert {c["connector"]: c for c in fallback["connected"]}["slack"][
-        "enabled"
-    ] is True
+    assert {c["connector"]: c for c in fallback["connected"]}["slack"]["enabled"] is True
 
 
 def test_session_set_override(tmp_path, monkeypatch):
@@ -215,16 +200,11 @@ def test_session_set_override(tmp_path, monkeypatch):
 
     # slack starts effective (connected + ops core default on)
     assert "slack" in mgr.effective_connectors("s1", "ops")
-    before = {
-        c["connector"]
-        for c in client.get("/v1/sessions/s1/connections").json()["connected"]
-    }
+    before = {c["connector"] for c in client.get("/v1/sessions/s1/connections").json()["connected"]}
     assert "slack" in before
 
     # mute slack for this session
-    resp = client.post(
-        "/v1/sessions/s1/connections", json={"connector": "slack", "enabled": False}
-    ).json()
+    resp = client.post("/v1/sessions/s1/connections", json={"connector": "slack", "enabled": False}).json()
     assert resp["ok"] is True
     assert mgr.session_connections.get("s1") == {"slack": False}
     assert "slack" not in mgr.effective_connectors("s1", "ops")
@@ -232,16 +212,11 @@ def test_session_set_override(tmp_path, monkeypatch):
     # 2026-07-03: "where did Slack go?") — both in the returned view and a fresh GET
     view_conn = {c["connector"]: c for c in resp["connections"]["connected"]}
     assert view_conn["slack"]["enabled"] is False
-    fresh = {
-        c["connector"]: c
-        for c in client.get("/v1/sessions/s1/connections").json()["connected"]
-    }
+    fresh = {c["connector"]: c for c in client.get("/v1/sessions/s1/connections").json()["connected"]}
     assert fresh["slack"]["enabled"] is False
 
     # clear → revert to the persona default (slack on again)
-    resp2 = client.post(
-        "/v1/sessions/s1/connections", json={"connector": "slack", "clear": True}
-    ).json()
+    resp2 = client.post("/v1/sessions/s1/connections", json={"connector": "slack", "clear": True}).json()
     assert resp2["ok"] is True
     assert mgr.session_connections.get("s1") == {}
     assert "slack" in mgr.effective_connectors("s1", "ops")
@@ -266,9 +241,7 @@ def test_declared_connector_allowlist_gates_session_tools(tmp_path):
         assert connect_connector(secrets, name, fields, validate=False)["ok"] is True
 
     def names_for(connectors):
-        agent = Agent(
-            name="p", title="P", system_prompt="x", connectors=connectors
-        )
+        agent = Agent(name="p", title="P", system_prompt="x", connectors=connectors)
         engine = build_engine(agent=agent, workspace=tmp_path, secrets=secrets)
         return set(engine.registry.names())
 
@@ -284,9 +257,7 @@ def test_declared_connector_allowlist_gates_session_tools(tmp_path):
     assert not any(n.startswith(("linear_", "box_")) for n in none)
 
 
-def test_allowlist_persona_drawer_and_effective_set_exclude_undeclared(
-    tmp_path, monkeypatch
-):
+def test_allowlist_persona_drawer_and_effective_set_exclude_undeclared(tmp_path, monkeypatch):
     """OPE-93, owner-hit 2026-08-15: a fresh Cloud Posture session rendered Browser and
     Slack as toggled-ON sources while the engine (correctly) refused their tools — the
     drawer and the inbound gate read the pre-allowlist hierarchy. All three surfaces now
@@ -307,16 +278,11 @@ def test_allowlist_persona_drawer_and_effective_set_exclude_undeclared(
     assert mgr.effective_connectors("sp", "security") <= {"github"}
     assert mgr._inbound_connector_allowed("sp", "slack") is False
 
-    names = {
-        c["connector"]
-        for c in mgr.session_connections_view("sp", "security")["connected"]
-    }
+    names = {c["connector"] for c in mgr.session_connections_view("sp", "security")["connected"]}
     assert names <= {"github"}  # browser (always connected) and slack are absent
 
     # Builder-based personas keep the unrestricted view — their sessions use the
     # drawer/inbound path (channel bindings) even though they expose no connector tools.
     _ops_session(mgr, "sg")
-    ops_names = {
-        c["connector"] for c in mgr.session_connections_view("sg", "ops")["connected"]
-    }
+    ops_names = {c["connector"] for c in mgr.session_connections_view("sg", "ops")["connected"]}
     assert "slack" in ops_names  # undeclared for security, present for ops

@@ -91,7 +91,11 @@ def home_read_only(home: str | None = None, tool_dirs: Sequence[str] | None = No
     """The toolchain folders (the machine's list, or the shipped one) and git settings that
     exist under this home folder."""
     base = Path(real(home or "~"))
-    tools = [real(p) for p in tool_dirs] if tool_dirs is not None else [real(base / name) for name in TOOLCHAINS if (base / name).exists()]
+    tools = (
+        [real(p) for p in tool_dirs]
+        if tool_dirs is not None
+        else [real(base / name) for name in TOOLCHAINS if (base / name).exists()]
+    )
     return tools + [real(base / name) for name in GIT_SETTINGS if (base / name).exists()]
 
 
@@ -128,11 +132,11 @@ def render(
         "(allow file-read-metadata)",
         f"(allow file-read* {_subpaths(_SYSTEM_READ)} {_literals(_LITERAL_READ)})",
         f"(allow file-write-data {_literals(['/dev/null', '/dev/zero', '/dev/tty', '/dev/dtracehelper'])})",
-        "(allow file-ioctl (literal \"/dev/tty\") (literal \"/dev/dtracehelper\"))",
+        '(allow file-ioctl (literal "/dev/tty") (literal "/dev/dtracehelper"))',
         f"(allow file-read* file-write* {_subpaths([runtime, *writable])})",
         "; Apple's command-line shims (/usr/bin/git, /usr/bin/python3) keep a small lookup cache in",
         "; the per-user temporary folder and ignore TMPDIR; without it every call takes a second",
-        f"(allow file-read* file-write* (regex #\"^{_XCRUN_CACHE}\"))",
+        f'(allow file-read* file-write* (regex #"^{_XCRUN_CACHE}"))',
     ]
     if readable:
         lines.append(f"(allow file-read* {_subpaths(readable)})")

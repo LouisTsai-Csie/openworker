@@ -250,11 +250,13 @@ class ConversationStore:
                     elif call_id not in trailing_calls:
                         # Synthesise a placeholder so the thread is well-formed.
                         # Skip trailing calls — they're pending, not corrupt.
-                        repaired.append({
-                            "role": "tool",
-                            "tool_call_id": call_id,
-                            "content": '{"error": "tool result was lost during an interrupted turn"}',
-                        })
+                        repaired.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": call_id,
+                                "content": '{"error": "tool result was lost during an interrupted turn"}',
+                            }
+                        )
             elif i in consumed_result_indices:
                 continue  # already moved this tool result up
             else:
@@ -266,9 +268,7 @@ class ConversationStore:
         path = self._file(sid)
         if not path.exists():
             return 0
-        return sum(
-            1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
-        )
+        return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
 
     def _append(self, sid: str, messages: list[dict]) -> None:
         with open(self._file(sid), "a", encoding="utf-8") as f:
@@ -279,9 +279,7 @@ class ConversationStore:
         """One-time per session: move any inline blob into a .jsonl and persist
         title + n_msgs in the index. Skips already-migrated rows on later startups."""
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT session_id, messages, n_msgs, title FROM sessions"
-            ).fetchall()
+            rows = self._conn.execute("SELECT session_id, messages, n_msgs, title FROM sessions").fetchall()
             for row in rows:
                 sid = row["session_id"]
                 jsonl = self._file(sid)
@@ -317,9 +315,7 @@ class ConversationStore:
         with self._lock:
             # lazily migrate a legacy inline blob into the .jsonl
             if not self._file(sid).exists():
-                row = self._conn.execute(
-                    "SELECT messages FROM sessions WHERE session_id = ?", (sid,)
-                ).fetchone()
+                row = self._conn.execute("SELECT messages FROM sessions WHERE session_id = ?", (sid,)).fetchone()
                 if row and row["messages"]:
                     try:
                         legacy = json.loads(row["messages"])
@@ -381,9 +377,7 @@ class ConversationStore:
 
     def load(self, session_id: str) -> SessionRecord | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,)).fetchone()
         if not row:
             return None
         messages = self._read_jsonl(session_id)
@@ -409,23 +403,17 @@ class ConversationStore:
             agent=fields["agent"] or "code",
             message_count=len(messages),
             updated_at=fields["updated_at"],
-            extra_roots=_load_roots(
-                fields.get("extra_roots")
-            ),
+            extra_roots=_load_roots(fields.get("extra_roots")),
             grants=_load_grants(fields.get("grants")),
             # Auto-compaction state (OPE-27) — same defensive parse as grants.
-            compaction=_load_grants(
-                fields.get("compaction")
-            ),
+            compaction=_load_grants(fields.get("compaction")),
             pinned=bool(fields["pinned"]),
             archived=bool(fields["archived"]),
             origin=fields["origin"],
             origin_label=fields["origin_label"],
             actor=(fields.get("actor")) or "",
             team=_load_grants(fields.get("team")),
-            bindings=_load_grants(
-                fields.get("bindings")
-            ),
+            bindings=_load_grants(fields.get("bindings")),
             usage=_load_grants(fields.get("usage")),
             spawn=_load_grants(fields.get("spawn")),
         )
@@ -484,9 +472,7 @@ class ConversationStore:
     def list(self, *, workspace: str | None = None) -> list[SessionRecord]:
         with self._lock:
             if workspace is None:
-                rows = self._conn.execute(
-                    "SELECT * FROM sessions ORDER BY pinned DESC, updated_at DESC"
-                ).fetchall()
+                rows = self._conn.execute("SELECT * FROM sessions ORDER BY pinned DESC, updated_at DESC").fetchall()
             else:
                 rows = self._conn.execute(
                     "SELECT * FROM sessions WHERE workspace = ? ORDER BY pinned DESC, updated_at DESC",
@@ -544,9 +530,7 @@ class ConversationStore:
                         (real, ws),
                     )
             latest: dict[str, str] = {}
-            for path, last in self._conn.execute(
-                "SELECT path, last_used FROM workspaces"
-            ).fetchall():
+            for path, last in self._conn.execute("SELECT path, last_used FROM workspaces").fetchall():
                 real = os.path.realpath(path)
                 if real not in latest or (last or "") > latest[real]:
                     latest[real] = last
@@ -560,9 +544,7 @@ class ConversationStore:
 
     def delete(self, session_id: str) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM sessions WHERE session_id = ?", (session_id,)
-            )
+            cur = self._conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
             self._conn.commit()
         path = self._file(session_id)
         if path.exists():

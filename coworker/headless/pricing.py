@@ -24,15 +24,10 @@ def load_prices() -> dict[str, dict[str, float]]:
     except FileNotFoundError:
         return {}
     models = data.get("models") or {}
-    return {
-        str(k): {f: float((spec or {})[f]) for f in _NUMERIC if f in (spec or {})}
-        for k, spec in models.items()
-    }
+    return {str(k): {f: float((spec or {})[f]) for f in _NUMERIC if f in (spec or {})} for k, spec in models.items()}
 
 
-def estimate_cost(
-    model: str, usage: dict[str, Any], prices: dict | None = None
-) -> float | None:
+def estimate_cost(model: str, usage: dict[str, Any], prices: dict | None = None) -> float | None:
     """USD for one usage record {input, output, cache_read, cache_write} (token counts).
     Returns None when the model has no row."""
     prices = load_prices() if prices is None else prices
@@ -43,14 +38,6 @@ def estimate_cost(
     cost = 0.0
     cost += float(usage.get("input", 0) or 0) * spec.get("input", 0.0) / per_million
     cost += float(usage.get("output", 0) or 0) * spec.get("output", 0.0) / per_million
-    cost += (
-        float(usage.get("cache_read", 0) or 0)
-        * spec.get("cache_read", spec.get("input", 0.0))
-        / per_million
-    )
-    cost += (
-        float(usage.get("cache_write", 0) or 0)
-        * spec.get("cache_write", spec.get("input", 0.0))
-        / per_million
-    )
+    cost += float(usage.get("cache_read", 0) or 0) * spec.get("cache_read", spec.get("input", 0.0)) / per_million
+    cost += float(usage.get("cache_write", 0) or 0) * spec.get("cache_write", spec.get("input", 0.0)) / per_million
     return round(cost, 6)

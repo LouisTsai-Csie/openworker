@@ -120,9 +120,7 @@ def _tool_result(engine):
 
 
 def test_a_question_gets_the_least_destructive_default_and_is_recorded(tmp_path):
-    engine, rows, _ = _engine(
-        tmp_path, [_tool_turn("ask_user", {"question": "Rewrite git history?"}), _text()]
-    )
+    engine, rows, _ = _engine(tmp_path, [_tool_turn("ask_user", {"question": "Rewrite git history?"}), _text()])
     events = _run(engine)
     assert _tool_result(engine) == {"answer": att.AUTO_QUESTION_ANSWER}
     assert any(r.get("stage") == "question_auto_answered" for r in rows)
@@ -186,9 +184,7 @@ def test_a_catalog_tool_is_installed_by_the_verified_installer(tmp_path, monkeyp
     monkeypatch.setattr(
         engine_mod._toolchain, "install", lambda name, **kw: installed.append(name) or "/opt/tools/gitleaks"
     )
-    engine, rows, _ = _engine(
-        tmp_path, [_tool_turn("request_tool", {"name": "gitleaks", "reason": "scan"}), _text()]
-    )
+    engine, rows, _ = _engine(tmp_path, [_tool_turn("request_tool", {"name": "gitleaks", "reason": "scan"}), _text()])
     events = _run(engine)
     assert installed == ["gitleaks"]
     result = _tool_result(engine)
@@ -288,9 +284,7 @@ def test_a_broken_attendance_getter_reads_as_attended(tmp_path):
     def broken():
         raise RuntimeError("no registry")
 
-    engine, _, cards = _engine(
-        tmp_path, [_tool_turn("run_shell", {"command": "make"}), _text()], attendance=None
-    )
+    engine, _, cards = _engine(tmp_path, [_tool_turn("run_shell", {"command": "make"}), _text()], attendance=None)
     engine.attendance = broken
     events = _run(engine)
     assert cards == ["run_shell"]  # today's card path, untouched

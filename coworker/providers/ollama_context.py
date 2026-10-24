@@ -89,9 +89,7 @@ def context_length_from_show(show: dict[str, Any]) -> int | None:
     return keyed if isinstance(keyed, int) and keyed >= MIN_OLLAMA_NUM_CTX else None
 
 
-def resolve_num_ctx(
-    show: dict[str, Any] | None, memory_bytes: int | None = None
-) -> int:
+def resolve_num_ctx(show: dict[str, Any] | None, memory_bytes: int | None = None) -> int:
     """The window to send: the Modelfile's pin if any, else the machine's recommended
     size held under the trained window (or the default when unknown). The env override
     caps either. `memory_bytes` stands in for the machine's memory in tests."""
@@ -443,9 +441,7 @@ def to_openai_completion(native: dict[str, Any]) -> dict[str, Any]:
     return body
 
 
-def to_openai_stream_events(
-    native: dict[str, Any], *, include_role: bool, saw_tools: bool
-) -> list[dict[str, Any]]:
+def to_openai_stream_events(native: dict[str, Any], *, include_role: bool, saw_tools: bool) -> list[dict[str, Any]]:
     """One native stream object → zero or more OpenAI chat.completion.chunk objects."""
     message = native.get("message") or {}
     content = message.get("content") or ""
@@ -470,9 +466,7 @@ def to_openai_stream_events(
                 **_chunk(
                     native,
                     {},
-                    finish_reason=_finish_reason(
-                        native.get("done_reason") or "stop", saw_tools or bool(tool_calls)
-                    ),
+                    finish_reason=_finish_reason(native.get("done_reason") or "stop", saw_tools or bool(tool_calls)),
                 ),
                 "usage": {
                     "prompt_tokens": prompt,
@@ -484,9 +478,7 @@ def to_openai_stream_events(
     return events
 
 
-def _chunk(
-    native: dict[str, Any], delta: dict[str, Any], finish_reason: str | None = None
-) -> dict[str, Any]:
+def _chunk(native: dict[str, Any], delta: dict[str, Any], finish_reason: str | None = None) -> dict[str, Any]:
     return {
         "id": "chatcmpl-ollama",
         "object": "chat.completion.chunk",

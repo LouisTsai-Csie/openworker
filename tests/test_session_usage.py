@@ -19,8 +19,16 @@ from tests.test_token_usage import _UsageProvider
 def test_usage_totals_folds_assistant_sidecars_by_model():
     msgs = [
         {"role": "user", "content": "hi"},
-        {"role": "assistant", "content": "a", "usage": {"model": "m1", "input": 10, "output": 2, "cache_read": 1, "cache_write": 0}},
-        {"role": "assistant", "content": "b", "usage": {"model": "m1", "input": 5, "output": 1, "cache_read": 0, "cache_write": 3}},
+        {
+            "role": "assistant",
+            "content": "a",
+            "usage": {"model": "m1", "input": 10, "output": 2, "cache_read": 1, "cache_write": 0},
+        },
+        {
+            "role": "assistant",
+            "content": "b",
+            "usage": {"model": "m1", "input": 5, "output": 1, "cache_read": 0, "cache_write": 3},
+        },
         {"role": "assistant", "content": "c", "usage": {"model": "m2", "input": 7, "output": 7}},
         {"role": "assistant", "content": "no sidecar"},
         {"role": "assistant", "content": "junk", "usage": {"model": "m2", "input": "x", "output": -4}},
@@ -37,16 +45,26 @@ def test_save_persists_totals_and_the_list_exposes_them(tmp_path, monkeypatch):
     assert engine is not None
     engine.messages.append({"role": "user", "content": "hi"})
     engine.messages.append(
-        {"role": "assistant", "content": "a", "usage": {"model": "openai:gpt-5.5", "input": 100, "output": 20, "cache_read": 5, "cache_write": 0}}
+        {
+            "role": "assistant",
+            "content": "a",
+            "usage": {"model": "openai:gpt-5.5", "input": 100, "output": 20, "cache_read": 5, "cache_write": 0},
+        }
     )
     engine.messages.append(
-        {"role": "assistant", "content": "b", "usage": {"model": "openai:gpt-5.5", "input": 50, "output": 10, "cache_read": 0, "cache_write": 0}}
+        {
+            "role": "assistant",
+            "content": "b",
+            "usage": {"model": "openai:gpt-5.5", "input": 50, "output": 10, "cache_read": 0, "cache_write": 0},
+        }
     )
     mgr.save("s-usage", engine)
     # Round-trips through the store column…
     loaded = mgr.session_store.load("s-usage")
     assert loaded is not None
-    assert loaded.usage == {"openai:gpt-5.5": {"input": 150, "output": 30, "cache_read": 5, "cache_write": 0, "turns": 2}}
+    assert loaded.usage == {
+        "openai:gpt-5.5": {"input": 150, "output": 30, "cache_read": 5, "cache_write": 0, "turns": 2}
+    }
     # …and the list row carries it for the Team panel roll-up.
     row = next(r for r in mgr.list_sessions() if r["session_id"] == "s-usage")
     assert row["usage"]["openai:gpt-5.5"]["input"] == 150

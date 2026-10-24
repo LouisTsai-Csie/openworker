@@ -92,7 +92,10 @@ def where_line(src: SessionSource, thread: str | None = None, frame: dict[str, A
             parts.append(f"thread {thread}")
         return " · ".join(parts)
     if p == "telegram":
-        parts = [f"From {label}", f"chat {src.chat_id}" + (f" ({src.chat_name})" if src.chat_name and src.chat_name != src.chat_id else "")]
+        parts = [
+            f"From {label}",
+            f"chat {src.chat_id}" + (f" ({src.chat_name})" if src.chat_name and src.chat_name != src.chat_id else ""),
+        ]
         if thread and thread != "1":
             parts.append(f"topic {thread}")
         return " · ".join(parts)

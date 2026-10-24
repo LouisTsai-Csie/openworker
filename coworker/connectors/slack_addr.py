@@ -15,7 +15,6 @@ Socket-Mode targets (single workspace) keep the bare `slack:C0123` form.
 from __future__ import annotations
 
 
-
 def qualify(team_id: str | None, channel: str) -> str:
     """Build a team-qualified chat_id, or the bare channel when no team."""
     return f"{team_id}/{channel}" if team_id else channel

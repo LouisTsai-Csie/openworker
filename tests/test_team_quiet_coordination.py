@@ -16,8 +16,8 @@ def test_progress_and_publications_are_quiet_and_do_not_cancel_timer(manager):
     space, lead, item = create_item(manager)
     manager.team_store.transition(space, SAM, item["id"], "in_progress")
     manager.team_store.comment(space, SAM, item["id"], "Halfway through")
-    manager.team_store.attach_ref(space, SAM, item["id"], "Version one", "attachment://" + "a"*64 + ".md#report.md")
-    manager.team_store.attach_ref(space, SAM, item["id"], "Version two", "attachment://" + "b"*64 + ".md#report.md")
+    manager.team_store.attach_ref(space, SAM, item["id"], "Version one", "attachment://" + "a" * 64 + ".md#report.md")
+    manager.team_store.attach_ref(space, SAM, item["id"], "Version two", "attachment://" + "b" * 64 + ".md#report.md")
     wake = timer(manager)
     assert asyncio.run(drain(manager)) == 0
     assert wake.state == "pending"
@@ -32,10 +32,14 @@ def test_one_review_handoff_after_publications_and_notes(manager):
     manager.team_store.transition(space, SAM, item["id"], "in_progress")
     for n in range(5):
         manager.team_store.comment(space, SAM, item["id"], f"Evidence detail {n}")
-    handoff = manager.team_store.transition(space, SAM, item["id"], "review", comment="PASS; published versions 1/2", refs=["report.md"])
+    handoff = manager.team_store.transition(
+        space, SAM, item["id"], "review", comment="PASS; published versions 1/2", refs=["report.md"]
+    )
+
     async def run():
         assert await drain(manager) == 1
         await finish(manager)
+
     asyncio.run(run())
     msgs = [m for m in manager.session_store.load("lead").messages if m["role"] == "user"]
     assert len(msgs) == 1
@@ -78,9 +82,11 @@ def test_explicit_worker_question_wakes_lead_without_batch_delay(manager):
     # Worker-created task: lead is not its creator/assignee. Subscription still works.
     question = manager.team_store.create_item(space, SAM, title="Question", criteria="Decision")
     manager.team_store.comment(space, SAM, question["id"], "Which acceptance rule?", needs_attention=True)
+
     async def run():
         assert await drain(manager) == 1
         await finish(manager)
+
     asyncio.run(run())
     messages = manager.session_store.load("lead").messages
     assert any("Which acceptance rule?" in m.get("content", "") for m in messages if m["role"] == "user")

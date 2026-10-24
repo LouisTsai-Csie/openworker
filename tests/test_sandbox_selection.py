@@ -105,7 +105,9 @@ def test_the_sandbox_command_is_served_but_not_advertised(tmp_path, monkeypatch,
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path))
     _openshell(monkeypatch, "OpenShell is not installed on this machine.")
     # The same answer on any machine, with or without OpenShell installed.
-    monkeypatch.setattr(setup_cmd, "checks", lambda: [(f"OpenShell {setup_cmd.PINNED_VERSION} is installed", False, "found none")])
+    monkeypatch.setattr(
+        setup_cmd, "checks", lambda: [(f"OpenShell {setup_cmd.PINNED_VERSION} is installed", False, "found none")]
+    )
     assert "sandbox" not in cli.HELP  # hidden until tried on a fresh machine
     with pytest.raises(SystemExit) as done:
         cli.main(["machine", "sandbox", "status"])
@@ -164,7 +166,9 @@ def test_setup_offers_the_base_image_download_and_runs_nothing_when_refused(tmp_
     monkeypatch.setattr(setup_cmd.openshell, "sandbox_image", lambda: "ghcr.io/example/base@sha256:abc")
     monkeypatch.setattr(setup_cmd.openshell, "image_tool", lambda: "docker")
     ran: list[list[str]] = []
-    monkeypatch.setattr(setup_cmd.subprocess, "run", lambda argv, **kw: ran.append(argv) or type("Done", (), {"returncode": 0})())
+    monkeypatch.setattr(
+        setup_cmd.subprocess, "run", lambda argv, **kw: ran.append(argv) or type("Done", (), {"returncode": 0})()
+    )
     asked: list[str] = []
     said: list[str] = []
     assert setup_cmd.setup(ask=lambda q: asked.append(q) or False, print_fn=said.append) == 1
@@ -187,7 +191,9 @@ def test_setup_on_a_mac_still_offers_the_download(tmp_path, monkeypatch):
     monkeypatch.setattr(setup_cmd, "checks", lambda: _all_but_the_image(setup_cmd))
     monkeypatch.setattr(setup_cmd.openshell, "image_tool", lambda: "docker")
     ran: list[list[str]] = []
-    monkeypatch.setattr(setup_cmd.subprocess, "run", lambda argv, **kw: ran.append(argv) or type("Done", (), {"returncode": 0})())
+    monkeypatch.setattr(
+        setup_cmd.subprocess, "run", lambda argv, **kw: ran.append(argv) or type("Done", (), {"returncode": 0})()
+    )
     said: list[str] = []
     assert setup_cmd.setup(yes=True, print_fn=said.append) == 2  # still "this configures a Linux machine"
     assert ran and ran[0][:2] == ["docker", "pull"]
@@ -199,9 +205,19 @@ def test_status_shows_a_missing_image_as_its_own_row_not_as_a_gateway_problem(tm
 
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path))
     monkeypatch.setattr(setup_cmd.shutil, "which", lambda name: f"/usr/bin/{name}")
-    monkeypatch.setattr(setup_cmd, "_run", lambda argv, timeout=600: type("Done", (), {"returncode": 0, "stdout": f"openshell {setup_cmd.PINNED_VERSION}\n"})())
+    monkeypatch.setattr(
+        setup_cmd,
+        "_run",
+        lambda argv, timeout=600: type(
+            "Done", (), {"returncode": 0, "stdout": f"openshell {setup_cmd.PINNED_VERSION}\n"}
+        )(),
+    )
     monkeypatch.setattr(setup_cmd.sys, "platform", "darwin")  # no linger row to fake
-    monkeypatch.setattr(setup_cmd, "openshell_problem", lambda fresh=False: f"{setup_cmd.openshell.IMAGE_MISSING_PREFIX} (about 5 GB, one time). Run `docker pull x`.")
+    monkeypatch.setattr(
+        setup_cmd,
+        "openshell_problem",
+        lambda fresh=False: f"{setup_cmd.openshell.IMAGE_MISSING_PREFIX} (about 5 GB, one time). Run `docker pull x`.",
+    )
     monkeypatch.setattr(setup_cmd.openshell, "image_present", lambda image=None: False)
     monkeypatch.setattr(setup_cmd.openshell, "sandbox_image", lambda: "x")
     monkeypatch.setattr(setup_cmd.openshell, "image_tool", lambda: "podman")  # the hint names the driver's own tool

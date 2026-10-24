@@ -40,7 +40,11 @@ if sys.platform == "win32":
         _fields_ = [("Sid", ctypes.c_void_p), ("Attributes", wintypes.DWORD)]
 
     class SECURITY_ATTRIBUTES(ctypes.Structure):
-        _fields_ = [("nLength", wintypes.DWORD), ("lpSecurityDescriptor", ctypes.c_void_p), ("bInheritHandle", wintypes.BOOL)]
+        _fields_ = [
+            ("nLength", wintypes.DWORD),
+            ("lpSecurityDescriptor", ctypes.c_void_p),
+            ("bInheritHandle", wintypes.BOOL),
+        ]
 
     class STARTUPINFOW(ctypes.Structure):
         _fields_ = [
@@ -52,7 +56,12 @@ if sys.platform == "win32":
         ]  # fmt: skip
 
     class PROCESS_INFORMATION(ctypes.Structure):
-        _fields_ = [("hProcess", wintypes.HANDLE), ("hThread", wintypes.HANDLE), ("dwProcessId", wintypes.DWORD), ("dwThreadId", wintypes.DWORD)]
+        _fields_ = [
+            ("hProcess", wintypes.HANDLE),
+            ("hThread", wintypes.HANDLE),
+            ("dwProcessId", wintypes.DWORD),
+            ("dwThreadId", wintypes.DWORD),
+        ]
 
     class TOKEN_DEFAULT_DACL(ctypes.Structure):
         _fields_ = [("DefaultDacl", ctypes.c_void_p)]
@@ -65,7 +74,17 @@ if sys.platform == "win32":
         ]  # fmt: skip
 
     class IO_COUNTERS(ctypes.Structure):
-        _fields_ = [(name, ctypes.c_uint64) for name in ("ReadOperationCount", "WriteOperationCount", "OtherOperationCount", "ReadTransferCount", "WriteTransferCount", "OtherTransferCount")]
+        _fields_ = [
+            (name, ctypes.c_uint64)
+            for name in (
+                "ReadOperationCount",
+                "WriteOperationCount",
+                "OtherOperationCount",
+                "ReadTransferCount",
+                "WriteTransferCount",
+                "OtherTransferCount",
+            )
+        ]
 
     class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
         _fields_ = [
@@ -74,10 +93,21 @@ if sys.platform == "win32":
         ]  # fmt: skip
 
     class TRUSTEE_W(ctypes.Structure):
-        _fields_ = [("pMultipleTrustee", ctypes.c_void_p), ("MultipleTrusteeOperation", ctypes.c_int), ("TrusteeForm", ctypes.c_int), ("TrusteeType", ctypes.c_int), ("ptstrName", ctypes.c_void_p)]
+        _fields_ = [
+            ("pMultipleTrustee", ctypes.c_void_p),
+            ("MultipleTrusteeOperation", ctypes.c_int),
+            ("TrusteeForm", ctypes.c_int),
+            ("TrusteeType", ctypes.c_int),
+            ("ptstrName", ctypes.c_void_p),
+        ]
 
     class EXPLICIT_ACCESS_W(ctypes.Structure):
-        _fields_ = [("grfAccessPermissions", wintypes.DWORD), ("grfAccessMode", ctypes.c_int), ("grfInheritance", wintypes.DWORD), ("Trustee", TRUSTEE_W)]
+        _fields_ = [
+            ("grfAccessPermissions", wintypes.DWORD),
+            ("grfAccessMode", ctypes.c_int),
+            ("grfInheritance", wintypes.DWORD),
+            ("Trustee", TRUSTEE_W),
+        ]
 
     _k32.GetCurrentProcess.restype = wintypes.HANDLE
     _k32.CloseHandle.argtypes = [wintypes.HANDLE]
@@ -92,19 +122,76 @@ if sys.platform == "win32":
     _k32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
     _k32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
     _adv.OpenProcessToken.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)]
-    _adv.GetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+    _adv.GetTokenInformation.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
     _adv.SetTokenInformation.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
     _adv.ConvertSidToStringSidW.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_wchar_p)]
     _adv.ConvertStringSidToSidW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_void_p)]
-    _adv.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(wintypes.ULONG)]
-    _adv.GetSecurityDescriptorDacl.argtypes = [ctypes.c_void_p, ctypes.POINTER(wintypes.BOOL), ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(wintypes.BOOL)]
-    _adv.CreateProcessAsUserW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPWSTR, ctypes.c_void_p, ctypes.c_void_p, wintypes.BOOL, wintypes.DWORD, ctypes.c_void_p, wintypes.LPCWSTR, ctypes.POINTER(STARTUPINFOW), ctypes.POINTER(PROCESS_INFORMATION)]
-    _adv.GetNamedSecurityInfoW.argtypes = [wintypes.LPCWSTR, ctypes.c_int, wintypes.DWORD, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p), ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
-    _adv.SetNamedSecurityInfoW.argtypes = [wintypes.LPWSTR, ctypes.c_int, wintypes.DWORD, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
-    _adv.SetEntriesInAclW.argtypes = [wintypes.ULONG, ctypes.POINTER(EXPLICIT_ACCESS_W), ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
+    _adv.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(wintypes.ULONG),
+    ]
+    _adv.GetSecurityDescriptorDacl.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(wintypes.BOOL),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(wintypes.BOOL),
+    ]
+    _adv.CreateProcessAsUserW.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPCWSTR,
+        wintypes.LPWSTR,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.BOOL,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        wintypes.LPCWSTR,
+        ctypes.POINTER(STARTUPINFOW),
+        ctypes.POINTER(PROCESS_INFORMATION),
+    ]
+    _adv.GetNamedSecurityInfoW.argtypes = [
+        wintypes.LPCWSTR,
+        ctypes.c_int,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    _adv.SetNamedSecurityInfoW.argtypes = [
+        wintypes.LPWSTR,
+        ctypes.c_int,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+    ]
+    _adv.SetEntriesInAclW.argtypes = [
+        wintypes.ULONG,
+        ctypes.POINTER(EXPLICIT_ACCESS_W),
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
     _u32.CreateWindowStationW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p]
     _u32.CreateWindowStationW.restype = wintypes.HANDLE
-    _u32.CreateDesktopW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p]
+    _u32.CreateDesktopW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+    ]
     _u32.CreateDesktopW.restype = wintypes.HANDLE
     _u32.GetProcessWindowStation.restype = wintypes.HANDLE
     _u32.SetProcessWindowStation.argtypes = [wintypes.HANDLE]
@@ -216,7 +303,9 @@ def logon_sid() -> str:
 def _descriptor(sddl: str) -> ctypes.c_void_p:
     descriptor = ctypes.c_void_p()
     size = wintypes.ULONG()
-    if not _adv.ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl, _SDDL_REVISION_1, ctypes.byref(descriptor), ctypes.byref(size)):
+    if not _adv.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+        sddl, _SDDL_REVISION_1, ctypes.byref(descriptor), ctypes.byref(size)
+    ):
         raise _fail(f"security descriptor from {sddl!r}")
     return descriptor
 
@@ -321,7 +410,9 @@ def spawn_as_account(
         raise _fail("CreateJobObject")
     limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
     limits.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-    if not _k32.SetInformationJobObject(job, _JobObjectExtendedLimitInformation, ctypes.byref(limits), ctypes.sizeof(limits)):
+    if not _k32.SetInformationJobObject(
+        job, _JobObjectExtendedLimitInformation, ctypes.byref(limits), ctypes.sizeof(limits)
+    ):
         raise _fail("SetInformationJobObject")
     startup = STARTUPINFOW()
     startup.cb = ctypes.sizeof(startup)
@@ -334,7 +425,19 @@ def spawn_as_account(
     buffer = ctypes.create_unicode_buffer(command)
     info = PROCESS_INFORMATION()
     flags = CREATE_SUSPENDED | CREATE_NEW_PROCESS_GROUP | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW
-    if not _adv.CreateProcessWithLogonW(account, ".", password, _LOGON_WITH_PROFILE, None, buffer, flags, None, cwd, ctypes.byref(startup), ctypes.byref(info)):
+    if not _adv.CreateProcessWithLogonW(
+        account,
+        ".",
+        password,
+        _LOGON_WITH_PROFILE,
+        None,
+        buffer,
+        flags,
+        None,
+        cwd,
+        ctypes.byref(startup),
+        ctypes.byref(info),
+    ):
         raise _fail("CreateProcessWithLogonW")
     if not _k32.AssignProcessToJobObject(job, info.hProcess):
         _k32.TerminateProcess(info.hProcess, 1)
@@ -358,7 +461,16 @@ def _change_dacl(folder: str, sid_text: str, mode: int, permissions: int = 0, in
     sid = _Sid(sid_text)
     old = ctypes.c_void_p()
     descriptor = ctypes.c_void_p()
-    status = _adv.GetNamedSecurityInfoW(folder, _SE_FILE_OBJECT, _DACL_SECURITY_INFORMATION, None, None, ctypes.byref(old), None, ctypes.byref(descriptor))
+    status = _adv.GetNamedSecurityInfoW(
+        folder,
+        _SE_FILE_OBJECT,
+        _DACL_SECURITY_INFORMATION,
+        None,
+        None,
+        ctypes.byref(old),
+        None,
+        ctypes.byref(descriptor),
+    )
     if status:
         raise OSError(status, f"GetNamedSecurityInfo {folder}: {ctypes.FormatError(status).strip()}")
     try:
@@ -368,7 +480,9 @@ def _change_dacl(folder: str, sid_text: str, mode: int, permissions: int = 0, in
         if status:
             raise OSError(status, f"SetEntriesInAcl {folder}: {ctypes.FormatError(status).strip()}")
         try:
-            status = _adv.SetNamedSecurityInfoW(folder, _SE_FILE_OBJECT, _DACL_SECURITY_INFORMATION, None, None, new, None)
+            status = _adv.SetNamedSecurityInfoW(
+                folder, _SE_FILE_OBJECT, _DACL_SECURITY_INFORMATION, None, None, new, None
+            )
             if status:
                 raise OSError(status, f"SetNamedSecurityInfo {folder}: {ctypes.FormatError(status).strip()}")
         finally:
