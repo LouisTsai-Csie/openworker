@@ -43,6 +43,7 @@ LAYERS: dict[str, int] = {
     "config": 0,
     "secrets": 0,
     "atomicio": 0,
+    "dbschema": 0,
     "basedir": 0,
     "clock": 0,
     "events": 0,
