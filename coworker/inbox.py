@@ -29,6 +29,8 @@ from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
+from coworker.atomicio import atomic_write_json
+
 KIND_APPROVAL = "approval"
 KIND_QUESTION = "question"
 KIND_NOTIFICATION = "notification"
@@ -123,11 +125,7 @@ class InboxStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"items": [asdict(i) for i in self._items.values()]}, indent=2),
-            encoding="utf-8",
-        )
+        atomic_write_json(self.path, {"items": [asdict(i) for i in self._items.values()]})
 
     # -- adding -----------------------------------------------------------------
     def add(

@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Any
 from collections.abc import Sequence
 
+from coworker.atomicio import atomic_write_json
 from coworker.sandbox import credentials as creds
 from coworker.sandbox import netproxy, network_profiles
 from coworker.sandbox.bundle import build_runner_zipapp
@@ -174,10 +175,8 @@ class WindowsProvider:
         # The environment goes through a file in the private folder (the account reads it):
         # CreateProcessWithLogonW allows 1024 characters of command line, and PATH alone can
         # be longer than that.
-        import json
-
         env_file = os.path.join(self._dir, "env.json")
-        Path(env_file).write_text(json.dumps(self._environment()), encoding="utf-8")
+        atomic_write_json(env_file, self._environment(), indent=None)
         serve = serve_arguments(self.socket_path, self._dir, also_sids=[sid])
         argv = [
             *runner_command(self._runner_inside),

@@ -19,6 +19,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from coworker.atomicio import atomic_write_json
+
 
 @dataclass
 class ParkedMessage:
@@ -57,11 +59,7 @@ class ParkedStore:
         if not self.path:
             return
         try:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.write_text(
-                json.dumps({"items": [asdict(i) for i in self._items]}, indent=2),
-                encoding="utf-8",
-            )
+            atomic_write_json(self.path, {"items": [asdict(i) for i in self._items]})
         except OSError:
             pass  # persistence is best-effort; memory stays authoritative
 

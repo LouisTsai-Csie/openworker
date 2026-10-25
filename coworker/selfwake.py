@@ -18,6 +18,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
+from coworker.atomicio import atomic_write_json
+
 KIND_TIMER = "timer"
 KIND_COMPLETION = "completion"
 KIND_EVENT = "event"  # wake when a named connector/webhook event fires (Phase 3)
@@ -79,16 +81,10 @@ class WakeStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path.with_suffix(self.path.suffix + ".tmp")
-        temporary.write_text(
-            json.dumps(
-                {"wakes": [asdict(w) for w in self._wakes.values()], "stopped_sessions": sorted(self.stopped_sessions)},
-                indent=2,
-            ),
-            encoding="utf-8",
+        atomic_write_json(
+            self.path,
+            {"wakes": [asdict(w) for w in self._wakes.values()], "stopped_sessions": sorted(self.stopped_sessions)},
         )
-        temporary.replace(self.path)
 
     def add_timer(self, session_id: str, fire_at: datetime, *, note: str = "") -> Wake:
         w = Wake(

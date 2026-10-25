@@ -42,6 +42,7 @@ LAYERS: dict[str, int] = {
     # L0 foundation -- no coworker dependencies beyond each other.
     "config": 0,
     "secrets": 0,
+    "atomicio": 0,
     "basedir": 0,
     "clock": 0,
     "events": 0,

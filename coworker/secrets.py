@@ -16,12 +16,13 @@ import logging
 import os
 import re
 import subprocess
-import tempfile
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import Any
+
+from coworker.atomicio import atomic_write_text
 
 _REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _IS_WINDOWS = sys.platform == "win32"
@@ -99,38 +100,23 @@ def _restrict_to_user(path: Path, *, is_dir: bool) -> None:
 def _atomic_private_write(target: Path, content: str) -> Path:
     """Write `content` to `target` atomically, never exposing it through a readable temp.
 
+    The atomicity, the unpredictable temp name and the fsyncs are `coworker.atomicio`;
+    what is specific to secrets is *when* the permissions are applied.
+
     The temp file used to be created by `Path.write_text` and only chmod-ed afterwards, so
     the plaintext sat on disk at the umask default (0644 on a normal box) for the length of
     the write — readable by every local process and by anything backing the directory up.
-    That is issue #143; the same pattern was in both writers here.
+    That is issue #143. `on_tempfile` is the hook that keeps the fix: it runs on the
+    still-empty temp, so the file is never readable at any instant it holds the plaintext.
 
-    `tempfile.mkstemp` creates with 0600 and O_EXCL before a byte is written, which also
-    removes the fixed `<name>.tmp` filename. That name was predictable, so a local attacker
-    could pre-create it as a symlink and have the write land wherever the link pointed.
-
-    Windows gets no mode bits from mkstemp, so the ACL is applied to the still-empty file
-    before the content goes in.
+    Windows gets no mode bits from the temp's creation, so the same hook applies the ACL.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         _restrict_to_user(target.parent, is_dir=True)
     except OSError:
         pass
-
-    fd, tmp_name = tempfile.mkstemp(dir=str(target.parent), prefix=f".{target.name}.", suffix=".tmp")
-    tmp = Path(tmp_name)
-    try:
-        _restrict_to_user(tmp, is_dir=False)
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(content)
-        os.replace(tmp, target)
-    except BaseException:
-        try:
-            tmp.unlink()
-        except OSError:
-            pass
-        raise
-    return target
+    return atomic_write_text(target, content, on_tempfile=lambda tmp: _restrict_to_user(tmp, is_dir=False))
 
 
 def write_private_text(path: str | Path, content: str) -> Path:

@@ -7,6 +7,9 @@ the most valuable data the app holds.
 
 This is the write-side complement to read-side corrupt-line tolerance: prevent the
 truncated file rather than cope with one after the fact.
+
+The mechanism itself lives in `coworker.atomicio` (tests/test_atomic_writes.py); what is
+checked here is that the shrink path actually goes through it.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ import os
 
 import pytest
 
+from coworker import atomicio
 from coworker.conversations import ConversationStore
 from coworker.sessions import SessionRecord
 
@@ -37,16 +41,15 @@ def test_shrink_rewrite_preserves_history_when_write_crashes(tmp_path, monkeypat
     store.save(_rec(sid, 5))
     assert len(store.load(sid).messages) == 5
 
-    # Force a crash partway through the shrink rewrite (5 -> 2): the write fails after the
-    # first line. A non-atomic in-place open(..., "w") truncates the real file at open() and
-    # the crash then erases the history; an atomic tmp-then-replace leaves the original
-    # untouched because the swap never happens.
-    import coworker.conversations as conv
-
-    real_open = open
-    writes = {"n": 0}
+    # Force a crash partway through the shrink rewrite (5 -> 2): half the bytes reach the
+    # temp file and then the write fails. A non-atomic in-place open(..., "w") truncates the
+    # real file at open() and the crash then erases the history; the atomic write leaves the
+    # original untouched because the rename never happens.
+    real_fdopen = os.fdopen
 
     class _CrashingFile:
+        """Writes half of what it is given, then dies."""
+
         def __init__(self, fh):
             self._fh = fh
 
@@ -58,18 +61,10 @@ def test_shrink_rewrite_preserves_history_when_write_crashes(tmp_path, monkeypat
             return False
 
         def write(self, s):
-            writes["n"] += 1
-            if writes["n"] >= 2:
-                raise OSError("simulated crash mid-write")
-            return self._fh.write(s)
+            self._fh.write(s[: len(s) // 2])
+            raise OSError("simulated crash mid-write")
 
-    def crashing_open(file, mode="r", *args, **kwargs):
-        fh = real_open(file, mode, *args, **kwargs)
-        if "w" in mode and os.path.basename(str(file)).startswith(sid):
-            return _CrashingFile(fh)
-        return fh
-
-    monkeypatch.setattr(conv, "open", crashing_open, raising=False)
+    monkeypatch.setattr(atomicio.os, "fdopen", lambda fd, *a, **kw: _CrashingFile(real_fdopen(fd, *a, **kw)))
 
     with pytest.raises(OSError):
         store.save(_rec(sid, 2))
@@ -92,5 +87,6 @@ def test_shrink_rewrite_persists_reduced_history(tmp_path):
     reloaded = store.load(sid)
     assert [m["content"] for m in reloaded.messages] == ["msg-0", "msg-1", "msg-2"]
 
-    # No leftover temp file next to the conversation log.
-    assert not (tmp_path / "conversations" / f"{sid}.tmp").exists()
+    # No leftover temp file next to the conversation log. The temp name is unpredictable
+    # (mkstemp), so this asserts on the suffix rather than on one expected name.
+    assert [p.name for p in (tmp_path / "conversations").iterdir() if p.name.endswith(".tmp")] == []

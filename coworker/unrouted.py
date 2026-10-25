@@ -17,6 +17,8 @@ import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from coworker.atomicio import atomic_write_json
+
 
 @dataclass
 class UnroutedItem:
@@ -43,11 +45,7 @@ class UnroutedStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"items": [asdict(i) for i in self._items]}, indent=2),
-            encoding="utf-8",
-        )
+        atomic_write_json(self.path, {"items": [asdict(i) for i in self._items]})
 
     def record(self, source: str, sender: str, text: str, reason: str) -> UnroutedItem:
         item = UnroutedItem(source=source or "?", sender=sender or "-", text=text or "", reason=reason)

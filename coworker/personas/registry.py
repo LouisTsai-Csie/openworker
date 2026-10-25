@@ -22,6 +22,7 @@ from collections.abc import Callable
 from coworker.agents.base import Agent
 from coworker.agents.code import CODE_CAPABILITIES, code_agent
 from coworker.agents.cowork import COWORK_CAPABILITIES, cowork_agent
+from coworker.atomicio import atomic_write_json
 from coworker.personas.manifest import PersonaManifest, load_manifest_file
 
 DEFAULT_PERSONA_ID = "cowork"
@@ -223,18 +224,14 @@ class PersonaRegistry:
     def save(self) -> None:
         if not self.state_path:
             return
-        self.state_path.parent.mkdir(parents=True, exist_ok=True)
-        self.state_path.write_text(
-            json.dumps(
-                {
-                    "enabled": self._enabled,
-                    "surfaced": self._surfaced,
-                    "installed_meta": self._installed_meta,
-                    "default": self._default,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        atomic_write_json(
+            self.state_path,
+            {
+                "enabled": self._enabled,
+                "surfaced": self._surfaced,
+                "installed_meta": self._installed_meta,
+                "default": self._default,
+            },
         )
 
     # -- queries ----------------------------------------------------------------

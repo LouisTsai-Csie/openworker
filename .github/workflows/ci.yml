@@ -30,6 +30,10 @@ jobs:
       # new upward import, and also when a grandfathered one is fixed but left listed.
       - name: Import layering
         run: uv run python scripts/import_graph.py
+      # ARCHITECTURE.md §7 D1 as a gate: a new path.write_text(json.dumps(...)) is a
+      # torn settings file waiting to happen, so it fails here instead of in the field.
+      - name: Atomic JSON writes
+        run: uv run python scripts/check_atomic_writes.py
 
   pytest:
     runs-on: ubuntu-latest

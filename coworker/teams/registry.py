@@ -16,6 +16,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, UTC
 from pathlib import Path
 
+from coworker.atomicio import atomic_write_json
+
 
 @dataclass
 class TeamWorker:
@@ -58,11 +60,7 @@ class TeamRegistry:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"teams": [asdict(t) for t in self._teams.values()]}, indent=2),
-            encoding="utf-8",
-        )
+        atomic_write_json(self.path, {"teams": [asdict(t) for t in self._teams.values()]})
 
     def create(
         self,

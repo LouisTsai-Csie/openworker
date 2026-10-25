@@ -31,6 +31,9 @@ from typing import Any
 from collections.abc import Awaitable, Callable
 from datetime import UTC
 
+from coworker.atomicio import atomic_write_json
+from coworker.secrets import write_private_text
+
 _OCSF_VERSION = "1.1.0"
 _CLASS_API_ACTIVITY = 6003  # OCSF Application Activity › API Activity
 _CATEGORY_APPLICATION = 6
@@ -96,13 +99,7 @@ def load_policy(state: Path) -> dict[str, Any]:
 def save_policy(state: Path, policy: dict[str, Any]) -> None:
     """Persist the org policy the controller handed us, so the machine can SHOW
     what governs it even while offline (visible-governance rule)."""
-    path = Path(state) / POLICY_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({**policy, "received_at": time.time()}, indent=2))
-    try:
-        path.chmod(0o600)
-    except OSError:
-        pass
+    write_private_text(Path(state) / POLICY_FILE, json.dumps({**policy, "received_at": time.time()}, indent=2))
 
 
 # -- OCSF -----------------------------------------------------------------------
@@ -232,9 +229,10 @@ class AuditExporter:
 
     def _save_cursor(self) -> None:
         try:
-            self._cursor_path().parent.mkdir(parents=True, exist_ok=True)
-            self._cursor_path().write_text(
-                json.dumps({"last_id": self._cursor, "sink": self.policy.sink, "at": time.time()})
+            atomic_write_json(
+                self._cursor_path(),
+                {"last_id": self._cursor, "sink": self.policy.sink, "at": time.time()},
+                indent=None,
             )
         except OSError:
             pass

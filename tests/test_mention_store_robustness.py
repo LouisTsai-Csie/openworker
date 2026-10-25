@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 
+from coworker import atomicio
 from coworker.mentions import MentionSessionStore
 
 _RECORD = {
@@ -23,6 +24,11 @@ _RECORD = {
     "session_id": "abc123def456",
     "channel": "slack:C0123",
 }
+
+
+def _temps(folder):
+    """Temp names are unpredictable (mkstemp), so check the suffix, not one name."""
+    return [p.name for p in folder.iterdir() if p.name.endswith(".tmp")]
 
 
 def _write(tmp_path, text):
@@ -64,21 +70,21 @@ def test_save_leaves_no_temp_file_behind(tmp_path):
     store = MentionSessionStore(path)
     store.set(_RECORD["thread_target"], _RECORD["session_id"], _RECORD["channel"])
     assert json.loads(path.read_text(encoding="utf-8")) == {"threads": [_RECORD]}
-    assert not path.with_suffix(".json.tmp").exists()
+    assert _temps(tmp_path) == []
 
 
 def test_save_failure_keeps_the_previous_file_and_the_in_memory_record(tmp_path, monkeypatch):
     path = _write(tmp_path, json.dumps({"threads": [_RECORD]}))
     store = MentionSessionStore(path)
 
-    def refuse(self, target):
+    def refuse(src, dst):
         raise OSError("disk full")
 
-    monkeypatch.setattr(type(path), "replace", refuse)
+    monkeypatch.setattr(atomicio.os, "replace", refuse)
     # The failed save must not raise into the caller (a Slack message handler)...
     store.set("slack:C0123:1700.000200", "sid2", "slack:C0123")
     # ...memory still has both records, the file on disk is the old complete one,
     # and no .tmp is left beside it.
     assert len(store.all()) == 2
     assert json.loads(path.read_text(encoding="utf-8")) == {"threads": [_RECORD]}
-    assert not path.with_suffix(".json.tmp").exists()
+    assert _temps(tmp_path) == []

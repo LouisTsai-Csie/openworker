@@ -25,6 +25,7 @@ from typing import Any, ClassVar
 from coworker import model_config as _model_config
 from coworker.agent import build_engine
 from coworker.agents import get_agent
+from coworker.atomicio import atomic_write_json
 from coworker.connections import (
     PersonaConnectionStore,
     SessionConnectionStore,
@@ -4331,7 +4332,7 @@ class SessionManager:
             return {}
 
     def _save_prefs(self) -> None:
-        self._prefs_path().write_text(json.dumps(self._prefs, indent=2), encoding="utf-8")
+        atomic_write_json(self._prefs_path(), self._prefs)
 
     # -- direct-message routing -------------------------------------------------
     def dm_session(self) -> str | None:
@@ -5598,7 +5599,7 @@ class SessionManager:
         if self._people.get(key) != name:
             self._people[key] = name
             try:
-                self._people_path.write_text(json.dumps(self._people))
+                atomic_write_json(self._people_path, self._people, indent=None)
             except OSError:
                 pass
 
