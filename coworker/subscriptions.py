@@ -18,6 +18,7 @@ to conflates the two directions.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 from collections import deque
@@ -26,6 +27,9 @@ from pathlib import Path
 from collections.abc import Callable
 
 from coworker.atomicio import atomic_write_json
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -44,9 +48,15 @@ class SubscriptionStore:
         self._load()
 
     def _load(self) -> None:
-        if self.path and self.path.is_file():
+        if not (self.path and self.path.is_file()):
+            return
+        try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self._subs = [Subscription(**raw) for raw in data.get("subscriptions", [])]
+            subs = [Subscription(**raw) for raw in data.get("subscriptions", [])]
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with no subscriptions", self.path)
+            return
+        self._subs = subs
 
     def _save(self) -> None:
         if not self.path:

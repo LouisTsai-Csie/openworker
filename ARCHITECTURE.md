@@ -8,8 +8,8 @@ reproduces the import-graph figures in §3 and §4; the rest are one-line `grep`
 beside the claim. If a number has drifted, the script is the source of truth, not this
 file.
 
-Measured 2026-10-25: `coworker/` is 233 modules / 76,664 lines, `tests/` 220 files /
-57,030 lines, `surfaces/gui` 63,088 lines of TS/TSX.
+Measured 2026-10-25: `coworker/` is 233 modules / 76,759 lines, `tests/` 221 files /
+57,272 lines, `surfaces/gui` 63,088 lines of TS/TSX.
 
 ---
 
@@ -155,8 +155,10 @@ really a `basedir` concern and sits in the wrong module today).
 - **JSON files** — settings, secrets, personas, skills, team boards. Every one of the 32
   whole-file writes, in 25 modules, goes through `coworker.atomicio`: write a temp in the
   target's own directory, `fsync` it, `os.replace`, then `fsync` the directory. A crash
-  between any two steps leaves the previous complete file.
-  `scripts/check_atomic_writes.py` is the gate (§8).
+  between any two steps leaves the previous complete file. On the read side, all 16
+  loaders treat an unreadable file as "start empty" rather than raising out of a
+  constructor the server builds at startup (#204); `tests/test_corrupt_json_startup.py`
+  is the gate for that, `scripts/check_atomic_writes.py` for the write side (§8).
 - **JSONL** — conversation transcripts, the headless event stream, the remote audit log:
   6 append sites in 3 modules, deliberately *not* fsynced. An append cannot be torn the
   way a rewrite can — the worst a power cut does is truncate the final line, which these
@@ -203,7 +205,10 @@ replaces, of which 7 already did temp-then-rename, plus 6 appends. None of the r
 fsynced, so the swap could reach the disk ahead of the bytes and a power cut could leave a
 complete-looking file of zeros — the failure the register attributed only to `secrets.py`
 was in every one of them. All 30, plus `secrets.py` and the `sandbox/bundle.py` zipapp, now
-go through `coworker.atomicio`.
+go through `coworker.atomicio`. The read side followed: 8 of the 16 JSON loaders still let
+a corrupt file raise out of `__init__`, and 7 of those are built by
+`SessionManager.__init__`, so one torn file stopped the server starting (#204). Atomic
+writes stop new torn files; they do nothing for the ones already on disk.
 
 ## 8. Keeping this true
 
@@ -216,8 +221,9 @@ This file is only useful if it cannot drift. Four mechanisms:
 2. **Code rules are tests, not prose** (CI `pytest`). `tests/test_sandbox_runner.py`
    enforces the runner's relative-imports-and-stdlib-only rule;
    `tests/test_schema_version.py` fails when a module opens a SQLite database without
-   stamping it. A rule nobody can forget to follow is worth more than a paragraph saying
-   to follow it.
+   stamping it; `tests/test_corrupt_json_startup.py` fails when a loader lets a corrupt
+   state file raise out of a constructor. A rule nobody can forget to follow is worth
+   more than a paragraph saying to follow it.
 3. **The existing ratchets only shrink.** `pyproject.toml` already does this for mypy
    (70 modules) and ruff's per-file ignores — entries are deleted as they are burned down,
    never re-added. Hold new debt to the same rule.

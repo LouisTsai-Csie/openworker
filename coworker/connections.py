@@ -23,10 +23,14 @@ Both stores are tiny JSON files mirroring ``SubscriptionStore`` (optional path, 
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from pathlib import Path
 
 from coworker.atomicio import atomic_write_json
+
+
+logger = logging.getLogger(__name__)
 
 
 class PersonaConnectionStore:
@@ -39,11 +43,17 @@ class PersonaConnectionStore:
         self._load()
 
     def _load(self) -> None:
-        if self.path and self.path.is_file():
+        if not (self.path and self.path.is_file()):
+            return
+        try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self._rows = {
+            rows = {
                 pid: {str(c): bool(v) for c, v in (row or {}).items()} for pid, row in data.get("personas", {}).items()
             }
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with no persona connections", self.path)
+            return
+        self._rows = rows
 
     def _save(self) -> None:
         if not self.path:
@@ -105,11 +115,17 @@ class SessionConnectionStore:
         self._load()
 
     def _load(self) -> None:
-        if self.path and self.path.is_file():
+        if not (self.path and self.path.is_file()):
+            return
+        try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self._rows = {
+            rows = {
                 sid: {str(c): bool(v) for c, v in (row or {}).items()} for sid, row in data.get("sessions", {}).items()
             }
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with no session connections", self.path)
+            return
+        self._rows = rows
 
     def _save(self) -> None:
         if not self.path:
