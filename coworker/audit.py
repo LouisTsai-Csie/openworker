@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from coworker.connectors import connector_for_tool
+from coworker.dbschema import ensure_version
 
 # Matched as substrings of a lowercased key name, at EVERY level of a structure (#397):
 # an HTTP-shaped or MCP tool takes its credential in a nested `headers` / `auth` / `config`
@@ -47,6 +48,8 @@ class AuditStore:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Before any DDL: an older build must stop here, not write to a newer file.
+        ensure_version(self._conn)
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS audit_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -8,8 +8,8 @@ reproduces the import-graph figures in §3 and §4; the rest are one-line `grep`
 beside the claim. If a number has drifted, the script is the source of truth, not this
 file.
 
-Measured 2026-10-25: `coworker/` is 232 modules / 76,514 lines, `tests/` 219 files /
-56,820 lines, `surfaces/gui` 63,088 lines of TS/TSX.
+Measured 2026-10-25: `coworker/` is 233 modules / 76,664 lines, `tests/` 220 files /
+57,030 lines, `surfaces/gui` 63,088 lines of TS/TSX.
 
 ---
 
@@ -68,7 +68,7 @@ from a layer above it.** That is the whole rule.
   L2  domain        conversations · sessions · inbox · projects ·
                     interactions · compaction · model_config · …         20
   L1  governance    permissions · risk · audit · provenance · …            8
-  L0  foundation    config · secrets · atomicio · basedir · clock · …      12
+  L0  foundation    config · secrets · atomicio · dbschema · clock · …    13
 ```
 
 The layering is defined as data in `scripts/import_graph.py` (`LAYERS`), so it can be
@@ -85,7 +85,7 @@ whether a human is watching.
 Run `python scripts/import_graph.py` (`--verbose` for every edge). As of 2026-10-25:
 
 ```
-modules 232   module-level edges 497   late edges 294
+modules 233   module-level edges 506   late edges 294
 
 cycles (module-level only) : 1 (2 modules)
 cycles (incl. late imports): 5 (23 modules)
@@ -141,9 +141,17 @@ Everything lives under the state directory (`coworker.secrets.state_dir()`, whic
 really a `basedir` concern and sits in the wrong module today).
 
 - **SQLite** — `coworker.db`, shared by five or more independent stores, each creating its
-  own tables. 26 `CREATE TABLE` sites, 25 ad-hoc `ALTER TABLE` migrations, and
-  `PRAGMA user_version` is never set. There is no schema version and no migration
-  framework.
+  own tables. 26 `CREATE TABLE` sites and 25 ad-hoc `ALTER TABLE`s, which converge: every
+  store runs its own DDL on open, so a file of any age ends up at today's schema. Rolling
+  *forward* has therefore always worked, and rolling back was what did not.
+  `PRAGMA user_version` now carries one schema generation for every file this product
+  writes (`coworker.dbschema`), and an older build refuses a file stamped newer than it
+  understands instead of writing into it. There is still no migration framework: a change
+  that is not "add a column" has nowhere to live.
+
+  The generation is per *file*, not per store, because `coworker.db` is written by five
+  independently-constructed stores — conversations, memory, audit, projects, machines —
+  and no one of them can own that integer.
 - **JSON files** — settings, secrets, personas, skills, team boards. Every one of the 32
   whole-file writes, in 25 modules, goes through `coworker.atomicio`: write a temp in the
   target's own directory, `fsync` it, `os.replace`, then `fsync` the directory. A crash
@@ -180,7 +188,7 @@ Ordered by what it costs to leave alone, not by size.
 | D4 | Domain failures return HTTP 200 | 229 `{"ok": False}` sites | Clients cannot distinguish "worked" from "refused" by status. |
 | D5 | `create_app` god function | 231 routes / 3,348 lines | Same as D2, for the HTTP surface. |
 | D6 | `make_integration_tools` god function | 136 tools / 4,505 lines across ~15 SaaS vendors | Any one vendor's change touches a 5,000-line file. |
-| D7 | No schema versioning | 26 `CREATE TABLE`, 25 `ALTER TABLE`, 0 `user_version` | Migrations are guesswork; a downgrade corrupts. |
+| D7 | No migration mechanism | 26 `CREATE TABLE`, 25 ad-hoc `ALTER TABLE`; `user_version` is stamped and guarded as of 2026-10-25, but nothing can express a change that is not "add a column" | Migrations are guesswork. The downgrade half is fixed: `dbschema.ensure_version` refuses a file from a newer build rather than corrupting it. |
 | D8 | 25 Store classes, no common base | — | Connection, transaction and locking policy is re-decided 25 times. |
 | D9 | Type debt in the core | 70 modules under mypy `ignore_errors` | The least-checked modules are the most central ones. |
 | D10 | Tests bound to internals | 90 of 218 test files call a private `_method` | The safety net blocks the refactor it should enable. |
@@ -199,15 +207,22 @@ go through `coworker.atomicio`.
 
 ## 8. Keeping this true
 
-This file is only useful if it cannot drift. Three mechanisms, all in the CI `lint` job:
+This file is only useful if it cannot drift. Four mechanisms:
 
-1. **`scripts/import_graph.py` exits non-zero** when there is an import-time cycle or a
-   module-level layer violation, which makes the layering in §3 a gate rather than a
-   description. (It could equally be `import-linter` driving the same `LAYERS` table.)
-2. **The existing ratchets only shrink.** `pyproject.toml` already does this for mypy
+1. **`scripts/import_graph.py` exits non-zero** (CI `lint`) when there is an import-time
+   cycle or a module-level layer violation, which makes the layering in §3 a gate rather
+   than a description. (It could equally be `import-linter` driving the same `LAYERS`
+   table.)
+2. **Code rules are tests, not prose** (CI `pytest`). `tests/test_sandbox_runner.py`
+   enforces the runner's relative-imports-and-stdlib-only rule;
+   `tests/test_schema_version.py` fails when a module opens a SQLite database without
+   stamping it. A rule nobody can forget to follow is worth more than a paragraph saying
+   to follow it.
+3. **The existing ratchets only shrink.** `pyproject.toml` already does this for mypy
    (70 modules) and ruff's per-file ignores — entries are deleted as they are burned down,
    never re-added. Hold new debt to the same rule.
-3. **`scripts/check_atomic_writes.py` exits non-zero** on a JSON write that does not go
+4. **`scripts/check_atomic_writes.py` exits non-zero** (CI `lint`) on a JSON write that
+   does not go
    through `coworker.atomicio`, and on an allowed-append entry that no longer matches
    anything. Both halves matter: the first stops D1 growing back one new store at a time,
    the second stops the exception list outliving the code it describes.

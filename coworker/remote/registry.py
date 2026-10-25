@@ -14,6 +14,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from coworker.dbschema import ensure_version
+
 MAX_NAME_CHARS = 60
 
 
@@ -28,6 +30,8 @@ class MachinesRegistry:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Before any DDL: an older build must stop here, not write to a newer file.
+        ensure_version(self._conn)
         with self._lock:
             # Name uniqueness is PER ORG, enforced in code (enroll's suffix loop
             # and rename's clash check) — not by a table constraint, so the

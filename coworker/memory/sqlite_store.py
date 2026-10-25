@@ -6,6 +6,7 @@ import sqlite3
 import threading
 from pathlib import Path
 
+from coworker.dbschema import ensure_version
 from coworker.memory.base import MemoryItem, MemoryStore, Scope
 
 
@@ -19,6 +20,8 @@ class SQLiteMemoryStore(MemoryStore):
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Before any DDL: an older build must stop here, not write to a newer file.
+        ensure_version(self._conn)
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS memories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

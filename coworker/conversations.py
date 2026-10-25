@@ -19,6 +19,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from coworker.atomicio import atomic_write_text
+from coworker.dbschema import ensure_version
 from coworker.sessions import SessionRecord
 
 # A session id becomes a filename (`<id>.jsonl`) and a scratch dir name, so it must be a
@@ -85,6 +86,8 @@ class ConversationStore:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Before any DDL: an older build must stop here, not write to a newer file.
+        ensure_version(self._conn)
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY, workspace TEXT, model TEXT, mode TEXT,

@@ -29,6 +29,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
+from coworker.dbschema import ensure_version
 from coworker.teams.model import (
     JOURNAL_BODY_LIMIT,
     JOURNAL_KINDS,
@@ -62,6 +63,8 @@ class JournalStore:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Before any DDL: an older build must stop here, not write to a newer file.
+        ensure_version(self._conn)
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS journal_entries (
                 seq INTEGER PRIMARY KEY AUTOINCREMENT,
