@@ -23,7 +23,9 @@ def _git_common_dir(workspace: Path) -> Path | None:
     try:
         out = subprocess.run(
             ["git", "-C", str(workspace), "rev-parse", "--git-common-dir"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -71,7 +73,7 @@ def project_label(key: str, *, home: str | None = None) -> dict[str, Any]:
     if shown == h:
         shown = "~"
     elif shown.startswith(h + "/"):
-        shown = "~" + shown[len(h):]
+        shown = "~" + shown[len(h) :]
     return {
         "kind": "git" if is_git else "folder",
         "label": p.name if is_git else shown,
@@ -124,17 +126,13 @@ class ProjectNames:
         """Bump MRU when a binding is used."""
         with self._lock:
             self._conn.execute(
-                "UPDATE project_names SET last_used_at = datetime('now') "
-                "WHERE kind = ? AND name = ?",
+                "UPDATE project_names SET last_used_at = datetime('now') WHERE kind = ? AND name = ?",
                 (kind, name),
             )
             self._conn.commit()
 
     def list(self, kind: str, *, limit: int | None = None) -> list[dict[str, Any]]:
-        q = (
-            "SELECT name, key, last_used_at FROM project_names "
-            "WHERE kind = ? ORDER BY last_used_at DESC, name"
-        )
+        q = "SELECT name, key, last_used_at FROM project_names WHERE kind = ? ORDER BY last_used_at DESC, name"
         args: list[Any] = [kind]
         if limit:
             q += " LIMIT ?"
@@ -145,9 +143,7 @@ class ProjectNames:
 
     def forget(self, kind: str, name: str) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM project_names WHERE kind = ? AND name = ?", (kind, name)
-            )
+            cur = self._conn.execute("DELETE FROM project_names WHERE kind = ? AND name = ?", (kind, name))
             self._conn.commit()
         return cur.rowcount > 0
 
@@ -170,9 +166,11 @@ def resolve_memory_key(
     if not workspace:
         return None
     derived = project_key(workspace)
-    path_key = str(Path(workspace).expanduser().resolve()) if Path(
-        workspace
-    ).expanduser().exists() else str(Path(workspace).expanduser())
+    path_key = (
+        str(Path(workspace).expanduser().resolve())
+        if Path(workspace).expanduser().exists()
+        else str(Path(workspace).expanduser())
+    )
     if memory_store is not None and derived != path_key:
         try:
             memory_store.rekey_workspace(path_key, derived)
@@ -199,9 +197,11 @@ def resolve_board_space(
     if not workspace:
         return None
     derived = project_key(workspace)
-    path_key = str(Path(workspace).expanduser().resolve()) if Path(
-        workspace
-    ).expanduser().exists() else str(Path(workspace).expanduser())
+    path_key = (
+        str(Path(workspace).expanduser().resolve())
+        if Path(workspace).expanduser().exists()
+        else str(Path(workspace).expanduser())
+    )
     if team_store is not None and derived != path_key:
         try:
             team_store.rekey_space(path_key, derived)
@@ -210,9 +210,7 @@ def resolve_board_space(
     return derived
 
 
-def project_presence(
-    key: str, *, memory_store: Any = None, team_store: Any = None
-) -> dict[str, int]:
+def project_presence(key: str, *, memory_store: Any = None, team_store: Any = None) -> dict[str, int]:
     """What already exists under a project key — feeds the grant-time notice.
     Counts only; the notice is a pointer, never content."""
     memories = 0

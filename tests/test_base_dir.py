@@ -122,7 +122,19 @@ def test_managed_grant_bundle_handles_every_family(tmp_path):
     grant = {"user_id": "usr_1", "machine_credential": "mc_1"}
     # Generic (Notion-style, multi-account layer): stamps ride the profile.
     s = SecretStore(tmp_path / "a.json")
-    out = store_managed_grant_bundle(s, "notion", {"provider": "notion", "connector": "notion", "connection_id": "conn_n", "access_token": "tok", "account": "Acme", "account_id": "ws_1"}, grant)
+    out = store_managed_grant_bundle(
+        s,
+        "notion",
+        {
+            "provider": "notion",
+            "connector": "notion",
+            "connection_id": "conn_n",
+            "access_token": "tok",
+            "account": "Acme",
+            "account_id": "ws_1",
+        },
+        grant,
+    )
     assert out.get("ok"), out
     prof = s.get("notion:account:ws_1") or {}
     assert prof["access_token"] == "tok" and prof["broker_user_id"] == "usr_1" and prof["machine_credential"] == "mc_1"
@@ -130,7 +142,31 @@ def test_managed_grant_bundle_handles_every_family(tmp_path):
     # GitHub: one profile per installation + pointer, all stamped, no tokens.
     s = SecretStore(tmp_path / "b.json")
     import json as _json
-    out = store_managed_grant_bundle(s, "github", {"connection_id": "conn_g", "installation_id": "1", "account_login": "a", "account_type": "User", "repo_selection": "all", "github_login": "me", "installations": _json.dumps([{"installation_id": "1", "account_login": "a", "account_type": "User", "repo_selection": "all"}, {"installation_id": "2", "account_login": "org", "account_type": "Organization", "repo_selection": "selected"}])}, grant)
+
+    out = store_managed_grant_bundle(
+        s,
+        "github",
+        {
+            "connection_id": "conn_g",
+            "installation_id": "1",
+            "account_login": "a",
+            "account_type": "User",
+            "repo_selection": "all",
+            "github_login": "me",
+            "installations": _json.dumps(
+                [
+                    {"installation_id": "1", "account_login": "a", "account_type": "User", "repo_selection": "all"},
+                    {
+                        "installation_id": "2",
+                        "account_login": "org",
+                        "account_type": "Organization",
+                        "repo_selection": "selected",
+                    },
+                ]
+            ),
+        },
+        grant,
+    )
     assert out.get("ok"), out
     for key in ("github:install:1", "github:install:2"):
         p = s.get(key) or {}
@@ -140,8 +176,25 @@ def test_managed_grant_bundle_handles_every_family(tmp_path):
     assert store_managed_grant_bundle(s, "github", {"connection_id": "x"}, grant)["ok"] is False
     # Slack: per-workspace bot token + pointer, stamped.
     s = SecretStore(tmp_path / "c.json")
-    out = store_managed_grant_bundle(s, "slack", {"connection_id": "conn_s", "access_token": "xoxb-1", "team_id": "T1", "team_domain": "acme", "bot_user_id": "B1", "slack_user_id": "U1", "account": "Acme"}, grant)
+    out = store_managed_grant_bundle(
+        s,
+        "slack",
+        {
+            "connection_id": "conn_s",
+            "access_token": "xoxb-1",
+            "team_id": "T1",
+            "team_domain": "acme",
+            "bot_user_id": "B1",
+            "slack_user_id": "U1",
+            "account": "Acme",
+        },
+        grant,
+    )
     assert out.get("ok"), out
     p = s.get("slack:team:T1") or {}
-    assert p.get("bot_token", p.get("access_token")) and p["machine_credential"] == "mc_1" and p["connection_id"] == "conn_s"
+    assert (
+        p.get("bot_token", p.get("access_token"))
+        and p["machine_credential"] == "mc_1"
+        and p["connection_id"] == "conn_s"
+    )
     assert (s.get("slack:default") or {}).get("broker_user_id") == "usr_1"

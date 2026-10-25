@@ -79,9 +79,7 @@ def test_verify_openai_ok(monkeypatch):
 def test_verify_openai_custom_endpoint(monkeypatch):
     cap: dict = {}
     _patch_get(monkeypatch, status=200, capture=cap)
-    verify_provider_key(
-        "openai", api_key="sk-x", base_url="https://gw.example/openai/v1/"
-    )
+    verify_provider_key("openai", api_key="sk-x", base_url="https://gw.example/openai/v1/")
     # trailing slash trimmed, /models appended to the custom endpoint
     assert cap["url"] == "https://gw.example/openai/v1/models"
     assert cap["calls"][1]["url"] == "https://gw.example/openai/v1/chat/completions"
@@ -146,9 +144,7 @@ def test_verify_ollama_uses_v1_models_no_key(monkeypatch):
         ),
     ],
 )
-def test_verify_ark_uses_non_persisted_responses_probe(
-    monkeypatch, name, base_url, model
-):
+def test_verify_ark_uses_non_persisted_responses_probe(monkeypatch, name, base_url, model):
     """Reverse-verified probe: the captured fixture must be non-empty and provider-specific."""
     cap: dict = {}
     _patch_post(monkeypatch, status=200, capture=cap)

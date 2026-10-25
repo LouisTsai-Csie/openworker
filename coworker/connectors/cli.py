@@ -30,20 +30,13 @@ def _cmd_status() -> int:
     settings = load_settings(SecretStore())
     print("Connector status:")
     for platform, s in settings.items():
-        print(
-            f"  {platform:10s} enabled={s.enabled}  allow_all={s.allow_all}  "
-            f"allowed_users={len(s.allowed_users)}"
-        )
+        print(f"  {platform:10s} enabled={s.enabled}  allow_all={s.allow_all}  allowed_users={len(s.allowed_users)}")
     return 0
 
 
 async def _run_fake(user: str, allow: list[str]) -> int:
     fake = FakeAdapter()
-    settings = {
-        "fake": ConnectorSettings(
-            platform="fake", enabled=True, allowed_users=set(allow), allow_all=not allow
-        )
-    }
+    settings = {"fake": ConnectorSettings(platform="fake", enabled=True, allowed_users=set(allow), allow_all=not allow)}
     gateway = Gateway(settings=settings)
 
     async def echo_handler(event: MessageEvent) -> None:
@@ -88,9 +81,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_fake = sub.add_parser("fake")
     p_fake.add_argument("--user", default="u1")
-    p_fake.add_argument(
-        "--allow", action="append", default=[], help="authorized user id (repeatable)"
-    )
+    p_fake.add_argument("--allow", action="append", default=[], help="authorized user id (repeatable)")
 
     p_send = sub.add_parser("send")
     p_send.add_argument("--target", required=True)

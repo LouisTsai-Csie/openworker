@@ -109,15 +109,11 @@ Operate things.
     m = parse_manifest(text)
     assert m.requires_folder is False and m.subagents is False and m.scheduling is True
 
-    coded = parse_manifest(
-        "---\nid: dev\nfamily: code\nworkspace: none\ntools: [git]\n---\nCode."
-    )
+    coded = parse_manifest("---\nid: dev\nfamily: code\nworkspace: none\ntools: [git]\n---\nCode.")
     assert coded.requires_folder and coded.subagents and not coded.scheduling
 
     # New keys override the shim.
-    mixed = parse_manifest(
-        "---\nid: dev2\nfamily: code\nrequires_folder: false\ntools: [git]\n---\nCode."
-    )
+    mixed = parse_manifest("---\nid: dev2\nfamily: code\nrequires_folder: false\ntools: [git]\n---\nCode.")
     assert mixed.requires_folder is False and mixed.subagents is True
 
 

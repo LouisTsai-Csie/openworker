@@ -133,9 +133,7 @@ def _text_response(text="hello", stop_reason="end_turn"):
     ],
 )
 def test_anthropic_complete_keeps_raw_stop_reason_in_sidecar(stop_reason, expected):
-    provider = AnthropicProvider(
-        client=_FakeClient(response=_text_response(stop_reason=stop_reason))
-    )
+    provider = AnthropicProvider(client=_FakeClient(response=_text_response(stop_reason=stop_reason)))
     turn = provider.complete(model="m", messages=[{"role": "user", "content": "x"}])
     assert turn.finish_reason == expected
     assert turn.extras["_anthropic"]["stop_reason"] == stop_reason
@@ -153,14 +151,10 @@ def test_anthropic_stream_keeps_raw_stop_reason_in_sidecar():
             index=0,
             delta=SimpleNamespace(type="text_delta", text="cut off mid"),
         ),
-        SimpleNamespace(
-            type="message_delta", delta=SimpleNamespace(stop_reason="max_tokens")
-        ),
+        SimpleNamespace(type="message_delta", delta=SimpleNamespace(stop_reason="max_tokens")),
     ]
     provider = AnthropicProvider(client=_FakeClient(events=events))
-    chunks = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )
+    chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
     turn = chunks[-1].turn
     assert turn.finish_reason == "length"
     assert turn.extras["_anthropic"]["stop_reason"] == "max_tokens"

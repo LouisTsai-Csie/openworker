@@ -68,9 +68,7 @@ def _parse_or_coerce(target: str) -> tuple[str, str, str | None]:
         raise
 
 
-def _resolve_slack_channel(
-    secrets: SecretStore, name: str
-) -> tuple[str | None, str | None]:
+def _resolve_slack_channel(secrets: SecretStore, name: str) -> tuple[str | None, str | None]:
     """'#all-openworker' (a NAME the user said) → the team-qualified chat_id, via the
     same cached conversations.list roster the GUI's channel picker uses. (chat_id, error):
     exactly one match wins; none/many return an actionable error instead of a guess
@@ -107,8 +105,7 @@ def _resolve_slack_channel(
     chat_id = str(c["id"]) if team == "default" else f"{team}/{c['id']}"
     if not c.get("is_member"):
         return None, (
-            f"found #{query}, but the bot isn't a member — invite @OpenWorker to #{query} "
-            "in Slack, then retry"
+            f"found #{query}, but the bot isn't a member — invite @OpenWorker to #{query} in Slack, then retry"
         )
     return chat_id, None
 
@@ -311,9 +308,7 @@ def make_send_file_tool(
             return {"error": "no workspace folders available to read from"}
         resolved = _resolve_within(path, bases)
         if resolved is None or not resolved.is_file():
-            return {
-                "error": "path is outside the folders this session can access (or missing)"
-            }
+            return {"error": "path is outside the folders this session can access (or missing)"}
         token = _resolve_token(secrets, platform, chat_id)
         if not token:
             return {"error": f"no bot token for {platform} — connect it first"}

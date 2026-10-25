@@ -40,18 +40,29 @@ def _capture(monkeypatch, status=200, body=None, raise_error=False):
 
 def test_box_registers_by_machine_credential(tmp_path, monkeypatch, cfg):
     secrets = SecretStore(tmp_path / "s.json")
-    secrets.put("slack:default", {
-        "mode": "relay", "machine_credential": "mc_abc", "broker_user_id": "u1",
-        "connection_id": "conn1",
-    })
+    secrets.put(
+        "slack:default",
+        {
+            "mode": "relay",
+            "machine_credential": "mc_abc",
+            "broker_user_id": "u1",
+            "connection_id": "conn1",
+        },
+    )
     calls = _capture(monkeypatch)
     out = sync.register(secrets, cfg, source="slack:T1/C1", session_id="s1", title="Ops")
     assert out == {"ok": True, "registered": True, "moved_from": []}
     (call,) = calls
     assert call["url"] == "https://api.test/v1/machine/subscriptions"
     assert call["headers"] == {"Authorization": "Bearer mc_abc"}
-    assert call["json"] == {"user_id": "u1", "connection_id": "conn1", "source": "slack:T1/C1",
-                            "session_id": "s1", "title": "Ops", "move": False}
+    assert call["json"] == {
+        "user_id": "u1",
+        "connection_id": "conn1",
+        "source": "slack:T1/C1",
+        "session_id": "s1",
+        "title": "Ops",
+        "move": False,
+    }
 
 
 def test_desktop_registers_by_session_token(tmp_path, monkeypatch, cfg):
@@ -84,9 +95,17 @@ def test_local_only_when_nothing_to_register(tmp_path, monkeypatch, cfg):
 
 def test_held_and_failures_map_to_route_answers(tmp_path, monkeypatch, cfg):
     secrets = SecretStore(tmp_path / "s.json")
-    secrets.put("slack:default", {"mode": "relay", "machine_credential": "mc", "broker_user_id": "u", "connection_id": "c"})
-    held = {"detail": {"error": "held", "held_by": {"session_id": "other", "title": "Lead", "machine_id": "m-a"},
-                       "also": [], "move_allowed": False}}
+    secrets.put(
+        "slack:default", {"mode": "relay", "machine_credential": "mc", "broker_user_id": "u", "connection_id": "c"}
+    )
+    held = {
+        "detail": {
+            "error": "held",
+            "held_by": {"session_id": "other", "title": "Lead", "machine_id": "m-a"},
+            "also": [],
+            "move_allowed": False,
+        }
+    }
     _capture(monkeypatch, status=409, body=held)
     out = sync.register(secrets, cfg, source="slack:C1", session_id="s")
     assert out["ok"] is False and out["error"] == "held"
@@ -104,7 +123,9 @@ def test_held_and_failures_map_to_route_answers(tmp_path, monkeypatch, cfg):
 
 def test_remove_and_orphan_are_best_effort(tmp_path, monkeypatch, cfg):
     secrets = SecretStore(tmp_path / "s.json")
-    secrets.put("slack:default", {"mode": "relay", "machine_credential": "mc", "broker_user_id": "u", "connection_id": "c"})
+    secrets.put(
+        "slack:default", {"mode": "relay", "machine_credential": "mc", "broker_user_id": "u", "connection_id": "c"}
+    )
     calls = _capture(monkeypatch)
     sync.remove(secrets, cfg, source="slack:C1", session_id="s")
     sync.report_orphan(secrets, cfg, source="slack:C1")
@@ -119,17 +140,25 @@ def test_remove_and_orphan_are_best_effort(tmp_path, monkeypatch, cfg):
 
 def test_pull_partitions_rows_by_this_machine(tmp_path, monkeypatch, cfg):
     secrets = SecretStore(tmp_path / "s.json")
-    secrets.put("slack:default", {"mode": "relay", "machine_credential": "mc", "broker_user_id": "u", "connection_id": "c"})
+    secrets.put(
+        "slack:default", {"mode": "relay", "machine_credential": "mc", "broker_user_id": "u", "connection_id": "c"}
+    )
     calls = []
 
     def fake_get(url, params=None, headers=None, timeout=None):
         calls.append(url)
         if url.endswith("/machine/subscriptions"):
-            return _Resp(200, {"machine_id": "m-a", "subscriptions": [
-                {"connector": "slack", "source": "slack:C1", "machine_id": "m-a", "session_id": "s1"},
-                {"connector": "slack", "source": "slack:C2", "machine_id": "m-b", "session_id": "s9"},
-                {"connector": "github", "source": "github:o/r", "machine_id": "m-a", "session_id": "s1"},
-            ]})
+            return _Resp(
+                200,
+                {
+                    "machine_id": "m-a",
+                    "subscriptions": [
+                        {"connector": "slack", "source": "slack:C1", "machine_id": "m-a", "session_id": "s1"},
+                        {"connector": "slack", "source": "slack:C2", "machine_id": "m-b", "session_id": "s9"},
+                        {"connector": "github", "source": "github:o/r", "machine_id": "m-a", "session_id": "s1"},
+                    ],
+                },
+            )
         return _Resp(200, {"people": [{"connector": "slack", "scope": "T1", "member": "U_BOB", "name": "Bob"}]})
 
     monkeypatch.setattr(sync.httpx, "get", fake_get)

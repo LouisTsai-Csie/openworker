@@ -19,7 +19,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, replace
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -31,6 +31,11 @@ from coworker import toolchain as _toolchain
 from coworker import toolresult
 from coworker import unattended as _attendance
 from coworker.events import Event, EventType
+from coworker.permissions import CLEARED_BY_MODE, Mode, PermissionEngine
+from coworker.providers import AssistantTurn, ProviderClient, ToolCall
+from coworker.providers.errors import friendly_model_error
+from coworker.providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
+from coworker.tools import ToolRegistry
 
 # §8.4 retry guard: the reviewer pauses for the rest of the turn after this many denials
 # IN A ROW (2→5 + streak semantics, owner ruling 2026-08-24 — a cumulative 2 silently
@@ -60,16 +65,12 @@ _REVIEWER_PAUSED_TEXT = (
     "Auto-approve is paused for the rest of this turn — the reviewer blocked "
     f"{_REVIEWER_TRIP} actions in a row, so approvals now come to you."
 )
-from coworker.permissions import CLEARED_BY_MODE, Mode, PermissionEngine
-from coworker.providers import AssistantTurn, ProviderClient, ToolCall
-from coworker.providers.errors import friendly_model_error
-from coworker.providers.openai_provider import looks_like_unparsed_tool_call, strip_dangling_tool_tag
-from coworker.tools import ToolRegistry
 
 
 logger = logging.getLogger(__name__)
 
-class ApprovalOutcome(str, Enum):
+
+class ApprovalOutcome(StrEnum):
     ONCE = "once"
     ALWAYS_TOOL = "always_tool"
     ALWAYS_COMMAND = "always_command"
@@ -284,20 +285,14 @@ class TurnEngine:
         # restart costs context (more cards), never correctness.
         self._agent_files = provenance.SessionFiles(permissions.workspace_root)
         self._tool_result_max_bytes = (
-            toolresult.DEFAULT_TOOL_RESULT_MAX_BYTES
-            if tool_result_max_bytes is None
-            else int(tool_result_max_bytes)
+            toolresult.DEFAULT_TOOL_RESULT_MAX_BYTES if tool_result_max_bytes is None else int(tool_result_max_bytes)
         )
-        self._tool_result_spill_dir = (
-            Path(tool_result_spill_dir) if tool_result_spill_dir is not None else None
-        )
+        self._tool_result_spill_dir = Path(tool_result_spill_dir) if tool_result_spill_dir is not None else None
         # Completed tool calls so far, so a fact can say how many steps back the write was.
         self._step = 0
         self._last_context_tokens: int | None = None
         self.audit_context: dict[str, Any] = {}
-        if instructions and not (
-            self.messages and self.messages[0].get("role") == "system"
-        ):
+        if instructions and not (self.messages and self.messages[0].get("role") == "system"):
             self.messages.insert(0, {"role": "system", "content": instructions})
         self._cancel = asyncio.Event()
         # Whether the latest assistant turn hit the output-token limit — decides which
@@ -334,9 +329,7 @@ class TurnEngine:
         task = asyncio.ensure_future(coro)
         cancel_wait = asyncio.ensure_future(self._cancel.wait())
         try:
-            done, _ = await asyncio.wait(
-                {task, cancel_wait}, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, _ = await asyncio.wait({task, cancel_wait}, return_when=asyncio.FIRST_COMPLETED)
             if task in done:
                 return task.result()
             task.cancel()
@@ -349,7 +342,9 @@ class TurnEngine:
         try:
             return await self._interruptible(coro, interrupted)
         finally:
-            self._tool_timings.setdefault(tool_call.id, {}).update(waited_started=started, waited_ms=(time.monotonic() - clock) * 1000)
+            self._tool_timings.setdefault(tool_call.id, {}).update(
+                waited_started=started, waited_ms=(time.monotonic() - clock) * 1000
+            )
 
     def _timed_result(self, tool_call, result):
         message = _tool_result_message(tool_call, result)
@@ -358,7 +353,9 @@ class TurnEngine:
         return message
 
     def queue_steering(
-        self, text: str, source: dict[str, Any] | None = None,
+        self,
+        text: str,
+        source: dict[str, Any] | None = None,
         activity: dict[str, Any] | None = None,
     ) -> None:
         self._steering.append((text, source, activity))
@@ -459,11 +456,7 @@ class TurnEngine:
             caps = self.provider.capabilities(model)
         except Exception:
             caps = None
-        if (
-            caps is not None
-            and not getattr(caps, "vision", False)
-            and self._history_has_images()
-        ):
+        if caps is not None and not getattr(caps, "vision", False) and self._history_has_images():
             text += " — earlier images can't be read by this model"
         self._append_notice("model_switch", text)
         return text
@@ -534,7 +527,10 @@ class TurnEngine:
             yield Event(EventType.ERROR, {"error": text, "error_type": type(exc).__name__})
             return
         info = workspace.describe()
-        yield Event(EventType.SANDBOX_READY, {k: info.get(k) for k in ("provider", "enforcement", "reason", "sandbox") if info.get(k) is not None})
+        yield Event(
+            EventType.SANDBOX_READY,
+            {k: info.get(k) for k in ("provider", "enforcement", "reason", "sandbox") if info.get(k) is not None},
+        )
 
     async def resume(self) -> AsyncIterator[Event]:
         """Continue a turn that was suspended at a prompt and persisted — durable resume after a
@@ -566,9 +562,7 @@ class TurnEngine:
         providers reject the whole conversation for it. Stubs are inserted
         IMMEDIATELY after the offending assistant message, keep the ids, and
         say honestly what happened — the model may re-issue the call."""
-        answered = {
-            m.get("tool_call_id") for m in self.messages if m.get("role") == "tool"
-        }
+        answered = {m.get("tool_call_id") for m in self.messages if m.get("role") == "tool"}
         i = 0
         while i < len(self.messages):
             msg = self.messages[i]
@@ -598,9 +592,7 @@ class TurnEngine:
         """The tool-calls of the last assistant message that don't yet have a tool result —
         i.e. the prompt we suspended on (+ any after it). Reconstructed from the persisted thread.
         """
-        answered = {
-            m.get("tool_call_id") for m in self.messages if m.get("role") == "tool"
-        }
+        answered = {m.get("tool_call_id") for m in self.messages if m.get("role") == "tool"}
         for msg in reversed(self.messages):
             if msg.get("role") == "user":
                 return []
@@ -614,9 +606,7 @@ class TurnEngine:
                         args = json.loads(fn.get("arguments") or "{}")
                     except Exception:
                         args = {}
-                    out.append(
-                        ToolCall(id=tc.get("id"), name=fn.get("name"), arguments=args)
-                    )
+                    out.append(ToolCall(id=tc.get("id"), name=fn.get("name"), arguments=args))
                 return out
         return []
 
@@ -655,14 +645,10 @@ class TurnEngine:
                 async for chunk in self._astream():
                     if chunk.reasoning_delta:
                         streamed_reasoning.append(chunk.reasoning_delta)
-                        yield Event(
-                            EventType.REASONING_DELTA, {"text": chunk.reasoning_delta}
-                        )
+                        yield Event(EventType.REASONING_DELTA, {"text": chunk.reasoning_delta})
                     if chunk.text_delta:
                         streamed.append(chunk.text_delta)
-                        yield Event(
-                            EventType.ASSISTANT_DELTA, {"text": chunk.text_delta}
-                        )
+                        yield Event(EventType.ASSISTANT_DELTA, {"text": chunk.text_delta})
                     if chunk.turn is not None:
                         turn = chunk.turn
             except Exception as exc:  # provider failure
@@ -676,16 +662,12 @@ class TurnEngine:
                     if notice:
                         record = self._compaction_record()
                         self._append_notice("compacted", notice, compaction=record)
-                        yield Event(
-                            EventType.COMPACTED, {"text": notice, "compaction": record}
-                        )
+                        yield Event(EventType.COMPACTED, {"text": notice, "compaction": record})
                         continue
                 # Same contract as the stop path below: the partial the user watched
                 # arrive survives the failure.
                 if streamed or streamed_reasoning:
-                    self.messages.append(
-                        _assistant_message(_partial_turn(streamed, streamed_reasoning))
-                    )
+                    self.messages.append(_assistant_message(_partial_turn(streamed, streamed_reasoning)))
                 friendly = friendly_model_error(self.model, exc)
                 payload = {
                     "error": friendly or str(exc),
@@ -699,9 +681,7 @@ class TurnEngine:
             if self._cancel.is_set() and turn is None:
                 # Stopped mid-stream: persist exactly what the user watched arrive.
                 if streamed or streamed_reasoning:
-                    self.messages.append(
-                        _assistant_message(_partial_turn(streamed, streamed_reasoning))
-                    )
+                    self.messages.append(_assistant_message(_partial_turn(streamed, streamed_reasoning)))
                 self._append_notice("interrupted")
                 yield Event(EventType.INTERRUPTED, {"iterations": iterations})
                 return
@@ -720,9 +700,7 @@ class TurnEngine:
                 # One stray `<tool_call>` at the very end of an otherwise finished
                 # answer is noise, not a call: drop it and keep the answer.
                 cleaned, dangling = strip_dangling_tool_tag(turn.text)
-                if dangling and not looks_like_unparsed_tool_call(
-                    cleaned, self.registry.schemas() or None
-                ):
+                if dangling and not looks_like_unparsed_tool_call(cleaned, self.registry.schemas() or None):
                     turn.text = cleaned
             self.messages.append(
                 _assistant_message(
@@ -731,7 +709,10 @@ class TurnEngine:
                     effort_setting=self.model_settings.get("reasoning_effort"),
                 )
             )
-            self.messages[-1]["timing"] = {"model_started": model_started, "model_ms": (time.monotonic() - model_clock) * 1000}
+            self.messages[-1]["timing"] = {
+                "model_started": model_started,
+                "model_ms": (time.monotonic() - model_clock) * 1000,
+            }
             payload: dict[str, Any] = {
                 "text": turn.text,
                 "tool_calls": [tc.name for tc in turn.tool_calls],
@@ -785,8 +766,7 @@ class TurnEngine:
                             {
                                 "reason": "length",
                                 "attempt": self._continuations,
-                                "remaining": MAX_TRUNCATION_CONTINUATIONS
-                                - self._continuations,
+                                "remaining": MAX_TRUNCATION_CONTINUATIONS - self._continuations,
                                 "iterations": iterations,
                                 "text": (
                                     "Reply cut off at the output-token limit with no "
@@ -803,9 +783,7 @@ class TurnEngine:
                         "was stopped rather than reported as complete. Raise "
                         "max_output_tokens, lower the reasoning effort, or retry."
                     )
-                    self._append_notice(
-                        "truncated", text, continuations=self._continuations
-                    )
+                    self._append_notice("truncated", text, continuations=self._continuations)
                     yield Event(
                         EventType.TURN_END,
                         {
@@ -903,9 +881,7 @@ class TurnEngine:
         cfg = self._compaction_config()
         if cfg.get("enabled") is False:
             return False
-        signal = self._last_context_tokens or _compaction.estimate_tokens(
-            self._outbound_messages()
-        )
+        signal = self._last_context_tokens or _compaction.estimate_tokens(self._outbound_messages())
         return _compaction.should_compact(
             signal,
             cfg.get("context_window"),
@@ -938,9 +914,7 @@ class TurnEngine:
         # OPE-189: both budgets scale with the trigger, so lowering it to save tokens can't
         # be undone by a block that keeps spending the freed space.
         user_budget = _compaction.user_message_budget(trigger)
-        summary_max = int(
-            cfg.get("summary_max_tokens") or _compaction.SUMMARY_MAX_TOKENS
-        )
+        summary_max = int(cfg.get("summary_max_tokens") or _compaction.SUMMARY_MAX_TOKENS)
         model = str(cfg.get("model") or "") or self.model
 
         def _build() -> _compaction.CompactionState | None:
@@ -996,10 +970,7 @@ class TurnEngine:
             if self._tool_result_spill_dir is not None:
                 try:
                     self._tool_result_spill_dir.mkdir(parents=True, exist_ok=True)
-                    path = (
-                        self._tool_result_spill_dir
-                        / f"compacted-transcript-upto-{state.boundary_index:04d}.md"
-                    )
+                    path = self._tool_result_spill_dir / f"compacted-transcript-upto-{state.boundary_index:04d}.md"
                     path.write_text(
                         _compaction.render_transcript(self.messages, state.boundary_index),
                         encoding="utf-8",
@@ -1039,9 +1010,7 @@ class TurnEngine:
 
         def produce():
             try:
-                for chunk in provider.stream(
-                    model=model, messages=messages, tools=tools, **settings
-                ):
+                for chunk in provider.stream(model=model, messages=messages, tools=tools, **settings):
                     # User pressed Stop: drop the stream between chunks (reading the
                     # asyncio.Event's flag from a thread is safe; we only read).
                     if self._cancel.is_set():
@@ -1058,9 +1027,7 @@ class TurnEngine:
             # the pre-first-token wait, a wedged connection) can't hold the turn.
             get_task = asyncio.ensure_future(queue.get())
             cancel_task = asyncio.ensure_future(self._cancel.wait())
-            done, _ = await asyncio.wait(
-                {get_task, cancel_task}, return_when=asyncio.FIRST_COMPLETED
-            )
+            done, _ = await asyncio.wait({get_task, cancel_task}, return_when=asyncio.FIRST_COMPLETED)
             cancel_task.cancel()
             if get_task not in done:
                 get_task.cancel()
@@ -1073,9 +1040,7 @@ class TurnEngine:
             else:
                 return
 
-    async def _handle_tool_calls(
-        self, tool_calls: list[ToolCall]
-    ) -> AsyncIterator[Event]:
+    async def _handle_tool_calls(self, tool_calls: list[ToolCall]) -> AsyncIterator[Event]:
         """Run one assistant turn's tool calls: authorize all of them first (sequentially —
         approval prompts are interactive), then execute. Low-risk calls (reads, searches)
         run concurrently; everything else runs one at a time in call order."""
@@ -1145,20 +1110,14 @@ class TurnEngine:
             if allowed:
                 cleared.append(tool_call)
 
-        concurrent = (
-            [tc for tc in cleared if self._parallel_safe(tc)]
-            if len(cleared) > 1
-            else []
-        )
+        concurrent = [tc for tc in cleared if self._parallel_safe(tc)] if len(cleared) > 1 else []
         serial = [tc for tc in cleared if tc not in concurrent]
 
         if concurrent:
             for tool_call in concurrent:
                 yield Event(EventType.TOOL_STARTED, {"name": tool_call.name})
                 self._audit(tool_call, stage="started")
-            outcomes = await asyncio.gather(
-                *[asyncio.to_thread(self._execute_sync, tc) for tc in concurrent]
-            )
+            outcomes = await asyncio.gather(*[asyncio.to_thread(self._execute_sync, tc) for tc in concurrent])
             for tool_call, (result, status) in zip(concurrent, outcomes, strict=True):
                 yield self._record_result(tool_call, result, status)
 
@@ -1207,9 +1166,7 @@ class TurnEngine:
         history (hosted chat templates reject orphaned tool_calls, and durable-resume
         would otherwise re-prompt it) + the finished event for the tool card."""
         self.messages.append(_tool_error_message(tool_call, "interrupted by user"))
-        self._audit(
-            tool_call, stage="finished", status="interrupted", reason="user stop"
-        )
+        self._audit(tool_call, stage="finished", status="interrupted", reason="user stop")
         return Event(
             EventType.TOOL_FINISHED,
             {"name": tool_call.name, "tool_call_id": tool_call.id, "status": "interrupted", "reason": "stopped"},
@@ -1220,9 +1177,7 @@ class TurnEngine:
         # concurrently; writes, shell, and anything unannotated stay strictly ordered.
         spec = self.registry.get(tool_call.name)
         metadata = spec.metadata if spec else None
-        return getattr(metadata, "risk_level", "") == "low" and not getattr(
-            metadata, "requires_approval", False
-        )
+        return getattr(metadata, "risk_level", "") == "low" and not getattr(metadata, "requires_approval", False)
 
     # -- Auto-Approve reviewer (spec Part 8) ----------------------------------------
 
@@ -1256,10 +1211,7 @@ class TurnEngine:
             self.reviewer is not None
             and self.reviewer_enabled
             and self.permissions.mode is Mode.AUTO_APPROVE
-            and (
-                (self.is_attended is not None and self.is_attended())
-                or self._auto_answering()
-            )
+            and ((self.is_attended is not None and self.is_attended()) or self._auto_answering())
             and self._reviewer_denials < _REVIEWER_TRIP
         )
 
@@ -1287,8 +1239,7 @@ class TurnEngine:
                 texts.append(text)
         if not texts:
             return "", [
-                {"text": t, "is_reply": True, **({"question": q} if q else {})}
-                for _, t, q in self._ask_replies
+                {"text": t, "is_reply": True, **({"question": q} if q else {})} for _, t, q in self._ask_replies
             ]
         history: list[dict[str, Any]] = []
         for i, t in enumerate(texts[:-1], start=1):
@@ -1320,18 +1271,14 @@ class TurnEngine:
         """A file this call would run that the agent DOWNLOADED this session, or None.
         Fetch-then-execute has no quiet legitimate form, so it reaches a person over both
         the reviewer and any command allowlist (OPE-114 §1)."""
-        match = self._agent_files.match(
-            tool_call.name, tool_call.arguments, step=self._step
-        )
+        match = self._agent_files.match(tool_call.name, tool_call.arguments, step=self._step)
         return match if match is not None and match.downloaded else None
 
     def _provenance(self, tool_call: ToolCall) -> str:
         """One line naming a file this call would run that the agent itself created, or ""
         (§8.2). Fixed vocabulary — never file contents, never outside-authored text, so the
         no-untrusted-content rule holds."""
-        match = self._agent_files.match(
-            tool_call.name, tool_call.arguments, step=self._step
-        )
+        match = self._agent_files.match(tool_call.name, tool_call.arguments, step=self._step)
         return match.render() if match else ""
 
     async def _preconsult_reviewer(self, tool_calls: list[ToolCall]) -> None:
@@ -1353,9 +1300,7 @@ class TurnEngine:
             spec = self.registry.get(tool_call.name)
             if spec is None:
                 continue
-            decision = self.permissions.evaluate(
-                tool_call.name, tool_call.arguments, spec.metadata
-            )
+            decision = self.permissions.evaluate(tool_call.name, tool_call.arguments, spec.metadata)
             # human_only asks never reach the reviewer — same rule as `_authorize`.
             if (
                 not decision.allowed
@@ -1383,11 +1328,17 @@ class TurnEngine:
             ]
         )
         for tc, verdict in zip(pending, verdicts, strict=True):
-            if (self.reviewer is not consulted_reviewer
-                    or self.reviewer_settings_epoch != settings_epoch
-                    or not self._reviewer_active()
-                    or (request, history, context) != self._review_inputs()):
-                verdict = replace(verdict, verdict="unsure", reason="Approval settings changed during review; a human decision is required.")
+            if (
+                self.reviewer is not consulted_reviewer
+                or self.reviewer_settings_epoch != settings_epoch
+                or not self._reviewer_active()
+                or (request, history, context) != self._review_inputs()
+            ):
+                verdict = replace(
+                    verdict,
+                    verdict="unsure",
+                    reason="Approval settings changed during review; a human decision is required.",
+                )
             self._reviewer_verdicts[tc.id] = verdict
             self._reviewer_input_snapshots[tc.id] = (request, history, context)
 
@@ -1398,22 +1349,28 @@ class TurnEngine:
         if verdict is not None:
             if snapshot is not None and snapshot != self._review_inputs():
                 from coworker.reviewer import Verdict
+
                 return Verdict("unsure", "Approval context changed since review; a human must decide.")
             return verdict
         request, history, context = self._review_inputs()
         delegated = self._delegated_context(tool_call)
         if delegated:
             from coworker.reviewer import Verdict
+
             if delegated.get("hard_deny") or delegated.get("human_only"):
                 return Verdict("unsure", delegated["reason"])
             verdict = await self.reviewer.review(
-                request=request, history=history,
-                tool_name=delegated["tool"], arguments=delegated["arguments"],
+                request=request,
+                history=history,
+                tool_name=delegated["tool"],
+                arguments=delegated["arguments"],
                 provenance=delegated.get("provenance", ""),
                 action_context=delegated["context"],
             )
             if delegated != self._delegated_context(tool_call) or (request, history, context) != self._review_inputs():
-                return Verdict("unsure", "The worker request or its permissions changed during review. Review the current request.")
+                return Verdict(
+                    "unsure", "The worker request or its permissions changed during review. Review the current request."
+                )
             return verdict
         result = await self.reviewer.review(
             request=request,
@@ -1425,18 +1382,27 @@ class TurnEngine:
         )
         if (request, history, context) != self._review_inputs():
             from coworker.reviewer import Verdict
+
             return Verdict("unsure", "Approval context changed during review; review the current request.")
         return result
 
     def _delegated_context(self, tool_call: ToolCall) -> dict | None:
-        if tool_call.name != "decide_worker_call" or str(tool_call.arguments.get("decision", "")).lower().strip() != "allow":
+        if (
+            tool_call.name != "decide_worker_call"
+            or str(tool_call.arguments.get("decision", "")).lower().strip() != "allow"
+        ):
             return None
         try:
             if self.delegated_approval:
                 result = self.delegated_approval(tool_call.arguments)
                 if isinstance(result, dict) and result.get("hard_deny"):
                     return deepcopy(result)
-                if isinstance(result, dict) and isinstance(result.get("tool"), str) and isinstance(result.get("arguments"), dict) and isinstance(result.get("context"), dict):
+                if (
+                    isinstance(result, dict)
+                    and isinstance(result.get("tool"), str)
+                    and isinstance(result.get("arguments"), dict)
+                    and isinstance(result.get("context"), dict)
+                ):
                     return deepcopy(result)
         except Exception:
             pass
@@ -1538,9 +1504,7 @@ class TurnEngine:
         spec = self.registry.get(tool_call.name)
         metadata = spec.metadata if spec else None
 
-        decision = self.permissions.evaluate(
-            tool_call.name, tool_call.arguments, metadata
-        )
+        decision = self.permissions.evaluate(tool_call.name, tool_call.arguments, metadata)
         delegated = self._delegated_context(tool_call)
         if delegated and delegated.get("hard_deny"):
             decision = replace(decision, allowed=False, needs_user=False, reason=delegated["reason"])
@@ -1558,17 +1522,13 @@ class TurnEngine:
         # floored — "write this script and run it" is ordinary work — they travel as a fact
         # for the reviewer to weigh instead.
         provenance_note = self._provenance(tool_call)
-        if self._downloaded_target(tool_call) is not None and (
-            decision.needs_user or allowed
-        ):
+        if self._downloaded_target(tool_call) is not None and (decision.needs_user or allowed):
             if self.permissions.mode is Mode.DANGEROUSLY_BYPASS_APPROVALS:
                 # The dangerous mode grants this floor too — recorded like every other
                 # clearance, with the provenance fact the card would have carried.
                 allowed = True
                 reason = f"{CLEARED_BY_MODE}: file the agent downloaded — {provenance_note}"
-                decision = replace(
-                    decision, allowed=True, reason=reason, needs_user=False, human_only=False
-                )
+                decision = replace(decision, allowed=True, reason=reason, needs_user=False, human_only=False)
             else:
                 allowed = False
                 reason = f"this file was downloaded by the agent this session — {provenance_note}"
@@ -1585,9 +1545,7 @@ class TurnEngine:
             # (§25 invariant — every auto-allowed call cites its rule) and remember it so
             # the tool card can say "allowed by standing rule".
             self._standing_notes[tool_call.id] = decision.rule
-            self._audit(
-                tool_call, stage="auto_allowed", status="allowed", reason=reason
-            )
+            self._audit(tool_call, stage="auto_allowed", status="allowed", reason=reason)
 
         # (c) Bypass mode ran a consequential call no other rule allowed: annotate it.
         # "full access" is the exact reason string of permissions.py's bypass branch.
@@ -1600,9 +1558,7 @@ class TurnEngine:
                 "origin": "bypass",
                 "note": decision.reason,
             }
-            self._audit(
-                tool_call, stage="auto_allowed", status="allowed", reason=decision.reason
-            )
+            self._audit(tool_call, stage="auto_allowed", status="allowed", reason=decision.reason)
 
         # OPE-136: a trusted-MCP allow ran cardless on standing config (a user trust
         # rule, or the legacy server flag) — audited and chip-annotated like every
@@ -1612,24 +1568,16 @@ class TurnEngine:
         # trust" at the mcp.json flag. One generic label made a user believe the
         # SERVER had marked their own rule (owner-hit 2026-08-30).
         if allowed and decision.reason.startswith("trusted MCP tool"):
-            origin = (
-                "trusted_rule"
-                if "user trust rule" in decision.reason
-                else "trusted_server"
-            )
+            origin = "trusted_rule" if "user trust rule" in decision.reason else "trusted_server"
             self._approval_origins[tool_call.id] = {"origin": origin}
-            self._audit(
-                tool_call, stage="auto_allowed", status="allowed", reason=reason
-            )
+            self._audit(tool_call, stage="auto_allowed", status="allowed", reason=reason)
 
         # OPE-136 run grant: a covered call ran cardless under the user's in-run
         # "Allow for this request" click — silent to attention, never invisible to
         # the record (transcript chip + audit row, like every cardless origin).
         if allowed and decision.reason == "tool allowed for this request":
             self._approval_origins[tool_call.id] = {"origin": "run_grant"}
-            self._audit(
-                tool_call, stage="auto_allowed", status="allowed", reason=reason
-            )
+            self._audit(tool_call, stage="auto_allowed", status="allowed", reason=reason)
 
         if not allowed and decision.needs_user and self._consume_allow_anyway(tool_call):
             # §8.4 "Allow anyway": the human already approved this exact action from the
@@ -1657,12 +1605,7 @@ class TurnEngine:
 
         consulted_live = False
         unsure_note = ""  # the reviewer's hesitation, when an unsure verdict raised the card
-        if (
-            not allowed
-            and decision.needs_user
-            and not decision.human_only
-            and self._reviewer_active()
-        ):
+        if not allowed and decision.needs_user and not decision.human_only and self._reviewer_active():
             # The one thing the reviewer may do: turn "ask the human" into "go ahead" —
             # never "blocked" into "go ahead" (§1.2; hard denies never reach this branch
             # because needs_user is False on them). `human_only` asks (git hooks, CI
@@ -1672,10 +1615,16 @@ class TurnEngine:
             consulted_reviewer = self.reviewer
             settings_epoch = self.reviewer_settings_epoch
             verdict = await self._consult_reviewer(tool_call)
-            if (self.reviewer is not consulted_reviewer
-                    or self.reviewer_settings_epoch != settings_epoch
-                    or not self._reviewer_active()):
-                verdict = replace(verdict, verdict="unsure", reason="Approval settings changed during review; a human decision is required.")
+            if (
+                self.reviewer is not consulted_reviewer
+                or self.reviewer_settings_epoch != settings_epoch
+                or not self._reviewer_active()
+            ):
+                verdict = replace(
+                    verdict,
+                    verdict="unsure",
+                    reason="Approval settings changed during review; a human decision is required.",
+                )
             self._audit(
                 tool_call,
                 stage="reviewer_verdict",
@@ -1689,9 +1638,7 @@ class TurnEngine:
             if verdict.verdict == "allow":
                 allowed = True
                 self._reviewer_denials = 0  # streak semantics: any non-deny resets
-                self._approval_origins[tool_call.id] = {
-                    "origin": "reviewer", "note": verdict.reason
-                }
+                self._approval_origins[tool_call.id] = {"origin": "reviewer", "note": verdict.reason}
                 reason = f"allowed by reviewer: {verdict.reason}"
             elif verdict.verdict == "deny":
                 # §8.4 deny asymmetry — full reason to the USER (event + audit above),
@@ -1757,9 +1704,13 @@ class TurnEngine:
 
         if not allowed and decision.needs_user:
             escalation = (
-                {"kind": "human_required", "reason": decision.reason} if decision.human_only else
-                {"kind": "reviewer_unsure", "reason": unsure_note} if unsure_note else
-                {"kind": "reviewer_unavailable", "reason": ""} if self.permissions.mode is Mode.AUTO_APPROVE else None
+                {"kind": "human_required", "reason": decision.reason}
+                if decision.human_only
+                else {"kind": "reviewer_unsure", "reason": unsure_note}
+                if unsure_note
+                else {"kind": "reviewer_unavailable", "reason": ""}
+                if self.permissions.mode is Mode.AUTO_APPROVE
+                else None
             )
             # Shadow evaluation: record what the reviewer would have said about this card.
             # Skipped when the live path already consulted it (an `unsure` falling through
@@ -1775,11 +1726,7 @@ class TurnEngine:
                     "escalation": escalation,
                     # An `unsure` verdict raised this card: the reviewer's one-line reason
                     # answers "why am I being asked?" in place (owner ask 2026-08-24).
-                    **(
-                        {"reviewer_unsure": verdict.reason}
-                        if consulted_live and verdict.verdict == "unsure"
-                        else {}
-                    ),
+                    **({"reviewer_unsure": verdict.reason} if consulted_live and verdict.verdict == "unsure" else {}),
                     "category": getattr(metadata, "category", ""),
                     # OPE-219: the host the sandbox's allowed-sites wall stopped. The card
                     # says so and offers to add the site to the machine's list.
@@ -1813,20 +1760,10 @@ class TurnEngine:
                     # catch-all "stays on this computer". None for non-MCP tools.
                     **(
                         {"mcp_destination": dest}
-                        if (
-                            dest := getattr(
-                                spec.func, "__coworker_mcp_destination__", None
-                            )
-                            if spec
-                            else None
-                        )
+                        if (dest := getattr(spec.func, "__coworker_mcp_destination__", None) if spec else None)
                         else {}
                     ),
-                    **(
-                        self.approval_extras(tool_call.name, tool_call.arguments)
-                        if self.approval_extras
-                        else {}
-                    ),
+                    **(self.approval_extras(tool_call.name, tool_call.arguments) if self.approval_extras else {}),
                 },
             )
             self._audit(
@@ -1835,7 +1772,8 @@ class TurnEngine:
                 reason=decision.reason,
                 call_id=tool_call.id,
             )
-            outcome = await self._wait_tool(tool_call,
+            outcome = await self._wait_tool(
+                tool_call,
                 self.approver(
                     PermissionRequest(
                         tool_name=tool_call.name,
@@ -1845,11 +1783,7 @@ class TurnEngine:
                         tool_call_id=tool_call.id,
                         escalation=escalation,
                         provenance=provenance_note,
-                        mcp_destination=(
-                            getattr(spec.func, "__coworker_mcp_destination__", None)
-                            if spec
-                            else None
-                        ),
+                        mcp_destination=(getattr(spec.func, "__coworker_mcp_destination__", None) if spec else None),
                     )
                 ),
                 interrupted=ApprovalOutcome.DENY,
@@ -1861,12 +1795,25 @@ class TurnEngine:
                 }
                 self._approval_origins.pop(tool_call.id, None)
                 self.messages.append(self._timed_result(tool_call, result))
-                self._audit(tool_call, stage="approval_resolved", call_id=tool_call.id, status="superseded", reason=result["reason"])
+                self._audit(
+                    tool_call,
+                    stage="approval_resolved",
+                    call_id=tool_call.id,
+                    status="superseded",
+                    reason=result["reason"],
+                )
                 self._audit(tool_call, stage="finished", status="skipped", reason=result["reason"])
-                yield Event(EventType.TOOL_FINISHED, {
-                    "name": tool_call.name, "status": "ok", "result_preview": json.dumps(result),
-                    "superseded_worker_call": (tool_call.arguments or {}).get("call_id") if tool_call.name == "decide_worker_call" else None,
-                })
+                yield Event(
+                    EventType.TOOL_FINISHED,
+                    {
+                        "name": tool_call.name,
+                        "status": "ok",
+                        "result_preview": json.dumps(result),
+                        "superseded_worker_call": (tool_call.arguments or {}).get("call_id")
+                        if tool_call.name == "decide_worker_call"
+                        else None,
+                    },
+                )
                 yield False
                 return
             if outcome is ApprovalOutcome.DENY:
@@ -1899,13 +1846,9 @@ class TurnEngine:
                 elif outcome is ApprovalOutcome.ALWAYS_TOOL:
                     self.permissions.allow_tool_for_session(tool_call.name)
                 elif outcome is ApprovalOutcome.ALWAYS_COMMAND:
-                    self.permissions.allow_command_for_session(
-                        str(tool_call.arguments.get("command", ""))
-                    )
+                    self.permissions.allow_command_for_session(str(tool_call.arguments.get("command", "")))
                 elif outcome is ApprovalOutcome.ALWAYS_DOMAIN:
-                    self.permissions.allow_domain_for_session(
-                        str(tool_call.arguments.get("url", ""))
-                    )
+                    self.permissions.allow_domain_for_session(str(tool_call.arguments.get("url", "")))
                 elif outcome is ApprovalOutcome.ALWAYS_SITE and decision.site:
                     self.permissions.allow_site_always(decision.site)
                 # A session grant given on the allowed-sites card must also open the
@@ -1966,9 +1909,7 @@ class TurnEngine:
             return
 
         if spec is None:
-            self.messages.append(
-                _tool_error_message(tool_call, f"unknown tool: {tool_call.name}")
-            )
+            self.messages.append(_tool_error_message(tool_call, f"unknown tool: {tool_call.name}"))
             yield Event(
                 EventType.TOOL_FINISHED,
                 {"name": tool_call.name, "status": "error", "reason": "unknown tool"},
@@ -1986,26 +1927,31 @@ class TurnEngine:
         try:
             delegated = self._authorized_delegates.pop(tool_call.id, None)
             if delegated and delegated != self._delegated_context(tool_call):
-                return {"error": "The worker request or its permissions changed before execution. Request a fresh decision."}, "error"
+                return {
+                    "error": "The worker request or its permissions changed before execution. Request a fresh decision."
+                }, "error"
             return self.registry.execute(tool_call.name, tool_call.arguments), "ok"
         except Exception as exc:
             return {"error": str(exc), "error_type": type(exc).__name__}, "error"
         finally:
-            self._tool_timings.setdefault(tool_call.id, {}).update(tool_started=started, tool_ms=(time.monotonic() - clock) * 1000)
+            self._tool_timings.setdefault(tool_call.id, {}).update(
+                tool_started=started, tool_ms=(time.monotonic() - clock) * 1000
+            )
 
     def _record_result(self, tool_call: ToolCall, result: Any, status: str) -> Event:
         spec = self.registry.get(tool_call.name)
         if (
-            status == "ok" and isinstance(result, dict) and result.get("ok")
-            and spec and getattr(spec.func, "__coworker_yields_turn__", False)
+            status == "ok"
+            and isinstance(result, dict)
+            and result.get("ok")
+            and spec
+            and getattr(spec.func, "__coworker_yields_turn__", False)
         ):
             self._yield_for_wake = True
         self._step += 1
         if status == "ok":
             # Only successful calls: a write that raised left nothing on disk to run.
-            self._agent_files.record(
-                tool_call.name, tool_call.arguments, result, step=self._step
-            )
+            self._agent_files.record(tool_call.name, tool_call.arguments, result, step=self._step)
         # A `_display` key on a tool result is user-facing metadata the AGENT must
         # never see (e.g. how many gmail hits the privacy filters hid — a count
         # the model could probe around). Lift it onto the message as a sidecar
@@ -2152,6 +2098,7 @@ class TurnEngine:
         Approval creates them on the board (server-side, inside the approver) and the
         result carries their ids; rejection returns feedback for a revised split."""
         from coworker.teams.proposals import validate_work_proposal
+
         args = tool_call.arguments or {}
         problem = None
         try:
@@ -2174,7 +2121,8 @@ class TurnEngine:
                 {**args, "tool_call_id": tool_call.id},
             )
             self._audit(tool_call, stage="items_proposed")
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.items_approver(dict(args), tool_call.id),
                 interrupted={"approved": False, "error": "interrupted by user"},
             ) or {"approved": False, "error": "no response"}
@@ -2222,7 +2170,8 @@ class TurnEngine:
                 {"request": request, "connector": connector, "worker": worker, "reason": reason},
             )
             self._audit(tool_call, stage="connector_requested", reason=reason)
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.connector_requester(dict(args), tool_call.id),
                 interrupted={"approved": False, "error": "interrupted by user"},
             ) or {"approved": False, "error": "no response"}
@@ -2246,6 +2195,7 @@ class TurnEngine:
         assign; rejection returns the user's feedback for a revised proposal."""
         from coworker.teams.proposals import validate_team_proposal
         from coworker.teams.model import BoardError
+
         args = tool_call.arguments or {}
         problem = None
         try:
@@ -2277,7 +2227,8 @@ class TurnEngine:
                 },
             )
             self._audit(tool_call, stage="team_proposed")
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.team_approver(dict(args), tool_call.id),
                 interrupted={"approved": False, "error": "interrupted by user"},
             ) or {"approved": False, "error": "no response"}
@@ -2335,7 +2286,8 @@ class TurnEngine:
         else:
             yield Event(EventType.PLAN_PROPOSED, {"plan": plan})
             self._audit(tool_call, stage="plan_proposed")
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.plan_approver(dict(args), tool_call.id),
                 interrupted={"approved": False, "error": "interrupted by user"},
             ) or {
@@ -2423,9 +2375,7 @@ class TurnEngine:
             catalog = ", ".join(sorted(_toolchain.MANAGED))
             result = {
                 "installed": False,
-                "error": (
-                    f"'{name}' is not in the pinned tool catalog ({catalog})."
-                ),
+                "error": (f"'{name}' is not in the pinned tool catalog ({catalog})."),
                 "guidance": (
                     "Install it yourself with the shell (brew/pip/…, subject to the "
                     "normal command approval), or continue without it and say in your "
@@ -2449,7 +2399,8 @@ class TurnEngine:
                 },
             )
             self._audit(tool_call, stage="tool_requested", reason=reason)
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.tool_requester(dict(args), tool_call.id),
                 interrupted={"installed": False, "error": "interrupted by user"},
             ) or {"installed": False, "error": "no response"}
@@ -2463,8 +2414,7 @@ class TurnEngine:
                         "installed": True,
                         "path": found,
                         "note": (
-                            "the user provided their own copy instead of the managed "
-                            "install — use it from this path"
+                            "the user provided their own copy instead of the managed install — use it from this path"
                         ),
                     }
             if not result.get("installed"):
@@ -2500,7 +2450,7 @@ class TurnEngine:
         workspace = getattr(self, "sandbox_workspace", None)
         evidence = bool(getattr(workspace, "reports_blocked", False))
         try:
-            for when, entry in (workspace.blocked_since(0.0) if evidence else []):
+            for when, entry in workspace.blocked_since(0.0) if evidence else []:
                 last[entry] = max(when, last.get(entry, 0.0))
         except Exception:  # evidence is a help, never a reason to fail the card
             last, evidence = {}, False
@@ -2514,9 +2464,7 @@ class TurnEngine:
             ],
         }
 
-    async def _handle_directory_request(
-        self, tool_call: ToolCall
-    ) -> AsyncIterator[Event]:
+    async def _handle_directory_request(self, tool_call: ToolCall) -> AsyncIterator[Event]:
         """Emit the grant prompt, await the user's out-of-band decision (which the requester also
         applies to this session's roots), and return the outcome as the tool result."""
         args = tool_call.arguments or {}
@@ -2527,11 +2475,7 @@ class TurnEngine:
             unscoped = self.permissions.mode is Mode.DANGEROUSLY_BYPASS_APPROVALS
             result: dict[str, Any] = {
                 "granted": False,
-                "error": (
-                    _attendance.AUTO_DIRECTORY_REPLY_UNSCOPED
-                    if unscoped
-                    else _attendance.AUTO_DIRECTORY_REPLY
-                ),
+                "error": (_attendance.AUTO_DIRECTORY_REPLY_UNSCOPED if unscoped else _attendance.AUTO_DIRECTORY_REPLY),
             }
             self._audit(
                 tool_call,
@@ -2561,7 +2505,8 @@ class TurnEngine:
                 stage="directory_requested",
                 reason=str(args.get("reason", "")),
             )
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.directory_requester(dict(args), tool_call.id),
                 interrupted={"granted": False, "error": "interrupted by user"},
             ) or {
@@ -2602,11 +2547,7 @@ class TurnEngine:
         if not question or (self.question_asker is None and not self._auto_answering()):
             result: dict[str, Any] = {
                 "answer": "",
-                "error": (
-                    "no question was asked"
-                    if not question
-                    else "asking isn't available here"
-                ),
+                "error": ("no question was asked" if not question else "asking isn't available here"),
             }
         elif self._auto_answering():
             # Attendance "auto": the fixed least-destructive answer stands in for the
@@ -2630,7 +2571,8 @@ class TurnEngine:
             # The asker is mode-aware (attended → live inline prompt; unattended → Inbox), so it
             # owns surfacing the question. The engine just awaits the answer.
             self._audit(tool_call, stage="question_requested", reason=question)
-            result = await self._wait_tool(tool_call,
+            result = await self._wait_tool(
+                tool_call,
                 self.question_asker(dict(args), tool_call.id),
                 interrupted={"answer": "", "error": "interrupted by user"},
             ) or {
@@ -2643,10 +2585,7 @@ class TurnEngine:
         replies = result.get("answers")
         status = (
             "ok"
-            if (
-                result.get("answer")
-                or (isinstance(replies, dict) and any(v is not None for v in replies.values()))
-            )
+            if (result.get("answer") or (isinstance(replies, dict) and any(v is not None for v in replies.values())))
             else "denied"
         )
         if status == "ok":
@@ -2668,9 +2607,7 @@ class TurnEngine:
             },
         )
 
-    def _note_ask_replies(
-        self, result: dict[str, Any], question: str = ""
-    ) -> None:
+    def _note_ask_replies(self, result: dict[str, Any], question: str = "") -> None:
         """Record the user's ask_user answer(s) for the reviewer's history (§8.2),
         together with the agent's question — shown to the judge explicitly framed as
         agent-authored data (same Rule-3 discipline as tool arguments), so a structured
@@ -2743,9 +2680,7 @@ class TurnEngine:
         # Auto-compaction (OPE-27): everything before the boundary is represented by the
         # compacted block. Outbound-only — the canonical history stays intact — and the
         # block+tail are byte-stable between turns, so prompt caching keeps working.
-        source_messages = _compaction.apply_to_outbound(
-            self.messages, self.compaction_state
-        )
+        source_messages = _compaction.apply_to_outbound(self.messages, self.compaction_state)
         # Runtime receipts stay out of provider payloads. Reminder/board context is
         # earlier agent context, not words attributed to the incoming user and never
         # a system instruction. Keep the actual user message verbatim and last.
@@ -2814,12 +2749,7 @@ class TurnEngine:
                         {
                             **msg,
                             "content": [
-                                (
-                                    placeholder
-                                    if isinstance(p, dict)
-                                    and p.get("type") == "image_url"
-                                    else p
-                                )
+                                (placeholder if isinstance(p, dict) and p.get("type") == "image_url" else p)
                                 for p in msg["content"]
                             ],
                         }
@@ -2829,9 +2759,7 @@ class TurnEngine:
                     for msg in out
                 ]
 
-        context = (
-            self.context_provider() if self.context_provider is not None else ""
-        ) or ""
+        context = (self.context_provider() if self.context_provider is not None else "") or ""
         if not context:
             return out
         # The block rides on the LAST user message — one shape for every provider. In a

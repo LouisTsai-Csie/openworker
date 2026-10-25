@@ -65,9 +65,7 @@ def validate_level(value: Any, source: str = "reasoning_effort") -> str | None:
     if not text:
         return None
     if text not in _RANK:
-        raise ValueError(
-            f"{source} must be one of {', '.join(EFFORT_LEVELS)}; got {value!r}"
-        )
+        raise ValueError(f"{source} must be one of {', '.join(EFFORT_LEVELS)}; got {value!r}")
     return text
 
 
@@ -179,7 +177,9 @@ def openai_compat_effort(model: str, level: str) -> EffortPlan:
         # A rejection is dropped by the provider's param-fix retry like any other.
         if verified and NO_EFFORT not in supported:
             lowest = min(supported, key=_RANK.__getitem__)
-            return EffortPlan(level, lowest, {"reasoning_effort": lowest}, f"{model} has no 'none'; sent its lowest level {lowest}")
+            return EffortPlan(
+                level, lowest, {"reasoning_effort": lowest}, f"{model} has no 'none'; sent its lowest level {lowest}"
+            )
         return EffortPlan(level, level, {"reasoning_effort": level}, "no-thinking request; OpenAI vocabulary assumed")
     effective = nearest_supported(level, supported)
     if effective is None:

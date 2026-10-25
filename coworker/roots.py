@@ -73,8 +73,7 @@ def render_context(roots: list[RootDir]) -> str:
             tag = " — the session's workspace (relative paths resolve here)"
         elif r.label == "scratch":
             tag = (
-                " — your scratch directory: temporary files, and artifacts you don't "
-                "want to leave inside the workspace"
+                " — your scratch directory: temporary files, and artifacts you don't want to leave inside the workspace"
             )
         else:
             tag = ""

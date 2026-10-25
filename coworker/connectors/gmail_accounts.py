@@ -36,9 +36,7 @@ def migrate_legacy_default(secrets: SecretStore) -> None:
     if not default.get("access_token"):
         return
     email = _norm(default.get("account")) or "default"
-    account = {
-        k: v for k, v in default.items() if k not in ("default_account", "filters")
-    }
+    account = {k: v for k, v in default.items() if k not in ("default_account", "filters")}
     account.setdefault("account", email)
     secrets.put(PREFIX + email, account)
     pointer: dict[str, Any] = {
@@ -72,9 +70,7 @@ def default_account(secrets: SecretStore) -> str:
     return next(iter(accounts), "")
 
 
-def resolve(
-    secrets: SecretStore, account: str = ""
-) -> tuple[str, str, dict[str, Any] | None]:
+def resolve(secrets: SecretStore, account: str = "") -> tuple[str, str, dict[str, Any] | None]:
     """(email, profile_key, profile) for the requested — or default — mailbox.
     Profile is None when nothing matches (not connected / unknown account)."""
     email = _norm(account) or default_account(secrets)
@@ -84,9 +80,7 @@ def resolve(
     return email, key, secrets.get(key)
 
 
-def managed_connect_account(
-    secrets: SecretStore, profile: dict[str, Any]
-) -> dict[str, Any]:
+def managed_connect_account(secrets: SecretStore, profile: dict[str, Any]) -> dict[str, Any]:
     """Store one managed-OAuth mailbox; the first connected account becomes the
     default. Reconnecting an email replaces its tokens in place."""
     migrate_legacy_default(secrets)
@@ -159,7 +153,7 @@ def set_filters(
     if senders is not None:
         current["senders"] = sorted({_norm(s) for s in senders if _norm(s)})
     if labels is not None:
-        current["labels"] = sorted({str(l).strip() for l in labels if str(l).strip()})
+        current["labels"] = sorted({str(label).strip() for label in labels if str(label).strip()})
     pointer = secrets.get(DEFAULT_KEY) or {}
     pointer["filters"] = current
     pointer.setdefault("type", "oauth")

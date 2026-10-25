@@ -123,7 +123,20 @@ class SandboxRegistry:
         with self._lock, self._connect() as db:
             db.execute(
                 "INSERT OR REPLACE INTO sandboxes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (name, provider, machine_id, session_id, agent, json.dumps(roots or []), profile, enforcement, state, os.getpid(), now, now),
+                (
+                    name,
+                    provider,
+                    machine_id,
+                    session_id,
+                    agent,
+                    json.dumps(roots or []),
+                    profile,
+                    enforcement,
+                    state,
+                    os.getpid(),
+                    now,
+                    now,
+                ),
             )
 
     def touch(self, name: str) -> None:
@@ -180,7 +193,12 @@ class SandboxRegistry:
             for name in sorted(openshell_names - owned):
                 # Say so: a deletion here is a sandbox nobody claims. If a live server is in
                 # fact building it, the log line is how that shows up.
-                log.info("reap: deleting OpenShell sandbox %s (not owned by a live server; owned=%s, pid=%d)", name, sorted(owned), os.getpid())
+                log.info(
+                    "reap: deleting OpenShell sandbox %s (not owned by a live server; owned=%s, pid=%d)",
+                    name,
+                    sorted(owned),
+                    os.getpid(),
+                )
                 try:
                     openshell._cli("sandbox", "delete", name, timeout=90, check=False)
                     removed.append(name)

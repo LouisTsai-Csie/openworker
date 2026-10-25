@@ -56,11 +56,7 @@ def load() -> dict[str, dict[str, Any]]:
         return {}
     if not isinstance(raw, dict):
         return {}
-    return {
-        str(k): {kk: vv for kk, vv in v.items() if kk in KEYS}
-        for k, v in raw.items()
-        if isinstance(v, dict)
-    }
+    return {str(k): {kk: vv for kk, vv in v.items() if kk in KEYS} for k, v in raw.items() if isinstance(v, dict)}
 
 
 def _save(records: dict[str, dict[str, Any]]) -> None:

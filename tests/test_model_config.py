@@ -63,8 +63,15 @@ def test_saved_settings_are_checked_merged_and_kept(tmp_path):
     assert error is None and record == {"thinking": False, "temperature": 0.2}
     assert (tmp_path / "state" / "model_config.json").is_file()
     assert model_config.get("ollama:qwen3-coder:30b") == {"thinking": False, "temperature": 0.2}
-    for bad in ({"context_size": 0}, {"context_size": "big"}, {"temperature": 3}, {"top_p": 0},
-                {"compaction_threshold_pct": 0.99}, {"thinking": "yes"}, {"nope": 1}):
+    for bad in (
+        {"context_size": 0},
+        {"context_size": "big"},
+        {"temperature": 3},
+        {"top_p": 0},
+        {"compaction_threshold_pct": 0.99},
+        {"thinking": "yes"},
+        {"nope": 1},
+    ):
         _, error = model_config.set("m", bad)
         assert error, bad
     model_config.remove("ollama:qwen3-coder:30b")
@@ -94,11 +101,17 @@ def test_effective_settings_say_where_each_value_came_from():
 def test_provider_settings_come_from_the_user_then_the_recommendation():
     assert model_config.model_settings_for("ollama:llama3.1:8b") == {}
     assert model_config.model_settings_for("ollama:nemotron-3.5-lightning:30b") == {
-        "max_tokens": 16000, "temperature": 1.0, "top_p": 0.95, "extra_body": {"think": True},
+        "max_tokens": 16000,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "extra_body": {"think": True},
     }
     model_config.set("ollama:nemotron-3.5-lightning:30b", {"thinking": False, "temperature": 0.3})
     assert model_config.model_settings_for("ollama:nemotron-3.5-lightning:30b") == {
-        "max_tokens": 16000, "temperature": 0.3, "top_p": 0.95, "extra_body": {"think": False},
+        "max_tokens": 16000,
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "extra_body": {"think": False},
     }
     # An effort level for a model with levels; no thinking switch rides along.
     model_config.set("gpt-5.6-sol", {"reasoning_effort": "high", "max_output_tokens": 32000})
@@ -119,15 +132,29 @@ class _Inner(httpx.BaseTransport):
     def handle_request(self, request):
         self.requests.append(request)
         if request.url.path.endswith("/api/show"):
-            return httpx.Response(200, json={"model_info": {"general.architecture": "qwen3moe", "qwen3moe.context_length": 262144}})
-        return httpx.Response(200, json={"model": "qwen3-coder:30b", "message": {"role": "assistant", "content": "ok"}, "done": True, "done_reason": "stop"})
+            return httpx.Response(
+                200, json={"model_info": {"general.architecture": "qwen3moe", "qwen3moe.context_length": 262144}}
+            )
+        return httpx.Response(
+            200,
+            json={
+                "model": "qwen3-coder:30b",
+                "message": {"role": "assistant", "content": "ok"},
+                "done": True,
+                "done_reason": "stop",
+            },
+        )
 
 
 def test_a_saved_context_size_wins_over_the_machine_rule():
     inner = _Inner()
     transport = OllamaContextTransport(inner=inner, memory_bytes=8 * local_machine.GB)
+
     def req():
-        return httpx.Request("POST", "http://127.0.0.1:11434/v1/chat/completions", json={"model": "qwen3-coder:30b", "messages": []})
+        return httpx.Request(
+            "POST", "http://127.0.0.1:11434/v1/chat/completions", json={"model": "qwen3-coder:30b", "messages": []}
+        )
+
     transport.handle_request(req())
     sent = [json.loads(r.content) for r in inner.requests if r.url.path == "/api/chat"]
     assert sent[0]["options"]["num_ctx"] == 16384  # the 8 GB tier
@@ -158,7 +185,10 @@ def test_manager_saves_reads_and_removes_model_settings(tmp_path, monkeypatch):
     assert mgr.model == "ollama:qwen3-coder:30b"  # default: true is the Make default button
     assert mgr.get_settings()["model_config"]["ollama:qwen3-coder:30b"]["context_size"] == 32768
     assert mgr.get_model_config("ollama:qwen3-coder:30b")["model"] == "ollama:qwen3-coder:30b"
-    assert mgr.set_model_config("x", {"temperature": 9}) == {"ok": False, "error": "temperature must be between 0 and 2"}
+    assert mgr.set_model_config("x", {"temperature": 9}) == {
+        "ok": False,
+        "error": "temperature must be between 0 and 2",
+    }
     assert mgr.remove_model_config("ollama:qwen3-coder:30b") == {"ok": True}
     assert mgr.get_model_config()["models"] == {}
 
@@ -181,14 +211,31 @@ def test_fit_and_system_facts(monkeypatch):
 def test_ollama_model_facts_read_tools_thinking_and_context(monkeypatch):
     from coworker.providers import ollama_facts
 
-    tags = {"models": [
-        {"name": "nemotron-3.5-lightning:30b", "size": 25 * local_machine.GB, "details": {"parameter_size": "30.5B", "quantization_level": "Q4_K_M"}},
-        {"name": "gemma3:12b", "size": 8 * local_machine.GB, "details": {}},
-        {"name": "nemotron-3-super:cloud", "size": 0, "remote_model": "nemotron-3-super:cloud", "remote_host": "https://ollama.com"},
-    ]}
+    tags = {
+        "models": [
+            {
+                "name": "nemotron-3.5-lightning:30b",
+                "size": 25 * local_machine.GB,
+                "details": {"parameter_size": "30.5B", "quantization_level": "Q4_K_M"},
+            },
+            {"name": "gemma3:12b", "size": 8 * local_machine.GB, "details": {}},
+            {
+                "name": "nemotron-3-super:cloud",
+                "size": 0,
+                "remote_model": "nemotron-3-super:cloud",
+                "remote_host": "https://ollama.com",
+            },
+        ]
+    }
     shows = {
-        "nemotron-3.5-lightning:30b": {"capabilities": ["completion", "tools", "thinking"], "model_info": {"general.architecture": "nemotron", "nemotron.context_length": 1048576}},
-        "gemma3:12b": {"capabilities": ["completion", "vision"], "model_info": {"general.architecture": "gemma3", "gemma3.context_length": 131072}},
+        "nemotron-3.5-lightning:30b": {
+            "capabilities": ["completion", "tools", "thinking"],
+            "model_info": {"general.architecture": "nemotron", "nemotron.context_length": 1048576},
+        },
+        "gemma3:12b": {
+            "capabilities": ["completion", "vision"],
+            "model_info": {"general.architecture": "gemma3", "gemma3.context_length": 131072},
+        },
         "nemotron-3-super:cloud": {"capabilities": ["completion", "tools", "thinking"], "model_info": {}},
     }
 
@@ -214,7 +261,9 @@ def test_ollama_model_facts_read_tools_thinking_and_context(monkeypatch):
     assert cloud["remote"] and cloud["fit"] == "cloud"
     # A saved context size shows as the user's.
     model_config.set("ollama:nemotron-3.5-lightning:30b", {"context_size": 32768})
-    row = {r["name"]: r for r in ollama_facts.model_facts("http://localhost:11434/v1", fresh=True)}["nemotron-3.5-lightning:30b"]
+    row = {r["name"]: r for r in ollama_facts.model_facts("http://localhost:11434/v1", fresh=True)}[
+        "nemotron-3.5-lightning:30b"
+    ]
     assert row["context"] == 32768 and row["context_from"] == "user"
 
 
@@ -222,11 +271,15 @@ def test_only_tool_capable_ollama_models_join_the_picker(tmp_path, monkeypatch):
     from coworker.providers import ollama_facts
     from coworker.server.manager import SessionManager
 
-    monkeypatch.setattr(ollama_facts, "model_facts", lambda base=None, fresh=False: [
-        {"model": "ollama:qwen3-coder:30b", "tools": True},
-        {"model": "ollama:gemma3:12b", "tools": False},
-        {"model": "ollama:old-server-model", "tools": None},  # an older Ollama does not say
-    ])
+    monkeypatch.setattr(
+        ollama_facts,
+        "model_facts",
+        lambda base=None, fresh=False: [
+            {"model": "ollama:qwen3-coder:30b", "tools": True},
+            {"model": "ollama:gemma3:12b", "tools": False},
+            {"model": "ollama:old-server-model", "tools": None},  # an older Ollama does not say
+        ],
+    )
     mgr = SessionManager(data_dir=tmp_path)
     assert mgr._ollama_models() == ["ollama:qwen3-coder:30b", "ollama:old-server-model"]
 
@@ -237,7 +290,9 @@ def test_a_session_can_switch_thinking_for_itself(tmp_path):
     from coworker.server.manager import SessionManager
 
     mgr = SessionManager(data_dir=tmp_path)
-    engine = SimpleNamespace(model="ollama:nemotron-3.5-lightning:30b", model_settings={"max_tokens": 16000, "extra_body": {"think": True}})
+    engine = SimpleNamespace(
+        model="ollama:nemotron-3.5-lightning:30b", model_settings={"max_tokens": 16000, "extra_body": {"think": True}}
+    )
     mgr._engines["s1"] = engine
     got = mgr.session_model_settings("s1")
     assert (got["thinking"], got["reasoning_effort"]) == (None, None)  # at the model's default
@@ -264,7 +319,11 @@ def test_a_session_can_set_reasoning_effort_within_the_model_levels(tmp_path):
     engine = SimpleNamespace(model="anthropic:claude-fable-5-1", model_settings={})
     mgr._engines["s1"] = engine
     controls = mgr.session_model_settings("s1")["controls"]
-    assert controls["reasoning"] == {"support": "supported", "levels": ["low", "medium", "high", "xhigh", "max"], "default": "high"}
+    assert controls["reasoning"] == {
+        "support": "supported",
+        "levels": ["low", "medium", "high", "xhigh", "max"],
+        "default": "high",
+    }
     assert controls["thinking"] == {"support": "not_supported"}
     out = mgr.set_session_model_settings("s1", {"reasoning_effort": "low"})
     assert out["ok"] and out["reasoning_effort"] == "low" and engine.model_settings["reasoning_effort"] == "low"

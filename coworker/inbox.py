@@ -25,7 +25,7 @@ import json
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +49,7 @@ VIS_INBOX = "inbox"
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def args_preview(arguments: dict | None, *, limit: int = 240) -> str:
@@ -75,9 +75,7 @@ class InboxItem:
     title: str
     body: str = ""
     state: str = STATE_PENDING
-    resolution: str | None = (
-        None  # approval: "allow"/"deny"/"always"; question: answer text
-    )
+    resolution: str | None = None  # approval: "allow"/"deny"/"always"; question: answer text
     inbox: str = "default"  # named inbox / delivery binding (Phase 3 routing)
     created_at: str = field(default_factory=_now)
     resolved_at: str | None = None
@@ -93,9 +91,7 @@ class InboxItem:
     # An option is a plain string OR a rich {label, description, recommended, preview} object
     # (OPE-51); old persisted items hold strings and stay valid.
     options: list = field(default_factory=list)
-    allow_text: bool = (
-        True  # accept a typed answer even when options exist (the "Other" escape)
-    )
+    allow_text: bool = True  # accept a typed answer even when options exist (the "Other" escape)
     multi: bool = False  # allow choosing more than one option
     header: str = ""  # short chip label for the card ("Region")
     # Grouped form (OPE-51): up to 4 {question, header, options, allow_text, multi} entries
@@ -330,9 +326,7 @@ class InboxStore:
             tool_call_id=tool_call_id,
         )
 
-    def add_notification(
-        self, session_id, title, *, body="", inbox="default", visibility=VIS_INBOX
-    ) -> InboxItem:
+    def add_notification(self, session_id, title, *, body="", inbox="default", visibility=VIS_INBOX) -> InboxItem:
         return self.add(
             session_id,
             KIND_NOTIFICATION,
@@ -412,16 +406,25 @@ class InboxStore:
             # Server-stamped ownership link only. Denying permission to ALLOW a worker
             # action means deny that action, not leave it parked indefinitely. Never
             # invert a proposed denial into an allow, or propagate stop/delete/errors.
-            if (resolution == "deny" and item.kind == KIND_APPROVAL
-                    and item.data.get("tool") == "decide_worker_call"
-                    and isinstance(args, dict) and args.get("decision") == "allow"
-                    and args.get("call_id") == source_id
-                    and source is not None and source.kind == KIND_APPROVAL
-                    and source.state == STATE_PENDING):
+            if (
+                resolution == "deny"
+                and item.kind == KIND_APPROVAL
+                and item.data.get("tool") == "decide_worker_call"
+                and isinstance(args, dict)
+                and args.get("decision") == "allow"
+                and args.get("call_id") == source_id
+                and source is not None
+                and source.kind == KIND_APPROVAL
+                and source.state == STATE_PENDING
+            ):
                 self._resolve_locked(source, "deny", by)
                 resolved_ids.append(source.id)
                 if isinstance(item.data.get("worker_call"), dict):
-                    item.data["worker_call"] = {**item.data["worker_call"], "state": STATE_RESOLVED, "resolution": "deny"}
+                    item.data["worker_call"] = {
+                        **item.data["worker_call"],
+                        "state": STATE_RESOLVED,
+                        "resolution": "deny",
+                    }
             for dependent in self._items.values():
                 if dependent.state == STATE_PENDING and dependent.data.get("worker_prompt_id") in resolved_ids:
                     self._supersede_locked(dependent, self._items[dependent.data["worker_prompt_id"]])
@@ -435,9 +438,7 @@ class InboxStore:
                     loop.call_soon_threadsafe(waiter.set)
         return True
 
-    def resolve_session(
-        self, session_id: str, resolution: str = "session deleted"
-    ) -> int:
+    def resolve_session(self, session_id: str, resolution: str = "session deleted") -> int:
         """Resolve every still-pending item of a session (called when the session is deleted —
         an orphaned approval/question can never be meaningfully answered). Releases any waiter
         the usual way; returns how many items were closed."""

@@ -6,6 +6,8 @@ the human to connect a service (request_connector). No network, no LLM."""
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from coworker.agents.base import Agent
@@ -32,7 +34,9 @@ def manager(tmp_path, monkeypatch):
 
 def _lead(manager, sid="lead-sid", agent="swe-lead"):
     manager.session_store.save(
-        SessionRecord(session_id=sid, workspace=manager.default_workspace, model="m", mode="interactive", messages=[], agent=agent)
+        SessionRecord(
+            session_id=sid, workspace=manager.default_workspace, model="m", mode="interactive", messages=[], agent=agent
+        )
     )
 
 
@@ -45,7 +49,11 @@ def test_workers_start_with_no_connectors_and_the_offer_is_the_default_set(manag
     # connected here but outside the default set, so only a human can add it.
     assert manager.connector_offer("swe-worker") == ["github"]
     # (`browser` is the built-in, always-connected connector.)
-    assert manager.connector_lists("swe-worker") == {"ready": ["github"], "connectable": [], "other_connected": ["browser", "slack"]}
+    assert manager.connector_lists("swe-worker") == {
+        "ready": ["github"],
+        "connectable": [],
+        "other_connected": ["browser", "slack"],
+    }
     assert manager.connector_offer("design-worker") == []  # declares nothing
     assert manager.connector_lists("design-worker")["other_connected"] == ["browser", "github", "slack"]
     assert manager.other_connected() == ["browser", "github", "slack"]
@@ -68,7 +76,9 @@ def test_staffing_card_ticks_are_the_grant_even_beyond_the_default_set(manager):
             # declaration is the default, not the ceiling. Jira is not connected here, so
             # that tick is dropped. A stray `approval_mode` (older client) is ignored.
             {
-                "persona": "swe-worker", "name": "nia", "connectors": ["github", "slack", "jira"],
+                "persona": "swe-worker",
+                "name": "nia",
+                "connectors": ["github", "slack", "jira"],
                 "connector_reasons": {"slack": 'you asked: "post the summary in Slack"'},
                 "approval_mode": "bypass-approvals",
             },
@@ -94,7 +104,9 @@ def test_org_policy_is_the_only_ceiling_on_worker_connectors(manager):
     assert manager.connector_lists("swe-worker")["other_connected"] == ["browser"]
     assert manager.other_connected() == ["browser", "github"]
     _lead(manager)
-    nia = manager.create_team("lead-sid", [{"persona": "swe-worker", "name": "nia", "connectors": ["github", "slack"]}])["workers"][0]
+    nia = manager.create_team(
+        "lead-sid", [{"persona": "swe-worker", "name": "nia", "connectors": ["github", "slack"]}]
+    )["workers"][0]
     assert nia["connectors"] == ["github"]  # a forced tick does not pass policy
     assert "blocked" in manager.grant_worker_connector("lead-sid", "nia", "slack")["error"]
 
@@ -108,14 +120,23 @@ async def test_lead_suggestions_outside_the_default_set_need_the_users_words(man
     # No reason for Slack (outside swe-worker's default set) and Jira is not connected:
     # the proposal bounces back to the lead with what to do, and nothing is parked.
     from proposal_fixtures import team_proposal
-    bounced = await approve(team_proposal([{"persona": "swe-worker", "name": "nia", "connectors": ["slack", "jira"]}]), "t0")
+
+    bounced = await approve(
+        team_proposal([{"persona": "swe-worker", "name": "nia", "connectors": ["slack", "jira"]}]), "t0"
+    )
     assert bounced["approved"] is False
     assert any("slack" in p and "quote" in p for p in bounced["problems"])
     assert any("jira" in p and "request_connector" in p for p in bounced["problems"])
     assert not manager.inbox.list(session_id="lead-sid", state="pending")
     # With the user's words as the reason it reaches the card, carrying what the card needs.
-    members = [{"persona": "swe-worker", "name": "nia", "connectors": ["GitHub", "slack"],
-                "connector_reasons": {"github": "pushes the branch", "slack": 'you asked: "post the summary in Slack"'}}]
+    members = [
+        {
+            "persona": "swe-worker",
+            "name": "nia",
+            "connectors": ["GitHub", "slack"],
+            "connector_reasons": {"github": "pushes the branch", "slack": 'you asked: "post the summary in Slack"'},
+        }
+    ]
     task = asyncio.create_task(approve(team_proposal(members), "t1"))
     for _ in range(50):
         await asyncio.sleep(0.02)
@@ -127,7 +148,10 @@ async def test_lead_suggestions_outside_the_default_set_need_the_users_words(man
     assert data["offer"] == {"swe-worker": ["github"]} and data["other_connected"] == ["browser", "github", "slack"]
     assert "lead_mode" in data
     # The human keeps both ticks.
-    manager.inbox.resolve(pending[0].id, '{"approved": true, "members": [{"persona": "swe-worker", "name": "nia", "connectors": ["github", "slack"]}]}')
+    manager.inbox.resolve(
+        pending[0].id,
+        '{"approved": true, "members": [{"persona": "swe-worker", "name": "nia", "connectors": ["github", "slack"]}]}',
+    )
     result = await task
     assert result["approved"] is True and result["workers"][0]["connectors"] == ["github", "slack"]
 
@@ -195,13 +219,24 @@ def test_decide_tool_is_consequential_and_lead_only(tmp_path):
     secrets = SecretStore(tmp_path / "s.json")
     calls = []
     lead = Agent(name="lead", title="L", system_prompt="x", team="lead")
-    eng = build_engine(agent=lead, workspace=tmp_path, provider=_Stub(), secrets=secrets, worker_decider=lambda *a: calls.append(a) or {"ok": True})
+    eng = build_engine(
+        agent=lead,
+        workspace=tmp_path,
+        provider=_Stub(),
+        secrets=secrets,
+        worker_decider=lambda *a: calls.append(a) or {"ok": True},
+    )
     assert "decide_worker_call" in eng.registry.names()
     spec = eng.registry.get("decide_worker_call")
     meta = getattr(spec, "metadata", None) or getattr(getattr(spec, "func", None), "__aisuite_tool_metadata__", None)
     assert meta is not None and meta.requires_approval is True  # a Manual lead's decision asks the human
     worker = Agent(name="w", title="W", system_prompt="x", team="worker")
-    assert "decide_worker_call" not in build_engine(agent=worker, workspace=tmp_path, provider=_Stub(), secrets=secrets, worker_decider=lambda *a: {}).registry.names()
+    assert (
+        "decide_worker_call"
+        not in build_engine(
+            agent=worker, workspace=tmp_path, provider=_Stub(), secrets=secrets, worker_decider=lambda *a: {}
+        ).registry.names()
+    )
 
 
 # -- grant_connector, the lead's later ask ------------------------------------------------
@@ -217,7 +252,9 @@ def test_grant_worker_connector_flips_the_session_and_can_extend_with_a_human_ye
     assert manager.effective_connectors(sid, "swe-worker") == {"github"}
     # Slack is outside swe-worker's default set but connected: the human already said yes
     # on the grant card, so it applies — as a recorded extension.
-    out = manager.grant_worker_connector("lead-sid", "nia", "slack", reason='you asked: "ping #billing"', approved_by="rohit@example.com")
+    out = manager.grant_worker_connector(
+        "lead-sid", "nia", "slack", reason='you asked: "ping #billing"', approved_by="rohit@example.com"
+    )
     assert out["approved"] is True and manager.effective_connectors(sid, "swe-worker") == {"github", "slack"}
     assert manager.session_connector_extensions.get(sid) == {"slack": True}
     # Not connected, unknown worker, not a lead: all refuse with a reason.
@@ -300,9 +337,21 @@ async def test_grant_connector_emits_the_gate_and_returns_the_verdict(tmp_path):
         seen.update(args)
         return {"approved": True, "worker": "nia", "connector": "github"}
 
-    events = await _run(_engine(tmp_path, requester, "grant_connector", {"worker": "nia", "connector": "GitHub", "reason": "push the branch"}))
+    events = await _run(
+        _engine(
+            tmp_path,
+            requester,
+            "grant_connector",
+            {"worker": "nia", "connector": "GitHub", "reason": "push the branch"},
+        )
+    )
     gate = [e for e in events if e.type is EventType.CONNECTOR_REQUESTED]
-    assert gate and gate[0].data == {"request": "grant", "connector": "github", "worker": "nia", "reason": "push the branch"}
+    assert gate and gate[0].data == {
+        "request": "grant",
+        "connector": "github",
+        "worker": "nia",
+        "reason": "push the branch",
+    }
     assert seen["worker"] == "nia"
     assert next(e for e in events if e.type is EventType.TOOL_FINISHED).data["status"] == "ok"
 
@@ -312,7 +361,9 @@ async def test_request_connector_decline_is_a_plain_outcome(tmp_path):
     async def requester(args, tool_call_id=None):
         return {"approved": False, "reason": "the user declined"}
 
-    engine = _engine(tmp_path, requester, "request_connector", {"connector": "linear", "reason": "keep the tracker in step"})
+    engine = _engine(
+        tmp_path, requester, "request_connector", {"connector": "linear", "reason": "keep the tracker in step"}
+    )
     events = await _run(engine)
     gate = [e for e in events if e.type is EventType.CONNECTOR_REQUESTED]
     assert gate[0].data["request"] == "connect" and gate[0].data["worker"] == ""
@@ -383,10 +434,23 @@ async def test_staffing_gate_works_without_a_socket(manager):
     _lead(manager)
     approve = manager.inbox_team_approver("lead-sid", "swe-lead")
     from proposal_fixtures import team_proposal
-    task = asyncio.create_task(approve(team_proposal([{"persona": "swe-worker", "name": "nia", "connectors": ["github"]}, {"persona": "test-worker", "name": "checks"}]), "t1"))
+
+    task = asyncio.create_task(
+        approve(
+            team_proposal(
+                [
+                    {"persona": "swe-worker", "name": "nia", "connectors": ["github"]},
+                    {"persona": "test-worker", "name": "checks"},
+                ]
+            ),
+            "t1",
+        )
+    )
     for _ in range(50):
         await asyncio.sleep(0.02)
-        pending = [i for i in manager.inbox.list(session_id="lead-sid", state="pending") if i.title == "Create this team?"]
+        pending = [
+            i for i in manager.inbox.list(session_id="lead-sid", state="pending") if i.title == "Create this team?"
+        ]
         if pending:
             break
     assert pending and "swe-worker" in pending[0].body
@@ -397,13 +461,20 @@ async def test_staffing_gate_works_without_a_socket(manager):
     assert data["gate"] == "team" and [m["name"] for m in data["members"]] == ["nia", "checks"]
     assert data["enable_chat"] is False and set(data["offer"]) == {"swe-worker", "test-worker"}
     # The human ticks nothing for nia (the lead suggested github) and approves.
-    manager.inbox.resolve(pending[0].id, '{"approved": true, "members": [{"persona": "swe-worker", "name": "nia", "connectors": []}, {"persona": "test-worker", "name": "checks", "connectors": []}]}')
+    manager.inbox.resolve(
+        pending[0].id,
+        '{"approved": true, "members": [{"persona": "swe-worker", "name": "nia", "connectors": []}, {"persona": "test-worker", "name": "checks", "connectors": []}]}',
+    )
     result = await task
     assert result["approved"] is True and [w["actor"] for w in result["workers"]] == ["nia", "checks"]
     assert result["workers"][0]["connectors"] == []
     # An engine built for a background delivery carries all three handlers.
     engine = manager.get_engine("lead-sid")
-    assert engine.team_approver is not None and engine.items_approver is not None and engine.connector_requester is not None
+    assert (
+        engine.team_approver is not None
+        and engine.items_approver is not None
+        and engine.connector_requester is not None
+    )
 
 
 @pytest.mark.asyncio
@@ -413,15 +484,22 @@ async def test_items_gate_and_connector_ask_work_without_a_socket(manager):
     _lead(manager)
     approve = manager.inbox_items_approver("lead-sid", "swe-lead")
     from proposal_fixtures import work_proposal
+
     proposal = work_proposal([{"title": "Cap the backoff", "criteria": "no wait exceeds maxDelayMs"}])
     task = asyncio.create_task(approve(proposal, "t2"))
     for _ in range(50):
         await asyncio.sleep(0.02)
-        pending = [i for i in manager.inbox.list(session_id="lead-sid", state="pending") if i.title.startswith("Approve the proposed")]
+        pending = [
+            i
+            for i in manager.inbox.list(session_id="lead-sid", state="pending")
+            if i.title.startswith("Approve the proposed")
+        ]
         if pending:
             break
     assert pending and "Acceptance criteria: no wait exceeds" in pending[0].body
-    assert (pending[0].data or {}).get("gate") == "items" and (pending[0].data or {})["items"][0]["title"] == "Cap the backoff"
+    assert (pending[0].data or {}).get("gate") == "items" and (pending[0].data or {})["items"][0][
+        "title"
+    ] == "Cap the backoff"
     # The lead's note reaches the Inbox card too (it used to be inline only).
     assert pending[0].data["summary"] == proposal["summary"]
     manager.inbox.resolve(pending[0].id, '{"approved": true}')
@@ -433,7 +511,9 @@ async def test_items_gate_and_connector_ask_work_without_a_socket(manager):
     task = asyncio.create_task(ask({"connector": "linear", "reason": "keep the tracker in step"}, "t4"))
     for _ in range(50):
         await asyncio.sleep(0.02)
-        pending = [i for i in manager.inbox.list(session_id="lead-sid", state="pending") if i.title == "Connect linear?"]
+        pending = [
+            i for i in manager.inbox.list(session_id="lead-sid", state="pending") if i.title == "Connect linear?"
+        ]
         if pending:
             break
     assert pending and pending[0].kind == "connector"
@@ -452,7 +532,9 @@ async def test_background_approver_tells_the_lead_a_worker_is_waiting(manager):
     _lead(manager)
     sid = manager.create_team("lead-sid", [{"persona": "swe-worker", "name": "nia"}])["workers"][0]["session_id"]
     approve = manager.inbox_approver(sid, "swe-worker")
-    request = SimpleNamespace(tool_name="run_shell", arguments={"command": "git status"}, tool_call_id="c1", metadata=None, reason="")
+    request = SimpleNamespace(
+        tool_name="run_shell", arguments={"command": "git status"}, tool_call_id="c1", metadata=None, reason=""
+    )
     task = asyncio.create_task(approve(request))
     for _ in range(50):
         await asyncio.sleep(0.02)
@@ -461,8 +543,14 @@ async def test_background_approver_tells_the_lead_a_worker_is_waiting(manager):
             break
     assert pending and pending[0].title == "Run `run_shell`?"
     team = manager.teams.for_lead_session("lead-sid")
-    waiting = [e for e in manager.team_store.subscribed_events(team.space, team.lead_actor) if e["kind"] == WORKER_WAITING]
-    assert waiting and waiting[0]["payload"]["prompt_id"] == pending[0].id and "git status" in waiting[0]["payload"]["preview"]
+    waiting = [
+        e for e in manager.team_store.subscribed_events(team.space, team.lead_actor) if e["kind"] == WORKER_WAITING
+    ]
+    assert (
+        waiting
+        and waiting[0]["payload"]["prompt_id"] == pending[0].id
+        and "git status" in waiting[0]["payload"]["preview"]
+    )
     # The lead answers it with decide_worker_call → the worker's prompt resolves.
     out = manager.decide_worker_call("lead-sid", "nia", pending[0].id, "allow", "plain repo inspection")
     assert out["ok"] is True
@@ -479,14 +567,18 @@ def test_worker_model_prefers_the_human_then_the_recommendation_then_the_lead(ma
     runnable = {opus, sol, sonnet}
     monkeypatch.setattr(manager, "model_selectable", lambda m: m in runnable)
     # The human's choice on the card wins, even outside the recommended list.
-    assert manager.resolve_worker_model("swe-worker", human_pick=sonnet, lead_pick=sol, lead_model=sonnet) == (sonnet, "")
+    assert manager.resolve_worker_model("swe-worker", human_pick=sonnet, lead_pick=sol, lead_model=sonnet) == (
+        sonnet,
+        "",
+    )
     # The lead's pick counts only when it is recommended; otherwise the first recommended runnable.
     assert manager.resolve_worker_model("swe-worker", lead_pick=sol, lead_model=sonnet) == (sol, "")
     assert manager.resolve_worker_model("swe-worker", lead_pick=sonnet, lead_model=sonnet) == (opus, "")
     # A human pick this machine cannot run is ignored, not obeyed into a dead worker.
     assert manager.resolve_worker_model("swe-worker", human_pick="google:gemini-x", lead_model=sonnet) == (opus, "")
     # Nothing recommended can run here: the lead's model, with a warning that says why.
-    runnable.clear(); runnable.add(sonnet)
+    runnable.clear()
+    runnable.add(sonnet)
     model, warning = manager.resolve_worker_model("swe-worker", lead_model=sonnet)
     assert model == sonnet
     assert "lead's model" in warning and "Neither is set up on this machine" in warning
@@ -497,8 +589,12 @@ def test_team_card_payload_carries_models_for_the_machine_the_workers_run_on(man
     monkeypatch.setattr(manager, "model_selectable", lambda m: m == sonnet)
     monkeypatch.setattr(manager, "_curated_models", lambda: [sonnet, opus])
     _lead(manager)
-    lead = manager.session_store.load("lead-sid"); lead.model = sonnet; manager.session_store.save(lead)
-    extras = manager.team_card_extras("lead-sid", [{"persona": "swe-worker", "name": "nia"}, {"persona": "test-worker", "name": "checks"}])
+    lead = manager.session_store.load("lead-sid")
+    lead.model = sonnet
+    manager.session_store.save(lead)
+    extras = manager.team_card_extras(
+        "lead-sid", [{"persona": "swe-worker", "name": "nia"}, {"persona": "test-worker", "name": "checks"}]
+    )
     assert extras["lead_model"] == sonnet
     assert extras["model_options"] == {"swe-worker": [], "test-worker": []}
     assert [m["id"] for m in extras["runnable_models"]] == [sonnet] and extras["runnable_models"][0]["label"]
@@ -548,7 +644,12 @@ async def test_an_allow_and_a_manual_leads_denial_still_ask(tmp_path):
 
         engine = _lead_engine(tmp_path, mode, args, decided)
         # The harness must resolve a real original action before allowing a proxy.
-        engine.delegated_approval = lambda _args: {"tool": "run_shell", "arguments": {"command": "git status"}, "context": {}, "reason": "requires approval"}
+        engine.delegated_approval = lambda _args: {
+            "tool": "run_shell",
+            "arguments": {"command": "git status"},
+            "context": {},
+            "reason": "requires approval",
+        }
         engine.approver = deny  # the human says no: the lead's decision must not run
         events = await _run(engine)
         assert EventType.PERMISSION_REQUIRED in [e.type for e in events], (mode, decision)
@@ -560,22 +661,38 @@ def test_the_leads_approval_card_carries_the_workers_call(manager):
     looked up by call_id — not the id."""
     _lead(manager)
     from coworker.teams.registry import TeamWorker
-    manager.teams.create(space="acme", lead_session="lead-sid", lead_actor="lead",
-        workers=[TeamWorker(actor="nia", persona="swe-worker", session_id="worker-sid")])
+
+    manager.teams.create(
+        space="acme",
+        lead_session="lead-sid",
+        lead_actor="lead",
+        workers=[TeamWorker(actor="nia", persona="swe-worker", session_id="worker-sid")],
+    )
     parked = manager.inbox.add_approval(
-        "worker-sid", "Run `run_shell`?", body="requires approval\ncommand: npm run build",
+        "worker-sid",
+        "Run `run_shell`?",
+        body="requires approval\ncommand: npm run build",
         data={"tool": "run_shell", "arguments": {"command": "npm run build"}},
     )
 
     class Request:
         tool_name = "decide_worker_call"
-        arguments = {"worker": "nia", "call_id": parked.id, "decision": "deny", "note": "wrong worktree"}
+        arguments: ClassVar[dict[str, str]] = {
+            "worker": "nia",
+            "call_id": parked.id,
+            "decision": "deny",
+            "note": "wrong worktree",
+        }
         metadata = None
 
     data = manager.approval_prompt_data("lead-sid", Request())
     assert data["worker_call"] == {
-        "worker": "nia", "tool": "run_shell", "arguments": {"command": "npm run build"},
-        "reason": "requires approval", "state": "pending", "resolution": None,
+        "worker": "nia",
+        "tool": "run_shell",
+        "arguments": {"command": "npm run build"},
+        "reason": "requires approval",
+        "state": "pending",
+        "resolution": None,
     }
     # An unknown id (already cleaned up, or invented by the model) attaches nothing.
     Request.arguments = {**Request.arguments, "call_id": "nope"}

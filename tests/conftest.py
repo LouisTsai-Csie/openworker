@@ -28,9 +28,7 @@ def assert_user_only(path: Path) -> None:
     instead, mirroring how the protection is applied in the first place.
     """
     if sys.platform == "win32":
-        acl = subprocess.run(
-            ["icacls", str(path)], capture_output=True, text=True
-        ).stdout
+        acl = subprocess.run(["icacls", str(path)], capture_output=True, text=True).stdout
         # `/inheritance:r` strips inherited ACEs; their absence is what proves the file
         # was restricted rather than left to inherit SYSTEM/Administrators from its parent.
         assert "(I)" not in acl, f"{path} still carries inherited ACEs:\n{acl}"
@@ -151,7 +149,14 @@ def gallery_manager(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "model_selectable", lambda model: model in (opus, sonnet))
     monkeypatch.setattr(m, "_curated_models", lambda: [opus, sonnet])
     m.session_store.save(
-        SessionRecord(session_id="lead-sid", workspace=m.default_workspace, model=sonnet, mode="auto-approve", messages=[], agent="swe-lead")
+        SessionRecord(
+            session_id="lead-sid",
+            workspace=m.default_workspace,
+            model=sonnet,
+            mode="auto-approve",
+            messages=[],
+            agent="swe-lead",
+        )
     )
     yield m
 

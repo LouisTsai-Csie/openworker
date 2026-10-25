@@ -48,8 +48,12 @@ Desktop app and docs: https://openworker.com
 # through to the terminal UI as an unknown skill.
 _AT_TOP = {"join": "join", "up": "up"}
 _UNDER_MACHINE = {
-    "status": "status", "keys": "keys", "secrets": "keys", "logs": "logs",
-    "service": "service", "leave": "leave",
+    "status": "status",
+    "keys": "keys",
+    "secrets": "keys",
+    "logs": "logs",
+    "service": "service",
+    "leave": "leave",
 }
 
 
@@ -98,16 +102,10 @@ def main(argv: list[str] | None = None) -> None:
         args = args[1:]
 
     cfg = load_config()
-    parser = argparse.ArgumentParser(
-        prog="openworker tui", description="Terminal UI (unlisted)."
-    )
-    parser.add_argument(
-        "skill", nargs="?", default="code", help="skill to launch (default: code)"
-    )
+    parser = argparse.ArgumentParser(prog="openworker tui", description="Terminal UI (unlisted).")
+    parser.add_argument("skill", nargs="?", default="code", help="skill to launch (default: code)")
     parser.add_argument("--cwd", default=".", help="workspace directory")
-    parser.add_argument(
-        "--model", default=cfg.model, help="model id, e.g. openai gpt-5.5"
-    )
+    parser.add_argument("--model", default=cfg.model, help="model id, e.g. openai gpt-5.5")
     parser.add_argument(
         "--mode",
         default=cfg.mode,

@@ -45,9 +45,7 @@ def validate_name(name: str) -> str:
     if len(name) > _MAX_NAME:
         raise ValueError(f"Skill name too long (limit {_MAX_NAME} characters).")
     if ".." in name or "/" in name or "\\" in name or not _NAME_RE.match(name):
-        raise ValueError(
-            "Skill name may only contain letters, digits, dots, dashes, and underscores."
-        )
+        raise ValueError("Skill name may only contain letters, digits, dots, dashes, and underscores.")
     return name
 
 
@@ -70,9 +68,7 @@ def _frontmatter_source(md: Path) -> str:
     return ""
 
 
-def _write_skill_md(
-    folder: Path, *, name: str, description: str, instructions: str, source: str = ""
-) -> None:
+def _write_skill_md(folder: Path, *, name: str, description: str, instructions: str, source: str = "") -> None:
     lines = ["---", f"name: {name}", f"description: {description}"]
     if source:
         lines.append(f"source: {source}")
@@ -120,9 +116,7 @@ class SkillStore:
         return folder
 
     # -- queries ------------------------------------------------------------------
-    def find(
-        self, name: str, workspace: str | Path | None = None
-    ) -> tuple[Path, str]:
+    def find(self, name: str, workspace: str | Path | None = None) -> tuple[Path, str]:
         """Locate a skill by name, most-local first (project before global) — mirrors the
         loader's collision precedence so management operates on the copy the model sees."""
         name = validate_name(name)
@@ -218,12 +212,8 @@ class SkillStore:
         _write_skill_md(
             folder,
             name=current.name,
-            description=(
-                description if description is not None else current.description
-            ),
-            instructions=(
-                instructions if instructions is not None else current.instructions
-            ),
+            description=(description if description is not None else current.description),
+            instructions=(instructions if instructions is not None else current.instructions),
             source=_frontmatter_source(folder / "SKILL.md"),
         )
         return {"name": current.name, "scope": scope}
@@ -248,9 +238,7 @@ class SkillStore:
         target_base = self._base(to_scope, workspace)
         target = self._folder_of(target_base, name)
         if (target / "SKILL.md").is_file():
-            raise ValueError(
-                f"A skill named '{name}' already exists in the target scope."
-            )
+            raise ValueError(f"A skill named '{name}' already exists in the target scope.")
         target_base.mkdir(parents=True, exist_ok=True)
         shutil.move(str(folder), str(target))
         return {"name": name, "scope": to_scope}
@@ -325,11 +313,7 @@ class SkillStore:
         except ValueError:
             shutil.rmtree(staged, ignore_errors=True)
             raise
-        extras = sorted(
-            str(p.relative_to(staged))
-            for p in staged.rglob("*")
-            if p.is_file() and p.name != "SKILL.md"
-        )
+        extras = sorted(str(p.relative_to(staged)) for p in staged.rglob("*") if p.is_file() and p.name != "SKILL.md")
         return {
             "token": token,
             "name": name,
@@ -354,9 +338,7 @@ class SkillStore:
         skill = _parse_skill(staged / "SKILL.md")
         if skill.name == token:  # no frontmatter name → parser fell back to the folder
             shutil.rmtree(staged, ignore_errors=True)
-            raise ValueError(
-                "The .md file needs YAML frontmatter with at least a skill name."
-            )
+            raise ValueError("The .md file needs YAML frontmatter with at least a skill name.")
         try:
             validate_name(skill.name)
         except ValueError:
@@ -421,17 +403,14 @@ class SessionSkillStore:
             except (OSError, ValueError):
                 return
             self._rows = {
-                sid: {str(s): bool(v) for s, v in (row or {}).items()}
-                for sid, row in data.get("sessions", {}).items()
+                sid: {str(s): bool(v) for s, v in (row or {}).items()} for sid, row in data.get("sessions", {}).items()
             }
 
     def _save(self) -> None:
         if not self.path:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"sessions": self._rows}, indent=2), encoding="utf-8"
-        )
+        self.path.write_text(json.dumps({"sessions": self._rows}, indent=2), encoding="utf-8")
 
     def get(self, session_id: str) -> dict[str, bool]:
         return dict(self._rows.get(session_id, {}))
@@ -589,9 +568,7 @@ def save_skill_tool(
             store.update(name, description=description.strip(), instructions=instructions)
         except ValueError:
             action = "added"
-            created = store.create(
-                name=name, description=description.strip(), instructions=instructions
-            )
+            created = store.create(name=name, description=description.strip(), instructions=instructions)
             folder = Path(created["path"])
         for src, base in staged:
             shutil.copy2(src, folder / base)

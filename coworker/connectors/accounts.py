@@ -48,11 +48,7 @@ def derive_account_id(d: ConnectorDescriptor, profile: dict[str, Any]) -> str:
     validator identity (stored as `account` at connect time). "default" only
     when neither exists — never fails, so migration can't strand a profile."""
     if d.account_field and d.account_field != IDENTITY:
-        return (
-            _norm(profile.get(d.account_field))
-            or _norm(profile.get("account"))
-            or "default"
-        )
+        return _norm(profile.get(d.account_field)) or _norm(profile.get("account")) or "default"
     return _norm(profile.get("account")) or "default"
 
 
@@ -80,9 +76,7 @@ def migrate_legacy_default(secrets: SecretStore, connector: str) -> None:
     )
 
 
-def list_accounts(
-    secrets: SecretStore, connector: str
-) -> list[tuple[str, dict[str, Any]]]:
+def list_accounts(secrets: SecretStore, connector: str) -> list[tuple[str, dict[str, Any]]]:
     """(account_id, profile) for every connected account, migration included."""
     migrate_legacy_default(secrets, connector)
     pre = prefix(connector)
@@ -104,9 +98,7 @@ def default_account(secrets: SecretStore, connector: str) -> str:
     return next(iter(accounts), "")
 
 
-def resolve(
-    secrets: SecretStore, connector: str, account: str = ""
-) -> tuple[str, str, dict[str, Any] | None]:
+def resolve(secrets: SecretStore, connector: str, account: str = "") -> tuple[str, str, dict[str, Any] | None]:
     """(account_id, profile_key, profile) for the requested — or default —
     account. Profile is None when nothing matches."""
     account_id = _norm(account) or default_account(secrets, connector)
@@ -116,9 +108,7 @@ def resolve(
     return account_id, key, secrets.get(key)
 
 
-def add_account(
-    secrets: SecretStore, connector: str, account_id: str, profile: dict[str, Any]
-) -> dict[str, Any]:
+def add_account(secrets: SecretStore, connector: str, account_id: str, profile: dict[str, Any]) -> dict[str, Any]:
     """Store one account (manual connect and managed OAuth both land here); the
     first connected account becomes the default. Re-adding an id replaces its
     credentials in place."""
@@ -135,9 +125,7 @@ def add_account(
     return {"ok": True, "account": account_id}
 
 
-def set_default(
-    secrets: SecretStore, connector: str, account_id: str
-) -> dict[str, Any]:
+def set_default(secrets: SecretStore, connector: str, account_id: str) -> dict[str, Any]:
     account_id = _norm(account_id)
     if not secrets.get(prefix(connector) + account_id):
         return {"ok": False, "error": "account not connected"}
@@ -149,9 +137,7 @@ def set_default(
     return {"ok": True, "default_account": account_id}
 
 
-def disconnect_account(
-    secrets: SecretStore, connector: str, account_id: str
-) -> dict[str, Any]:
+def disconnect_account(secrets: SecretStore, connector: str, account_id: str) -> dict[str, Any]:
     """Drop one account. The default pointer moves to the next account; removing
     the last account removes the pointer profile too."""
     account_id = _norm(account_id)

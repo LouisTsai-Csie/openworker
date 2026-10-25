@@ -31,10 +31,7 @@ class FakeProvider(WebSearchProvider):
 
     def search(self, query, max_results=5):
         self.calls.append((query, max_results))
-        return [
-            SearchResult(title=f"r{i}", url=f"https://x/{i}", snippet="s")
-            for i in range(max_results)
-        ]
+        return [SearchResult(title=f"r{i}", url=f"https://x/{i}", snippet="s") for i in range(max_results)]
 
 
 def test_tool_returns_results():
@@ -84,9 +81,7 @@ def test_build_provider_third_party_requires_key():
 def test_tool_surfaces_missing_key_error(tmp_path):
     secrets = SecretStore(tmp_path / "secrets.json")
     secrets.put("web_search:default", {"provider": "tavily"})  # no api_key
-    out = make_web_search_tool(secrets)(
-        query="q"
-    )  # resolve_provider raises ValueError → error dict
+    out = make_web_search_tool(secrets)(query="q")  # resolve_provider raises ValueError → error dict
     assert "needs an API key" in out["error"]
 
 
@@ -109,20 +104,11 @@ def test_web_search_rest(tmp_path, monkeypatch):
     client = TestClient(create_app(SessionManager(data_dir=tmp_path / "data")))
 
     assert client.get("/v1/web-search").json()["provider"] == "duckduckgo"
-    assert (
-        client.post(
-            "/v1/web-search", json={"provider": "tavily", "api_key": "sk-secret-xyz"}
-        ).json()["ok"]
-        is True
-    )
+    assert client.post("/v1/web-search", json={"provider": "tavily", "api_key": "sk-secret-xyz"}).json()["ok"] is True
     got = client.get("/v1/web-search").json()
     assert got["provider"] == "tavily" and got["has_key"] is True
-    assert (
-        "sk-secret-xyz" not in client.get("/v1/web-search").text
-    )  # key never returned
-    assert (
-        client.post("/v1/web-search", json={"provider": "nope"}).json()["ok"] is False
-    )
+    assert "sk-secret-xyz" not in client.get("/v1/web-search").text  # key never returned
+    assert client.post("/v1/web-search", json={"provider": "nope"}).json()["ok"] is False
 
 
 def test_engine_registers_web_search(tmp_path):

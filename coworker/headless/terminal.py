@@ -45,7 +45,7 @@ def _home_relative(path: str) -> str:
         home = str(Path.home())
     except Exception:
         return path
-    return "~" + path[len(home):] if path == home or path.startswith(home + os.sep) else path
+    return "~" + path[len(home) :] if path == home or path.startswith(home + os.sep) else path
 
 
 def _ago(seconds: Any) -> str:
@@ -174,9 +174,15 @@ class Terminal:
                 seen = _ago(h.get("blocked_seconds_ago")) if h.get("blocked_seconds_ago") is not None else ""
                 site = _site(str(h.get("host", "")))
                 if seen:
-                    body.append(f"The sandbox blocked {site} {seen}." if len(hosts) > 1 else f"The sandbox blocked this site {seen}.")
+                    body.append(
+                        f"The sandbox blocked {site} {seen}."
+                        if len(hosts) > 1
+                        else f"The sandbox blocked this site {seen}."
+                    )
                 elif network.get("evidence"):
-                    body.append(f"No command has tried {site} yet." if len(hosts) > 1 else "No command has tried this site yet.")
+                    body.append(
+                        f"No command has tried {site} yet." if len(hosts) > 1 else "No command has tried this site yet."
+                    )
             return f"let commands reach {names}", body
         wall = self.card.get("site_wall")
         if wall:
@@ -338,7 +344,10 @@ class Terminal:
         name = str(args.get("name") or "").strip()
         info = toolchain.describe(name) or {}
         async with self._lock:
-            lines = ["", f"The coworker asks to install a tool: {name}" + (f" {info['version']}" if info.get("version") else "")]
+            lines = [
+                "",
+                f"The coworker asks to install a tool: {name}" + (f" {info['version']}" if info.get("version") else ""),
+            ]
             if info.get("summary"):
                 lines.append(f"  {_short(info['summary'], 200)}")
             if args.get("reason"):

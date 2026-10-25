@@ -91,11 +91,7 @@ def test_managed_callback_installs_and_hot_reloads(client, monkeypatch):
     assert client.manager.secrets.get("github:default")["mode"] == "relay"
     assert refreshes  # hot-add, like a Slack workspace
 
-    gh = next(
-        c
-        for c in client.get("/v1/connectors").json()["connectors"]
-        if c["name"] == "github"
-    )
+    gh = next(c for c in client.get("/v1/connectors").json()["connectors"] if c["name"] == "github")
     assert gh["connected"] is True
     assert [i["installation_id"] for i in gh["installations"]] == ["101"]
     assert gh["installations"][0]["account_login"] == "acme"
@@ -125,9 +121,7 @@ def test_disconnect_last_installation_never_resurrects_manual_pat(client, monkey
     _no_cloud(monkeypatch)
     # A manual PAT stored BEFORE the managed install must stay stored but the
     # relay must not survive the last installation's removal.
-    client.manager.secrets.put(
-        "github:default", {"type": "token", "token": "ghp_manual", "enabled": True}
-    )
+    client.manager.secrets.put("github:default", {"type": "token", "token": "ghp_manual", "enabled": True})
     client.post("/oauth/callback", data=_install_form("101"))
     body = client.post("/v1/connectors/github/installations/101/disconnect").json()
     assert body["ok"] is True and body["remaining_installs"] == 0
@@ -314,18 +308,14 @@ def test_addressing_roundtrip():
 
 async def test_send_posts_comment_with_minted_token(monkeypatch):
     """Replies mint the right installation's token and post as the bot."""
-    hub = RelayHub(
-        "wss://x", lambda: "jwt", transport_factory=lambda: FakeTransport([])
-    )
+    hub = RelayHub("wss://x", lambda: "jwt", transport_factory=lambda: FakeTransport([]))
     minted: list[str] = []
 
     async def token_client(installation_id: str) -> str:
         minted.append(installation_id)
         return "ghs_live-token"
 
-    adapter = GitHubRelayAdapter(
-        hub, installs={"101": {"account_login": "acme"}}, token_client=token_client
-    )
+    adapter = GitHubRelayAdapter(hub, installs={"101": {"account_login": "acme"}}, token_client=token_client)
     adapter._repo_installs["acme/site"] = "101"
 
     posted = {}
@@ -443,9 +433,7 @@ def test_managed_tools_use_minted_token_by_owner(tmp_path, monkeypatch):
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
     secrets = SecretStore()
     github_installs.managed_connect_install(secrets, _install_form("101"))
-    github_installs.managed_connect_install(
-        secrets, _install_form("202", account="hooli")
-    )
+    github_installs.managed_connect_install(secrets, _install_form("202", account="hooli"))
     seen = _capture_requests(monkeypatch)
     minted = []
 
@@ -583,9 +571,7 @@ def test_clone_pull_roundtrip_and_no_token_at_rest(tmp_path, monkeypatch, _origi
     monkeypatch.setenv("GITHUB_GIT_URL", f"file://{_origin['base']}")
     secrets = SecretStore()
     github_installs.managed_connect_install(secrets, _install_form("101"))
-    monkeypatch.setattr(
-        cloud, "github_installation_token", lambda s, c, iid, *, force=False: "ghs_live"
-    )
+    monkeypatch.setattr(cloud, "github_installation_token", lambda s, c, iid, *, force=False: "ghs_live")
     granted, tools = _clone_tools(secrets, tmp_path)
 
     out = tools["github_clone"]("acme", "site")
@@ -610,6 +596,7 @@ def test_clone_pull_roundtrip_and_no_token_at_rest(tmp_path, monkeypatch, _origi
 
 def test_clone_explicit_pr_ref_returns_full_sha(tmp_path, monkeypatch, _origin):
     from pathlib import Path
+
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("GITHUB_GIT_URL", f"file://{_origin['base']}")
     work = _origin["work"]
@@ -627,8 +614,10 @@ def test_clone_explicit_pr_ref_returns_full_sha(tmp_path, monkeypatch, _origin):
 
 def test_clone_rejects_option_like_ref_before_git(tmp_path, monkeypatch):
     _, tools = _clone_tools(SecretStore(), tmp_path)
-    monkeypatch.setattr("coworker.connectors.integration_tools._run_git",
-                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not run git")))
+    monkeypatch.setattr(
+        "coworker.connectors.integration_tools._run_git",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not run git")),
+    )
     for ref in ("--upload-pack=command", "main:refs/heads/main", "main other"):
         assert "ref must be" in tools["github_clone"]("acme", "site", ref=ref)["error"]
 
@@ -685,9 +674,7 @@ def test_push_and_open_pr_tools(tmp_path, monkeypatch, _origin):
     monkeypatch.setenv("GITHUB_GIT_URL", f"file://{_origin['base']}")
     secrets = SecretStore()
     github_installs.managed_connect_install(secrets, _install_form("101"))
-    monkeypatch.setattr(
-        cloud, "github_installation_token", lambda s, c, iid, *, force=False: "ghs_live"
-    )
+    monkeypatch.setattr(cloud, "github_installation_token", lambda s, c, iid, *, force=False: "ghs_live")
     granted, tools = _clone_tools(secrets, tmp_path)
 
     assert tools["github_clone"]("acme", "site").get("ok") is True
@@ -703,9 +690,7 @@ def test_push_and_open_pr_tools(tmp_path, monkeypatch, _origin):
     import subprocess
 
     bare = _origin["base"] / "acme" / "site.git"
-    branches = subprocess.run(
-        ["git", "branch"], cwd=bare, capture_output=True, text=True
-    ).stdout
+    branches = subprocess.run(["git", "branch"], cwd=bare, capture_output=True, text=True).stdout
     assert "feature/scaffold" in branches
 
     from coworker.connectors import integration_tools as it

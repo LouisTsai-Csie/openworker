@@ -14,9 +14,7 @@ import pytest
 from coworker import secrets as secrets_mod
 from coworker.secrets import SecretStore, write_private_text
 
-posix_only = pytest.mark.skipif(
-    sys.platform == "win32", reason="POSIX mode bits; Windows uses the icacls ACL path"
-)
+posix_only = pytest.mark.skipif(sys.platform == "win32", reason="POSIX mode bits; Windows uses the icacls ACL path")
 
 
 @posix_only
@@ -54,9 +52,7 @@ def test_temp_file_is_never_group_or_world_readable_mid_write(tmp_path, monkeypa
 
     assert observed, "expected the writer to restrict a temp file"
     for name, mode in observed.items():
-        assert mode & (stat.S_IRGRP | stat.S_IROTH) == 0, (
-            f"{name} existed at {oct(mode)} while holding the plaintext"
-        )
+        assert mode & (stat.S_IRGRP | stat.S_IROTH) == 0, f"{name} existed at {oct(mode)} while holding the plaintext"
 
 
 def test_no_temp_file_is_left_behind(tmp_path):
@@ -91,7 +87,9 @@ def test_a_failed_write_leaves_the_previous_file_intact(tmp_path, monkeypatch):
         store.put("openai", {"api_key": "sk-replacement"})
 
     assert json.loads(path.read_text())["openai"]["api_key"] == "sk-original"
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["secrets.json", "secrets.json.lock"], "temp must be cleaned up"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["secrets.json", "secrets.json.lock"], (
+        "temp must be cleaned up"
+    )
 
 
 def test_a_hostile_preexisting_temp_name_cannot_redirect_the_write(tmp_path):

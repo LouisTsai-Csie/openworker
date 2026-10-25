@@ -101,7 +101,10 @@ def test_with_auto_answer_the_agent_reports_the_block_and_does_not_ask(in_opensh
     engine = _engine(tmp_path)
     engine.attendance = lambda: "auto"
     text = engine.context_provider()
-    assert "nobody is there to allow it" in text and "ask_user" not in text.split("OpenShell sandbox", 1)[1].split("\n\n", 1)[0]
+    assert (
+        "nobody is there to allow it" in text
+        and "ask_user" not in text.split("OpenShell sandbox", 1)[1].split("\n\n", 1)[0]
+    )
     assert "openshell policy update SANDBOX_NAME --add-endpoint HOST:PORT --binary '/**' --wait" in text
 
 
@@ -161,11 +164,15 @@ def test_inside_a_literal_internal_address_is_still_refused(in_openshell, monkey
         assert reason and "refusing to fetch" in reason and pin is None
 
 
-def test_inside_openshell_0_1_a_name_is_not_judged_by_its_placeholder_address(in_openshell, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_inside_openshell_0_1_a_name_is_not_judged_by_its_placeholder_address(
+    in_openshell, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # OpenShell 0.1 sets no proxy variables and answers every name with an address in
     # 198.18.0.0/15, which the guard refuses as private. Seen on 0.1.2: example.org -> 198.18.0.2.
     monkeypatch.delenv("HTTPS_PROXY", raising=False)
-    monkeypatch.setattr(socket, "getaddrinfo", lambda *_a, **_k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("198.18.0.2", 443))])
+    monkeypatch.setattr(
+        socket, "getaddrinfo", lambda *_a, **_k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("198.18.0.2", 443))]
+    )
     assert guard._vet("https://example.org/page") == (None, None)
     assert guard._vet("http://example.org/page") == (None, None)
     # The same answer outside a sandbox is refused, as before.
@@ -176,5 +183,7 @@ def test_inside_openshell_0_1_a_name_is_not_judged_by_its_placeholder_address(in
 
 def test_outside_a_name_is_looked_up_and_pinned_as_before(outside, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy.example:3128")  # a proxy alone changes nothing
-    monkeypatch.setattr(socket, "getaddrinfo", lambda *_a, **_k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))])
+    monkeypatch.setattr(
+        socket, "getaddrinfo", lambda *_a, **_k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))]
+    )
     assert guard._vet("https://example.org/") == (None, "93.184.216.34")

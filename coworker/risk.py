@@ -11,12 +11,12 @@ to its aisuite metadata (``requires_approval`` → external) or is treated as re
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Optional
 from collections.abc import Callable
 
 
-class RiskClass(str, Enum):
+class RiskClass(StrEnum):
     READ = "read"  # no side effects — always allowed
     EGRESS = "egress"  # reaches the network — the request itself can carry data off-machine
     WRITE_LOCAL = "write_local"  # mutates the workspace — path-scoped + mode-gated
@@ -115,9 +115,7 @@ def _mcp_floor(tool_name: str, metadata: Any) -> RiskClass | None:
     return None
 
 
-def classify(
-    tool_name: str, metadata: Any = None, overrides: RiskOverrides | None = None
-) -> RiskClass:
+def classify(tool_name: str, metadata: Any = None, overrides: RiskOverrides | None = None) -> RiskClass:
     """Effective risk of a tool call. A user override may *relax* a metadata tool (the
     intended use — quieting an over-cautious plug-in), but may only ever **tighten** a
     built-in write/exec/egress tool, a connector-catalog write, or a third-party MCP tool
@@ -125,17 +123,12 @@ def classify(
     scoping AND the read-only gate at once, so it is refused here. Precedence otherwise:
     the by-name base table, then aisuite metadata (`requires_approval` → external),
     else read."""
-    base = (
-        _BASE.get(tool_name)
-        or _catalog_floor(tool_name)
-        or _mcp_floor(tool_name, metadata)
-    )
+    base = _BASE.get(tool_name) or _catalog_floor(tool_name) or _mcp_floor(tool_name, metadata)
     if overrides is not None:
         ov = overrides(tool_name)
-        if ov is not None:
-            if base is None or _STRICTNESS[ov] >= _STRICTNESS[base]:
-                return ov
-            # A loosening override on a floored tool is ignored: fall through to the base.
+        if ov is not None and (base is None or _STRICTNESS[ov] >= _STRICTNESS[base]):
+            return ov
+        # A loosening override on a floored tool is ignored: fall through to the base.
     if base is not None:
         return base
     if bool(getattr(metadata, "requires_approval", False)):

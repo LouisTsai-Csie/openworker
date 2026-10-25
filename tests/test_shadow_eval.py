@@ -234,13 +234,8 @@ def _engine_world(setup: dict) -> KnownWorld:
     from coworker.session_facts import KnownWorld
 
     return KnownWorld(
-        roots=tuple(
-            (str(r["path"]), bool(r.get("writable", False)))
-            for r in setup.get("roots", [])
-        ),
-        remotes=tuple(
-            tuple(str(rem).split(None, 1)) for rem in setup.get("remotes", [])
-        ),
+        roots=tuple((str(r["path"]), bool(r.get("writable", False))) for r in setup.get("roots", [])),
+        remotes=tuple(tuple(str(rem).split(None, 1)) for rem in setup.get("remotes", [])),
     )
 
 
@@ -277,10 +272,7 @@ def test_stub_run_passes_all_gates_because_stub_knows_the_key():
     reviewer = ev.build_reviewer("stub:test", stub=True)
 
     async def _go():
-        return [
-            await ev.run_corpus(reviewer, name, include_holdout=True, stub=True)
-            for name in ev.CORPORA
-        ]
+        return [await ev.run_corpus(reviewer, name, include_holdout=True, stub=True) for name in ev.CORPORA]
 
     results = asyncio.run(_go())
     by_name = {r.name: r for r in results}
@@ -291,17 +283,20 @@ def test_stub_run_passes_all_gates_because_stub_knows_the_key():
 
 
 def test_benign_gate_fails_below_threshold():
-    r = ev.CorpusResult(
-        name="benign", rows=10, allows=2, false_allows=[], tokens_in=0, tokens_out=0, per_row=[]
-    )
+    r = ev.CorpusResult(name="benign", rows=10, allows=2, false_allows=[], tokens_in=0, tokens_out=0, per_row=[])
     assert r.allow_rate == 0.2
     assert not r.gate_passed()  # 20% < 30% threshold
 
 
 def test_dangerous_gate_fails_on_a_single_false_allow():
     r = ev.CorpusResult(
-        name="dangerous", rows=10, allows=1, false_allows=["danger-001"],
-        tokens_in=0, tokens_out=0, per_row=[],
+        name="dangerous",
+        rows=10,
+        allows=1,
+        false_allows=["danger-001"],
+        tokens_in=0,
+        tokens_out=0,
+        per_row=[],
     )
     assert not r.gate_passed()
 
@@ -310,14 +305,26 @@ def test_errored_corpus_cannot_pass_even_when_otherwise_clean():
     # A provider outage that turns rows into error-unsures must never read as a pass:
     # those rows measured nothing. Benign at 100% allow but with one errored row → no pass.
     r = ev.CorpusResult(
-        name="benign", rows=10, allows=10, false_allows=[],
-        tokens_in=0, tokens_out=0, per_row=[], errors=1,
+        name="benign",
+        rows=10,
+        allows=10,
+        false_allows=[],
+        tokens_in=0,
+        tokens_out=0,
+        per_row=[],
+        errors=1,
     )
     assert r.allow_rate == 1.0 and not r.gate_passed()
     # Dangerous with zero false-allows but an errored row → also no pass.
     r2 = ev.CorpusResult(
-        name="dangerous", rows=10, allows=0, false_allows=[],
-        tokens_in=0, tokens_out=0, per_row=[], errors=2,
+        name="dangerous",
+        rows=10,
+        allows=0,
+        false_allows=[],
+        tokens_in=0,
+        tokens_out=0,
+        per_row=[],
+        errors=2,
     )
     assert not r2.gate_passed()
 
@@ -471,8 +478,7 @@ def test_every_reviewer_corpus_row_actually_reaches_the_reviewer():
     for name in ev.CORPORA:
         for r in ev.load_corpus(name):
             roots = [
-                RootDir(path=x["path"], writable=x.get("writable", False))
-                for x in (r.setup or {}).get("roots", [])
+                RootDir(path=x["path"], writable=x.get("writable", False)) for x in (r.setup or {}).get("roots", [])
             ]
             engine = PermissionEngine(
                 workspace_root=roots[0].path if roots else "/repo",

@@ -11,7 +11,7 @@ an absolute wake time for `sleep_until`). Relative waits (`sleep_for`) and timer
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 
 def current_time() -> dict:
@@ -21,7 +21,7 @@ def current_time() -> dict:
     this is live. Returns the local time with its UTC offset and timezone name, the
     same instant in UTC, and the weekday."""
     now = datetime.now().astimezone()
-    utc = now.astimezone(timezone.utc)
+    utc = now.astimezone(UTC)
     return {
         "local": now.isoformat(timespec="seconds"),
         "timezone": now.tzname() or "",

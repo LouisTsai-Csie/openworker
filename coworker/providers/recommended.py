@@ -67,11 +67,7 @@ def _entries() -> tuple[tuple[tuple[str, ...], Recommendation], ...]:
             max_output_tokens=_int(item.get("max_output_tokens")),
             thinking_available=bool(thinking.get("available")),
             thinking_default=bool(thinking.get("default")),
-            sampling={
-                k: float(v)
-                for k, v in (item.get("sampling") or {}).items()
-                if isinstance(v, (int, float))
-            },
+            sampling={k: float(v) for k, v in (item.get("sampling") or {}).items() if isinstance(v, (int, float))},
             notes=str(item.get("notes") or ""),
             source=str(item.get("source") or ""),
         )

@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from textual import work
 from textual.app import App, ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Static
@@ -32,7 +32,7 @@ def _short(value: Any, limit: int = 80) -> str:
 
 
 class ApprovalScreen(ModalScreen[ApprovalOutcome]):
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("y", "decide('once')", "Approve"),
         Binding("n", "decide('deny')", "Deny"),
         Binding("a", "decide('always_tool')", "Always tool"),
@@ -73,7 +73,7 @@ class CoworkerApp(App):
     #approval-buttons { height: auto; padding-top: 1; }
     #approval-buttons Button { margin-right: 1; }
     """
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+c", "quit", "Quit"),
         Binding("escape", "interrupt", "Interrupt"),
     ]
@@ -124,15 +124,10 @@ class CoworkerApp(App):
             user_rules=self._user_rules,
             messages=self._resume_messages,
         )
-        self._write(
-            f"[b]coworker · code[/b]  ·  model {self.model}  ·  mode {self.mode.value}"
-        )
+        self._write(f"[b]coworker · code[/b]  ·  model {self.model}  ·  mode {self.mode.value}")
         self._write(f"workspace: {self.workspace}")
         if self._resume_messages:
-            self._write(
-                f"[dim]resumed session {self._session_id} · "
-                f"{len(self._resume_messages)} messages[/dim]"
-            )
+            self._write(f"[dim]resumed session {self._session_id} · {len(self._resume_messages)} messages[/dim]")
         self._write("Type a request, or /help for commands.\n")
         self.query_one("#prompt", Input).focus()
 
@@ -182,23 +177,18 @@ class CoworkerApp(App):
             if data.get("text"):
                 self._write(f"[b green]assistant[/b green]\n{data['text']}")
         elif event.type is EventType.TOOL_PROPOSED:
-            self._write(
-                f"[yellow]→ {data['name']}[/yellow] {_short(data.get('arguments'), 100)}"
-            )
+            self._write(f"[yellow]→ {data['name']}[/yellow] {_short(data.get('arguments'), 100)}")
         elif event.type is EventType.TOOL_FINISHED:
             status = data.get("status")
             tag = "green" if status == "ok" else "red"
             extra = data.get("result_preview") or data.get("reason") or ""
-            self._write(
-                f"  [{tag}]✓ {data['name']} · {status}[/{tag}] {_short(extra, 100)}"
-            )
+            self._write(f"  [{tag}]✓ {data['name']} · {status}[/{tag}] {_short(extra, 100)}")
         elif event.type is EventType.INTERRUPTED:
             self._write("[red]⏹ interrupted[/red]")
         elif event.type is EventType.ERROR:
             self._write(f"[red]error: {data.get('error')}[/red]")
-        elif event.type is EventType.TURN_END:
-            if data.get("status") == "max_iterations_exceeded":
-                self._write("[red]⚠ stopped: max iterations reached[/red]")
+        elif event.type is EventType.TURN_END and data.get("status") == "max_iterations_exceeded":
+            self._write("[red]⚠ stopped: max iterations reached[/red]")
 
     def _write(self, text: str) -> None:
         self.rendered.append(text)
@@ -213,9 +203,7 @@ class CoworkerApp(App):
         if name in {"/quit", "/exit"}:
             self.exit()
         elif name == "/help":
-            self._write(
-                "commands: /mode plan|interactive|auto · /model <id> · /clear · /quit"
-            )
+            self._write("commands: /mode plan|interactive|auto · /model <id> · /clear · /quit")
         elif name == "/mode" and arg in {
             "plan",
             "interactive",

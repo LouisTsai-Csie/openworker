@@ -10,12 +10,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from collections.abc import Awaitable, Callable
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     TEXT = "text"
     COMMAND = "command"
     MEDIA = "media"
@@ -31,9 +31,7 @@ def parse_target(target: str) -> tuple[str, str, str | None]:
     """`'platform:chat_id[:thread]'` -> (platform, chat_id, thread_id)."""
     parts = (target or "").split(":")
     if len(parts) < 2 or not parts[0] or not parts[1]:
-        raise ValueError(
-            f"invalid target {target!r} (expected 'platform:chat_id[:thread]')"
-        )
+        raise ValueError(f"invalid target {target!r} (expected 'platform:chat_id[:thread]')")
     thread = ":".join(parts[2:]) if len(parts) > 2 else None
     return parts[0], parts[1], (thread or None)
 
@@ -56,9 +54,7 @@ class SessionSource:
 
     def label(self) -> str:
         who = self.user_name or self.user_id or "?"
-        where = {"dm": "DM", "group": "group", "channel": "channel"}.get(
-            self.chat_type, self.chat_type
-        )
+        where = {"dm": "DM", "group": "group", "channel": "channel"}.get(self.chat_type, self.chat_type)
         return f"{self.platform} {where} · {who}"
 
 
@@ -169,9 +165,7 @@ class BasePlatformAdapter(ABC):
     def set_interaction_handler(self, handler: InteractionHandler) -> None:
         self._interaction_handler = handler
 
-    async def send_interactive(
-        self, chat_id: str, text: str, buttons, *, thread_id: str | None = None
-    ) -> SendResult:
+    async def send_interactive(self, chat_id: str, text: str, buttons, *, thread_id: str | None = None) -> SendResult:
         """Send a prompt with choice buttons. Default: plain text (adapters without interactive
         support just show the text — the user answers in the app)."""
         return await self.send(chat_id, text, thread_id=thread_id)
@@ -189,9 +183,7 @@ class BasePlatformAdapter(ABC):
         """Stop the listener and close connections."""
 
     @abstractmethod
-    async def send(
-        self, chat_id: str, text: str, *, thread_id: str | None = None
-    ) -> SendResult:
+    async def send(self, chat_id: str, text: str, *, thread_id: str | None = None) -> SendResult:
         """Send an outbound message."""
 
     async def handle_message(self, event: MessageEvent) -> None:

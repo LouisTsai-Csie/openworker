@@ -27,9 +27,7 @@ def _slack_api_base() -> str:
     return os.environ.get("SLACK_API_URL", "https://slack.com/api/")
 
 
-def _send_telegram(
-    token: str, chat_id: str, text: str, thread_id: str | None = None
-) -> SendResult:
+def _send_telegram(token: str, chat_id: str, text: str, thread_id: str | None = None) -> SendResult:
     import httpx
 
     payload: dict = {"chat_id": chat_id, "text": text}
@@ -49,15 +47,11 @@ def _send_telegram(
     except Exception as exc:  # network / decode
         return SendResult(False, error=str(exc))
     if data.get("ok"):
-        return SendResult(
-            True, message_id=str(data.get("result", {}).get("message_id"))
-        )
+        return SendResult(True, message_id=str(data.get("result", {}).get("message_id")))
     return SendResult(False, error=data.get("description") or "telegram send failed")
 
 
-def _send_slack(
-    token: str, chat_id: str, text: str, thread_id: str | None = None
-) -> SendResult:
+def _send_slack(token: str, chat_id: str, text: str, thread_id: str | None = None) -> SendResult:
     import httpx
 
     from coworker.connectors.slack_addr import split
@@ -108,9 +102,7 @@ def _slack_blocks(text: str, buttons) -> list[dict]:
     return blocks
 
 
-def _send_slack_interactive(
-    token: str, chat_id: str, text: str, buttons, thread_id: str | None = None
-) -> SendResult:
+def _send_slack_interactive(token: str, chat_id: str, text: str, buttons, thread_id: str | None = None) -> SendResult:
     import httpx
 
     from coworker.connectors.slack_addr import split
@@ -146,9 +138,7 @@ DEFAULT_SENDERS: dict[str, Sender] = {
 
 # -- file upload (§34 / UX-016) --------------------------------------------------------
 # A FileSender is (token, chat_id, thread_id, filename, data, title, comment) -> SendResult.
-FileSender = Callable[
-    [str, str, str | None, str, bytes, str | None, str | None], SendResult
-]
+FileSender = Callable[[str, str, str | None, str, bytes, str | None, str | None], SendResult]
 
 
 def _send_slack_file(
@@ -179,9 +169,7 @@ def _send_slack_file(
         )
         got = resp.json()
         if not got.get("ok"):
-            return SendResult(
-                False, error=got.get("error") or "slack upload-url failed"
-            )
+            return SendResult(False, error=got.get("error") or "slack upload-url failed")
         up = httpx.post(
             got["upload_url"],
             files={"file": (filename, data)},

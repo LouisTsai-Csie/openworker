@@ -6,6 +6,12 @@ import pytest
 
 from coworker import cli as ow_cli
 from coworker.remote import joiner
+import argparse
+import json
+import plistlib
+from pathlib import Path
+import shutil
+import subprocess
 
 
 def test_no_arguments_prints_help_that_lists_every_public_command(capsys):
@@ -103,18 +109,11 @@ def test_keys_stores_a_key_and_never_prints_it(tmp_path, monkeypatch, capsys):
 
 # -- status --json, logs, and the macOS service ---------------------------------------
 
-import argparse
-import json
-import plistlib
-from pathlib import Path
-
 
 def _joined(tmp_path: Path, name: str = "mini") -> Path:
     state = tmp_path / "state"
     state.mkdir()
-    joiner.save_remote_config(
-        state, {"controller": "http://10.0.0.5:9787", "name": name, "machine_id": "m1"}
-    )
+    joiner.save_remote_config(state, {"controller": "http://10.0.0.5:9787", "name": name, "machine_id": "m1"})
     return state
 
 
@@ -134,7 +133,13 @@ def test_status_json_is_machine_readable(tmp_path, monkeypatch, capsys):
 def test_logs_command_per_platform(tmp_path):
     state = _joined(tmp_path, "cloud vm")
     assert joiner.logs_command(state, "linux", None, 50, True) == [
-        "journalctl", "--user", "-u", "openworker-cloud-vm.service", "-n", "50", "-f",
+        "journalctl",
+        "--user",
+        "-u",
+        "openworker-cloud-vm.service",
+        "-n",
+        "50",
+        "-f",
     ]
     assert joiner.logs_command(state, "linux", "openworker.service", 10, False)[3] == "openworker.service"
     mac = joiner.logs_command(state, "darwin", None, 200, False)
@@ -170,9 +175,12 @@ def test_macos_service_install_writes_a_launchd_agent(tmp_path, monkeypatch, cap
     # list shows it with its state dir; uninstall unloads and removes it.
     assert joiner._cmd_service(state, argparse.Namespace(service_command="list"), platform="darwin", home=tmp_path) == 0
     assert f"com.openworker.machine.mac-mini  state={state}" in capsys.readouterr().out
-    assert joiner._cmd_service(
-        state, argparse.Namespace(service_command="uninstall", unit=None), platform="darwin", home=tmp_path
-    ) == 0
+    assert (
+        joiner._cmd_service(
+            state, argparse.Namespace(service_command="uninstall", unit=None), platform="darwin", home=tmp_path
+        )
+        == 0
+    )
     assert not plist_path.exists()
     assert any(c[0] == "bootout" for c in calls)
 
@@ -206,8 +214,6 @@ def test_service_needs_a_joined_machine_and_a_supported_platform(tmp_path, capsy
 
 # -- packaging/install.sh --------------------------------------------------------------
 
-import shutil
-import subprocess
 
 INSTALL_SH = Path(__file__).resolve().parents[1] / "packaging" / "install.sh"
 

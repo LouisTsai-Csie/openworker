@@ -58,9 +58,7 @@ def _install(mgr, tmp_path, extra=""):
 
 
 def _session(mgr, sid, agent):
-    mgr.session_store.save(
-        SessionRecord(session_id=sid, workspace="", model="m", mode="interactive", agent=agent)
-    )
+    mgr.session_store.save(SessionRecord(session_id=sid, workspace="", model="m", mode="interactive", agent=agent))
 
 
 def test_bundle_skills_join_the_persona_sessions_menu(tmp_path, monkeypatch):
@@ -88,9 +86,7 @@ def test_manifest_skills_list_narrows_the_bundle(tmp_path, monkeypatch):
     names = mgr.effective_skill_names("s1")
     assert "semgrep-triage" in names
     assert "secret-scan" not in names
-    assert "secret-scan" not in {
-        r["name"] for r in mgr.session_skills_view("s1")["skills"]
-    }
+    assert "secret-scan" not in {r["name"] for r in mgr.session_skills_view("s1")["skills"]}
 
 
 def test_user_disable_and_mute_win_over_bundle_skills(tmp_path, monkeypatch):
@@ -113,9 +109,7 @@ def test_users_own_copy_shadows_the_bundle_row(tmp_path, monkeypatch):
     _install(mgr, tmp_path)
     _session(mgr, "s1", "sec-review")
 
-    mgr.skill_store.create(
-        name="semgrep-triage", description="my customized copy", instructions="mine", scope="global"
-    )
+    mgr.skill_store.create(name="semgrep-triage", description="my customized copy", instructions="mine", scope="global")
     rows = [r for r in mgr.session_skills_view("s1")["skills"] if r["name"] == "semgrep-triage"]
     assert len(rows) == 1 and rows[0]["scope"] != "coworker"
 

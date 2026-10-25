@@ -33,7 +33,9 @@ def test_policy_lists_every_folder_and_nothing_else_of_the_machine():
     assert "/home/sam/code/app" in fs["read_write"] and "/home/sam/code/app" not in fs["read_only"]
     assert "/home/sam/reference" in fs["read_only"] and "/home/sam/reference" not in fs["read_write"]
     assert policy.RUNNER_MOUNT in fs["read_only"]  # the agent cannot change the runner
-    assert not any(p.startswith("/home/") and p not in {r["path"] for r in ROOTS} for p in fs["read_only"] + fs["read_write"])
+    assert not any(
+        p.startswith("/home/") and p not in {r["path"] for r in ROOTS} for p in fs["read_only"] + fs["read_write"]
+    )
     assert rendered["landlock"]["compatibility"] == "hard_requirement"  # never run open
     assert rendered["process"] == {"run_as_user": "1000", "run_as_group": "1000"}  # the folders' owner
 
@@ -46,7 +48,9 @@ def test_policy_is_plain_yaml_without_shared_objects():
 def test_network_profiles():
     # An allow list holds only the machine's ticked sites: none, nothing gets out.
     assert policy.render(ROOTS, profile="allowlist")["network_policies"] == {}
-    ticked = policy.render(ROOTS, profile="allowlist", extra_hosts=["github.com:443", "registry.acme.dev:443"])["network_policies"]
+    ticked = policy.render(ROOTS, profile="allowlist", extra_hosts=["github.com:443", "registry.acme.dev:443"])[
+        "network_policies"
+    ]
     assert {"host": "registry.acme.dev", "port": 443} in ticked["credentials"]["endpoints"]
     assert all(entry["binaries"] for entry in ticked.values())  # OpenShell requires the field
     # "Allow everything" has no OpenShell policy: 0.1 refuses any-host wildcards. Said plainly.
@@ -58,9 +62,24 @@ def test_network_profiles():
 
 def test_folders_are_mounted_at_the_same_absolute_path():
     mounts = policy.mounts(ROOTS, "/var/lib/openworker/sandbox")["docker"]["mounts"]
-    assert {"type": "bind", "source": "/home/sam/code/app", "target": "/home/sam/code/app", "read_only": False} in mounts
-    assert {"type": "bind", "source": "/home/sam/reference", "target": "/home/sam/reference", "read_only": True} in mounts
-    assert {"type": "bind", "source": "/var/lib/openworker/sandbox", "target": policy.RUNNER_MOUNT, "read_only": True} in mounts
+    assert {
+        "type": "bind",
+        "source": "/home/sam/code/app",
+        "target": "/home/sam/code/app",
+        "read_only": False,
+    } in mounts
+    assert {
+        "type": "bind",
+        "source": "/home/sam/reference",
+        "target": "/home/sam/reference",
+        "read_only": True,
+    } in mounts
+    assert {
+        "type": "bind",
+        "source": "/var/lib/openworker/sandbox",
+        "target": policy.RUNNER_MOUNT,
+        "read_only": True,
+    } in mounts
 
 
 def test_stream_messages_match_the_protobuf_wire_format():
@@ -68,7 +87,7 @@ def test_stream_messages_match_the_protobuf_wire_format():
     #   no_login_shell: true, workspace_scope: {workspace: "default"}}}  (OpenShell 0.1.2)
     start = wire.encode_start("abc", ["bash", "-c"])
     assert start.hex() == "0a1c" + "0a03616263" + "120462617368" + "12022d63" + "5001" + "62090a0764656661756c74"
-    (number, _kind, request), = list(wire._fields(start))
+    ((number, _kind, request),) = list(wire._fields(start))
     fields = [(n, v) for n, _k, v in wire._fields(request)]
     assert number == 1 and fields[0] == (1, b"abc") and (10, 1) in fields
     assert [(n, v) for n, _k, v in wire._fields(dict(fields)[12])] == [(1, b"default")]
@@ -112,7 +131,9 @@ def test_another_version_or_a_stopped_gateway_is_refused(monkeypatch):
     monkeypatch.setattr(openshell.subprocess, "run", _fake_cli({"--version": ("openshell 9.9.9\n", 0)}))
     with pytest.raises(openshell.OpenShellUnavailable, match="tested with"):
         openshell.preflight()
-    monkeypatch.setattr(openshell.subprocess, "run", _fake_cli({"--version": _OK_VERSION, "status": ("Status: Disconnected", 1)}))
+    monkeypatch.setattr(
+        openshell.subprocess, "run", _fake_cli({"--version": _OK_VERSION, "status": ("Status: Disconnected", 1)})
+    )
     with pytest.raises(openshell.OpenShellUnavailable, match="not running"):
         openshell.preflight()
     present = {"--version": _OK_VERSION, "status": _CONNECTED, "gateway": _DOCKER_GATEWAY, "image": ("[{...}]", 0)}
@@ -126,28 +147,51 @@ def test_a_missing_base_image_is_refused_before_a_create_can_hang_on_it(monkeypa
     # image is checked up front, with a message that names the download.
     monkeypatch.setattr(openshell, "_gateway_is_remote", lambda: False)
     monkeypatch.setattr(openshell.shutil, "which", lambda name: f"/usr/bin/{name}")
-    missing = {"--version": _OK_VERSION, "status": _CONNECTED, "gateway": _DOCKER_GATEWAY, "image": ("Error: No such image", 1)}
+    missing = {
+        "--version": _OK_VERSION,
+        "status": _CONNECTED,
+        "gateway": _DOCKER_GATEWAY,
+        "image": ("Error: No such image", 1),
+    }
     monkeypatch.setattr(openshell.subprocess, "run", _fake_cli(missing))
     with pytest.raises(openshell.OpenShellImageMissing) as err:
         openshell.preflight()
     text = str(err.value)
-    assert openshell.is_image_problem(text) and "sandbox setup" in text and f"docker pull {openshell.DEFAULT_IMAGE}" in text
+    assert (
+        openshell.is_image_problem(text)
+        and "sandbox setup" in text
+        and f"docker pull {openshell.DEFAULT_IMAGE}" in text
+    )
     assert isinstance(err.value, openshell.OpenShellUnavailable)  # callers that refuse sessions need no new branch
-    assert not openshell.is_image_problem("The OpenShell gateway is not running") and not openshell.is_image_problem(None)
+    assert not openshell.is_image_problem("The OpenShell gateway is not running") and not openshell.is_image_problem(
+        None
+    )
     # The check is keyed on the gateway's driver, not the OS: with another driver (a Mac's
     # MicroVM, say) Docker cannot be asked, and the preflight passes as before.
     vm_gateway = ('{"compute_drivers": [{"name": "vm"}]}', 0)
-    monkeypatch.setattr(openshell.subprocess, "run", _fake_cli({"--version": _OK_VERSION, "status": _CONNECTED, "gateway": vm_gateway}))
+    monkeypatch.setattr(
+        openshell.subprocess, "run", _fake_cli({"--version": _OK_VERSION, "status": _CONNECTED, "gateway": vm_gateway})
+    )
     assert openshell.image_present() is None
     assert openshell.preflight() == {"version": openshell.PINNED_VERSION}
     # No `docker` command on PATH: also "cannot tell", never a false refusal.
     monkeypatch.setattr(openshell.shutil, "which", lambda name: "/usr/bin/openshell" if name == "openshell" else None)
-    monkeypatch.setattr(openshell.subprocess, "run", _fake_cli({"--version": _OK_VERSION, "status": _CONNECTED, "gateway": _DOCKER_GATEWAY}))
+    monkeypatch.setattr(
+        openshell.subprocess,
+        "run",
+        _fake_cli({"--version": _OK_VERSION, "status": _CONNECTED, "gateway": _DOCKER_GATEWAY}),
+    )
     assert openshell.image_present() is None
     # The environment's image is the one asked for.
     seen: list[str] = []
     monkeypatch.setattr(openshell.shutil, "which", lambda name: f"/usr/bin/{name}")
-    monkeypatch.setattr(openshell.subprocess, "run", lambda argv, **kw: seen.append(argv[-1]) or _fake_cli({"gateway": _DOCKER_GATEWAY, "image": ("", 0)})(argv, **kw))
+    monkeypatch.setattr(
+        openshell.subprocess,
+        "run",
+        lambda argv, **kw: (
+            seen.append(argv[-1]) or _fake_cli({"gateway": _DOCKER_GATEWAY, "image": ("", 0)})(argv, **kw)
+        ),
+    )
     monkeypatch.setenv("OPENWORKER_SANDBOX_IMAGE", "registry.example.com/team/agent:2")
     assert openshell.image_present() is True and seen[-1] == "registry.example.com/team/agent:2"
 
@@ -159,10 +203,18 @@ def test_the_image_check_follows_the_driver_and_stays_out_of_remote_gateways(mon
     monkeypatch.setattr(openshell.shutil, "which", lambda name: f"/usr/bin/{name}")
     podman = ('{"compute_drivers": [{"name": "podman"}]}', 0)
     seen: list[list[str]] = []
-    monkeypatch.setattr(openshell.subprocess, "run", lambda argv, **kw: seen.append(argv) or _fake_cli({"gateway": podman, "image": ("", 1)})(argv, **kw))
+    monkeypatch.setattr(
+        openshell.subprocess,
+        "run",
+        lambda argv, **kw: seen.append(argv) or _fake_cli({"gateway": podman, "image": ("", 1)})(argv, **kw),
+    )
     assert openshell.image_tool() == "podman"
     assert openshell.image_present() is False and seen[-1][:3] == ["podman", "image", "inspect"]
-    monkeypatch.setattr(openshell.subprocess, "run", _fake_cli({"--version": _OK_VERSION, "status": _CONNECTED, "gateway": podman, "image": ("", 1)}))
+    monkeypatch.setattr(
+        openshell.subprocess,
+        "run",
+        _fake_cli({"--version": _OK_VERSION, "status": _CONNECTED, "gateway": podman, "image": ("", 1)}),
+    )
     with pytest.raises(openshell.OpenShellImageMissing, match="podman pull"):
         openshell.preflight()
     # A remote gateway keeps its images on another machine: a local store says nothing
@@ -176,7 +228,15 @@ def test_registry_counts_caps_and_forgets(tmp_path, monkeypatch):
     from coworker.sandbox.registry import SandboxLimitReached, SandboxRegistry
 
     reg = SandboxRegistry(tmp_path / "registry.db")
-    reg.record("ow-a", provider="openshell", session_id="s1", agent="lead", roots=ROOTS, profile="allowlist", enforcement="full")
+    reg.record(
+        "ow-a",
+        provider="openshell",
+        session_id="s1",
+        agent="lead",
+        roots=ROOTS,
+        profile="allowlist",
+        enforcement="full",
+    )
     reg.record("ow-b", provider="openshell", session_id="s1", agent="worker")
     assert reg.count() == 2 and reg.find("s1", "worker")["name"] == "ow-b"
     assert reg.list()[0]["roots"] == ROOTS and reg.list()[0]["machine_id"] == "local"
@@ -198,7 +258,9 @@ def test_reap_leaves_a_sandbox_that_a_living_server_is_still_creating(tmp_path, 
     reg = registry_mod.SandboxRegistry(tmp_path / "registry.db")
     reg.record("ow-building", provider="openshell", session_id="s1", state="creating")  # this server, alive
     monkeypatch.setattr(registry_mod, "_openshell_present", lambda: True)
-    monkeypatch.setattr(openshell, "list_our_sandboxes", lambda registry: [{"name": "ow-building"}, {"name": "ow-orphan"}])
+    monkeypatch.setattr(
+        openshell, "list_our_sandboxes", lambda registry: [{"name": "ow-building"}, {"name": "ow-orphan"}]
+    )
     deleted: list[str] = []
     monkeypatch.setattr(openshell, "_cli", lambda *args, **kw: deleted.append(args[2]))
     assert reg.reap() == ["ow-orphan"]
@@ -262,7 +324,11 @@ def test_a_sandbox_is_created_with_its_registry_label(tmp_path, monkeypatch):
     # Without an explicit id the sandbox belongs to this state folder's registry.
     from coworker.sandbox.registry import SandboxRegistry, registry_id
 
-    assert openshell.OpenShellProvider(roots=[{"path": str(project), "writable": True}]).registry == registry_id() == SandboxRegistry().id
+    assert (
+        openshell.OpenShellProvider(roots=[{"path": str(project), "writable": True}]).registry
+        == registry_id()
+        == SandboxRegistry().id
+    )
 
 
 def test_adding_a_site_sets_the_policy_on_the_running_sandbox(tmp_path, monkeypatch):
@@ -274,7 +340,9 @@ def test_adding_a_site_sets_the_policy_on_the_running_sandbox(tmp_path, monkeypa
     project.mkdir()
     seen: list = []
     monkeypatch.setattr(openshell, "_cli", lambda *args, **kw: seen.append(args))
-    provider = openshell.OpenShellProvider(roots=[{"path": str(project), "writable": True}], extra_hosts=["github.com:443"], registry="abc123")
+    provider = openshell.OpenShellProvider(
+        roots=[{"path": str(project), "writable": True}], extra_hosts=["github.com:443"], registry="abc123"
+    )
     # Not made yet: the list grows and nothing is asked of the gateway.
     provider.add_hosts(["pypi.org:443"])
     assert provider.extra_hosts == ["github.com:443", "pypi.org:443"] and seen == []
@@ -364,7 +432,9 @@ def test_registry_reaps_rows_of_a_server_that_is_gone(tmp_path, monkeypatch):
 
 # -- on a machine with OpenShell -----------------------------------------------------------
 
-live = pytest.mark.skipif(os.environ.get("OPENWORKER_TEST_OPENSHELL") != "1", reason="needs a running OpenShell gateway")
+live = pytest.mark.skipif(
+    os.environ.get("OPENWORKER_TEST_OPENSHELL") != "1", reason="needs a running OpenShell gateway"
+)
 
 
 @pytest.fixture
@@ -392,7 +462,9 @@ def test_a_session_in_a_real_sandbox(folder):
     try:
         assert ws.describe()["enforcement"] == "full" and ws.describe()["runner"]["os"] == "Linux"
         row = ws.registry.find("s-test", "swe-lead")
-        assert row["name"] == ws.provider.sandbox_name and row["enforcement"] == "full" and row["profile"] == "allowlist"
+        assert (
+            row["name"] == ws.provider.sandbox_name and row["enforcement"] == "full" and row["profile"] == "allowlist"
+        )
         ex = ws.executor
         assert ex.run("cat hello.txt && cd /tmp && export KEEP=yes")["exit_code"] == 0
         assert ex.run("echo $KEEP $PWD")["output"].split() == ["yes", "/tmp"]  # one persistent shell
@@ -409,7 +481,12 @@ def test_a_session_in_a_real_sandbox(folder):
         from coworker.agents.base import AgentContext
         from coworker import catalog
 
-        tools = {t.__name__: t for t in catalog.expand(["code_files", "search"], AgentContext(workspace=folder, executor=ex, roots=roots, sandbox=ws))}
+        tools = {
+            t.__name__: t
+            for t in catalog.expand(
+                ["code_files", "search"], AgentContext(workspace=folder, executor=ex, roots=roots, sandbox=ws)
+            )
+        }
         tools["write_file"]("notes/a.md", "TODO: written by a tool\n")
         assert "written by a tool" in tools["read_file"]("notes/a.md")["content"]
         assert tools["grep"]("TODO")["count"] == 1
@@ -418,7 +495,12 @@ def test_a_session_in_a_real_sandbox(folder):
     finally:
         ws.close()
     assert ws.registry.find("s-test") is None  # forgotten when the session's workspace closes
-    assert ws.provider.sandbox_name not in subprocess.run(["openshell", "sandbox", "list"], stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout
+    assert (
+        ws.provider.sandbox_name
+        not in subprocess.run(
+            ["openshell", "sandbox", "list"], stdin=subprocess.DEVNULL, capture_output=True, text=True
+        ).stdout
+    )
 
 
 @live
@@ -471,8 +553,10 @@ def test_a_sandbox_left_behind_by_a_dead_server_is_removed(folder):
 
     orphan = OpenShellProvider(roots=[{"path": str(folder), "writable": True}], label="orphan")
     orphan.create()  # created, never recorded by a living server
+
     def names():
         return {str(s.get("name")) for s in list_our_sandboxes(SandboxRegistry().id)}
+
     assert orphan.sandbox_name in names()
     removed = SandboxRegistry().reap()
     assert orphan.sandbox_name in removed and orphan.sandbox_name not in names()
@@ -551,7 +635,9 @@ def test_a_mac_whose_docker_kernel_lacks_landlock_is_told_to_update_docker_deskt
     from coworker.sandbox.providers import openshell as os_mod
 
     def fail(*args, **kwargs):
-        raise RuntimeError("`openshell sandbox create --name` failed: Error: sandbox entered error phase while provisioning: ContainerExited: Container exited")
+        raise RuntimeError(
+            "`openshell sandbox create --name` failed: Error: sandbox entered error phase while provisioning: ContainerExited: Container exited"
+        )
 
     monkeypatch.setattr(os_mod, "preflight", lambda: {"version": os_mod.PINNED_VERSION})
     monkeypatch.setattr(os_mod, "_cli", fail)
@@ -567,7 +653,9 @@ def test_a_mac_whose_docker_kernel_lacks_landlock_is_told_to_update_docker_deskt
     # OpenShell 0.1 on a Mac: the sandbox could not reach the gateway because Docker
     # Desktop's host networking is off.
     def unreachable(*args, **kwargs):
-        raise RuntimeError("`openshell sandbox create --name` failed: Startup configuration fetch failed after 5 attempts: failed to connect to OpenShell server")
+        raise RuntimeError(
+            "`openshell sandbox create --name` failed: Startup configuration fetch failed after 5 attempts: failed to connect to OpenShell server"
+        )
 
     monkeypatch.setattr(os_mod, "_cli", unreachable)
     monkeypatch.setattr(setup_cmd, "docker_host_network", lambda: False)
@@ -616,4 +704,3 @@ def test_on_a_mac_a_session_is_refused_early_when_docker_desktops_host_networkin
     monkeypatch.setattr(openshell, "host_network_problem", lambda: "Turn on host networking in Docker Desktop.")
     with pytest.raises(openshell.OpenShellUnavailable, match="host networking"):
         openshell.preflight()
-

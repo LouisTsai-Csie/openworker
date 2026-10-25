@@ -29,8 +29,7 @@ ATTENDANCE_VALUES = (ATTENDED, INBOX, AUTO)
 
 # What the engine says on the person's behalf in `auto`. Fixed text, never model-authored.
 AUTO_QUESTION_ANSWER = (
-    "No one is available. Choose the least destructive option that still satisfies the "
-    "task as written."
+    "No one is available. Choose the least destructive option that still satisfies the task as written."
 )
 AUTO_DIRECTORY_REPLY = (
     "No user is available to choose a folder. Work inside the current workspace. If the "

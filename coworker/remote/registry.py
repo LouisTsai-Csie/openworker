@@ -129,9 +129,7 @@ class MachinesRegistry:
         its id there ("" for machines the user brought)."""
         base = _clean_name(name)
         with self._lock:
-            row = self._conn.execute(
-                "SELECT id FROM machines WHERE pubkey = ?", (pubkey,)
-            ).fetchone()
+            row = self._conn.execute("SELECT id FROM machines WHERE pubkey = ?", (pubkey,)).fetchone()
             if row is not None:
                 raise ValueError("pubkey already enrolled")
             candidate, attempt = base, 1
@@ -147,8 +145,19 @@ class MachinesRegistry:
                 "INSERT INTO machines (id, name, pubkey, seal_pubkey, app_version, org_id, enrolled_by,"
                 " provenance, provenance_ref, created_at, last_seen)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (machine_id, candidate, pubkey, seal_pubkey, app_version, org_id, enrolled_by,
-                 provenance, provenance_ref, now, now),
+                (
+                    machine_id,
+                    candidate,
+                    pubkey,
+                    seal_pubkey,
+                    app_version,
+                    org_id,
+                    enrolled_by,
+                    provenance,
+                    provenance_ref,
+                    now,
+                    now,
+                ),
             )
             self._conn.commit()
             return {
@@ -163,24 +172,18 @@ class MachinesRegistry:
 
     def by_pubkey(self, pubkey: str) -> dict[str, Any] | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM machines WHERE pubkey = ?", (pubkey,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM machines WHERE pubkey = ?", (pubkey,)).fetchone()
             return dict(row) if row else None
 
     def by_id(self, machine_id: str) -> dict[str, Any] | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM machines WHERE id = ?", (machine_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM machines WHERE id = ?", (machine_id,)).fetchone()
             return dict(row) if row else None
 
     def list(self, org_id: str | None = None) -> list[dict[str, Any]]:
         with self._lock:
             if org_id is None:
-                rows = self._conn.execute(
-                    "SELECT * FROM machines ORDER BY created_at"
-                ).fetchall()
+                rows = self._conn.execute("SELECT * FROM machines ORDER BY created_at").fetchall()
             else:
                 rows = self._conn.execute(
                     "SELECT * FROM machines WHERE org_id = ? ORDER BY created_at",
@@ -214,23 +217,15 @@ class MachinesRegistry:
             ).fetchone()
             if clash:
                 raise ValueError(f"a machine named '{cleaned}' already exists")
-            self._conn.execute(
-                "UPDATE machines SET name = ? WHERE id = ?", (cleaned, machine_id)
-            )
+            self._conn.execute("UPDATE machines SET name = ? WHERE id = ?", (cleaned, machine_id))
             self._conn.commit()
             return self.by_id(machine_id)
 
     def remove(self, machine_id: str) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM machines WHERE id = ?", (machine_id,)
-            )
-            self._conn.execute(
-                "DELETE FROM machine_sessions WHERE machine_id = ?", (machine_id,)
-            )
-            self._conn.execute(
-                "DELETE FROM machine_transcripts WHERE machine_id = ?", (machine_id,)
-            )
+            cur = self._conn.execute("DELETE FROM machines WHERE id = ?", (machine_id,))
+            self._conn.execute("DELETE FROM machine_sessions WHERE machine_id = ?", (machine_id,))
+            self._conn.execute("DELETE FROM machine_transcripts WHERE machine_id = ?", (machine_id,))
             self._conn.execute(
                 "DELETE FROM machine_secret_deploys WHERE machine_id = ?",
                 (machine_id,),
@@ -307,8 +302,7 @@ class MachinesRegistry:
     def transcript(self, machine_id: str, session_id: str) -> str | None:
         with self._lock:
             row = self._conn.execute(
-                "SELECT payload FROM machine_transcripts"
-                " WHERE machine_id = ? AND session_id = ?",
+                "SELECT payload FROM machine_transcripts WHERE machine_id = ? AND session_id = ?",
                 (machine_id, session_id),
             ).fetchone()
             return row["payload"] if row else None

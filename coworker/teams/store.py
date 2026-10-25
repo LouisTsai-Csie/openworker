@@ -27,7 +27,7 @@ import hashlib
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -236,7 +236,7 @@ class TeamStore:
     ) -> dict[str, Any]:
         prev = self._head_hash(space)
         record = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "space": space,
             "kind": kind,
             "actor": actor.id,
@@ -312,24 +312,17 @@ class TeamStore:
         if case_id is not None:
             where.append("case_id = ?")
             params.append(case_id)
-        sql = (
-            "SELECT * FROM team_events WHERE "
-            + " AND ".join(where)
-            + " ORDER BY seq LIMIT ?"
-        )
+        sql = "SELECT * FROM team_events WHERE " + " AND ".join(where) + " ORDER BY seq LIMIT ?"
         params.append(max(1, min(int(limit or 500), 2000)))
         with self._lock:
             rows = self._conn.execute(sql, params).fetchall()
         return [_row_to_event(row) for row in rows]
 
-    def for_recipient(
-        self, recipient: str, *, since_seq: int = 0, limit: int = 200
-    ) -> list[dict[str, Any]]:
+    def for_recipient(self, recipient: str, *, since_seq: int = 0, limit: int = 200) -> list[dict[str, Any]]:
         """Everything addressed to one agent, in order — the delivery projection."""
         with self._lock:
             rows = self._conn.execute(
-                "SELECT * FROM team_events WHERE recipient = ? AND seq > ?"
-                " ORDER BY seq LIMIT ?",
+                "SELECT * FROM team_events WHERE recipient = ? AND seq > ? ORDER BY seq LIMIT ?",
                 (recipient, since_seq, max(1, min(int(limit or 200), 2000))),
             ).fetchall()
         return [_row_to_event(row) for row in rows]
@@ -344,9 +337,7 @@ class TeamStore:
     # durable-until-consumed (a crash before consume replays on the next drain);
     # coalescing happens at dequeue. "Mailbox" is banned as a concept.
 
-    def feed_for(
-        self, space: str, actor_id: str, *, limit: int = 200
-    ) -> list[dict[str, Any]]:
+    def feed_for(self, space: str, actor_id: str, *, limit: int = 200) -> list[dict[str, Any]]:
         """Unconsumed events this actor is subscribed to, in order: everything on
         its current slice, plus assignment events that START its interest (newly
         assigned to it) or END it (just reassigned away — it hears that, then
@@ -386,8 +377,16 @@ class TeamStore:
             return bool(payload.get("claimed"))
         return kind in (ITEM_CREATED, WORKER_WAITING)
 
-    def delivery_page(self, space: str, actor: str, *, is_lead: bool,
-                      feed_after: int = 0, subscription_after: int = 0, limit: int = 200) -> dict:
+    def delivery_page(
+        self,
+        space: str,
+        actor: str,
+        *,
+        is_lead: bool,
+        feed_after: int = 0,
+        subscription_after: int = 0,
+        limit: int = 200,
+    ) -> dict:
         """Read both delivery projections from ONE scanned log range.
 
         Even quiet/self/status events advance the scan. Never let a subscription
@@ -401,21 +400,33 @@ class TeamStore:
             events = self.events(space, since_seq=min(feed, sub), limit=limit + 1)
             page = events[:limit]
             visible = self._worker_slice(space, actor)
-            directs = [e for e in page if e["seq"] > feed and e["actor"] != actor and (
-                e.get("item_id") in visible or
-                (e["kind"] == ITEM_ASSIGNED and actor in (e["payload"].get("assignee"), e["payload"].get("previous"))))]
+            directs = [
+                e
+                for e in page
+                if e["seq"] > feed
+                and e["actor"] != actor
+                and (
+                    e.get("item_id") in visible
+                    or (
+                        e["kind"] == ITEM_ASSIGNED
+                        and actor in (e["payload"].get("assignee"), e["payload"].get("previous"))
+                    )
+                )
+            ]
             subs = [e for e in page if e["seq"] > sub and self._subscription_event(e, actor)] if is_lead else []
-            return {"directs": directs, "subs": subs, "through_seq": page[-1]["seq"] if page else 0,
-                    "has_more": len(events) > limit}
+            return {
+                "directs": directs,
+                "subs": subs,
+                "through_seq": page[-1]["seq"] if page else 0,
+                "has_more": len(events) > limit,
+            }
 
     # Lead subscriptions: an ALLOWLIST of decision-demanding event classes — a
     # worker moving its item to review/blocked, or filing a new item. Journal
     # appends and routine comments never wake anyone.
     SUBSCRIBED_TRANSITIONS = ("review", "blocked")
 
-    def subscribed_events(
-        self, space: str, subscriber: str, *, limit: int = 200
-    ) -> list[dict[str, Any]]:
+    def subscribed_events(self, space: str, subscriber: str, *, limit: int = 200) -> list[dict[str, Any]]:
         """Unconsumed subscription-worthy events on a space for one subscriber."""
         key = f"sub:{subscriber}:{space}"
         events = self.events(
@@ -430,10 +441,7 @@ class TeamStore:
                 continue
             if event["actor"] == subscriber:
                 continue  # your own verbs never wake you
-            if (
-                event["kind"] == ITEM_TRANSITIONED
-                and event["payload"].get("to") not in self.SUBSCRIBED_TRANSITIONS
-            ):
+            if event["kind"] == ITEM_TRANSITIONED and event["payload"].get("to") not in self.SUBSCRIBED_TRANSITIONS:
                 continue
             # Assignments only surface when they are CLAIMS — the lead supervises
             # self-service by exception; its own (and the user's) assigns are not news.
@@ -446,9 +454,7 @@ class TeamStore:
         self._set_cursor(f"sub:{subscriber}:{space}", upto_seq)
 
     def _cursor(self, key: str) -> int:
-        row = self._conn.execute(
-            "SELECT consumed_seq FROM team_cursors WHERE cursor_key = ?", (key,)
-        ).fetchone()
+        row = self._conn.execute("SELECT consumed_seq FROM team_cursors WHERE cursor_key = ?", (key,)).fetchone()
         return int(row["consumed_seq"]) if row else 0
 
     def _set_cursor(self, key: str, seq: int) -> None:
@@ -463,9 +469,7 @@ class TeamStore:
 
     def spaces(self) -> list[str]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT space FROM team_meta ORDER BY space"
-            ).fetchall()
+            rows = self._conn.execute("SELECT space FROM team_meta ORDER BY space").fetchall()
         return [row["space"] for row in rows]
 
     def verify_chain(self, space: str) -> int:
@@ -475,9 +479,7 @@ class TeamStore:
         the log was edited out of band.
         """
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT * FROM team_events WHERE space = ? ORDER BY seq", (space,)
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM team_events WHERE space = ? ORDER BY seq", (space,)).fetchall()
         prev = GENESIS
         for row in rows:
             record = {key: row[key] for key in _HASHED_FIELDS}
@@ -502,13 +504,11 @@ class TeamStore:
             self._conn.execute("DELETE FROM team_items WHERE space = ?", (space,))
             self._conn.execute("DELETE FROM team_links WHERE space = ?", (space,))
             self._conn.execute(
-                "DELETE FROM team_attachment_refs"
-                " WHERE space = ? AND event_seq != 0",
+                "DELETE FROM team_attachment_refs WHERE space = ? AND event_seq != 0",
                 (space,),
             )
             rows = self._conn.execute(
-                "SELECT seq, ts, kind, actor, item_id, payload FROM team_events"
-                " WHERE space = ? ORDER BY seq",
+                "SELECT seq, ts, kind, actor, item_id, payload FROM team_events WHERE space = ? ORDER BY seq",
                 (space,),
             ).fetchall()
             for row in rows:
@@ -528,6 +528,7 @@ class TeamStore:
     def create_proposal(self, space: str, actor: Actor, proposal: dict) -> dict:
         """Atomically materialize an accepted plan, its intent and dependency links."""
         from coworker.teams.proposals import validate_work_proposal
+
         proposal = validate_work_proposal(proposal)
         self._require(actor, {Role.USER, Role.LEAD}, "create_proposal")
         # Journal failures must not leave committed board items followed by an error
@@ -539,19 +540,38 @@ class TeamStore:
         with self._lock:
             first = self._next_item_id(space)
             ids = {item["key"]: first + i for i, item in enumerate(proposal["items"])}
+
             def append(kind, item_id, payload, case=None):
-                return self._append_locked(space, kind, actor, item_id=item_id,
-                    case_id=case, recipient=None, payload=payload, taint=False, commit=False)
+                return self._append_locked(
+                    space,
+                    kind,
+                    actor,
+                    item_id=item_id,
+                    case_id=case,
+                    recipient=None,
+                    payload=payload,
+                    taint=False,
+                    commit=False,
+                )
+
             try:
                 for item in proposal["items"]:
-                    metadata = {**common, "key": item["key"], "activity": item["activity"],
-                        "workstream": item["workstream"], "item_ids": ids,
-                        "verifies": [ids[k] for k in item["verifies"]]}
+                    metadata = {
+                        **common,
+                        "key": item["key"],
+                        "activity": item["activity"],
+                        "workstream": item["workstream"],
+                        "item_ids": ids,
+                        "verifies": [ids[k] for k in item["verifies"]],
+                    }
                     append(ITEM_CREATED, ids[item["key"]], {**item, "proposal": metadata}, item.get("case"))
                 for item in proposal["items"]:
                     for prerequisite in item["depends_on"]:
-                        append(ITEM_LINKED, ids[prerequisite], {"src": ids[prerequisite],
-                            "kind": "blocks", "dst": ids[item["key"]]})
+                        append(
+                            ITEM_LINKED,
+                            ids[prerequisite],
+                            {"src": ids[prerequisite], "kind": "blocks", "dst": ids[item["key"]]},
+                        )
                 # Reserving the explicit lead-owned acceptance item does not execute it.
                 final = proposal["final_acceptance"]
                 if final["owner"] == "lead":
@@ -560,9 +580,11 @@ class TeamStore:
             except Exception:
                 self._conn.rollback()
                 raise
-        return {"approved": True, "items": [{"id": ids[i["key"]], "key": i["key"],
-            "title": i["title"]} for i in proposal["items"]],
-            "note": "Items and dependency links created. Staff and assign to start work; declared external actions are not permission grants."}
+        return {
+            "approved": True,
+            "items": [{"id": ids[i["key"]], "key": i["key"], "title": i["title"]} for i in proposal["items"]],
+            "note": "Items and dependency links created. Staff and assign to start work; declared external actions are not permission grants.",
+        }
 
     def create_item(
         self,
@@ -586,22 +608,15 @@ class TeamStore:
         if not (title or "").strip():
             raise BoardError("title is required")
         if not (criteria or "").strip():
-            raise BoardError(
-                "acceptance criteria are required — they are what gets verified at"
-                " review"
-            )
+            raise BoardError("acceptance criteria are required — they are what gets verified at review")
         with self._lock:
             if parent is not None:
                 try:
                     parent_item = self._item(space, parent)
                 except BoardError:
-                    raise BoardNotFoundError(
-                        f"no visible item #{parent} in space {space!r}"
-                    ) from None
+                    raise BoardNotFoundError(f"no visible item #{parent} in space {space!r}") from None
                 if not self._item_visible_to(space, actor, parent_item):
-                    raise BoardNotFoundError(
-                        f"no visible item #{parent} in space {space!r}"
-                    )
+                    raise BoardNotFoundError(f"no visible item #{parent} in space {space!r}")
                 if case is None:
                     case = parent_item["case_id"] or None
             item_id = self._next_item_id(space)
@@ -646,9 +661,7 @@ class TeamStore:
             params.append(assignee)
         with self._lock:
             rows = self._conn.execute(
-                "SELECT * FROM team_items WHERE "
-                + " AND ".join(where)
-                + " ORDER BY id",
+                "SELECT * FROM team_items WHERE " + " AND ".join(where) + " ORDER BY id",
                 params,
             ).fetchall()
             items = [_row_to_item(row) for row in rows]
@@ -692,13 +705,9 @@ class TeamStore:
             try:
                 item = self._item(space, item_id)
             except BoardError:
-                raise BoardNotFoundError(
-                    f"no visible item #{item_id} in space {space!r}"
-                ) from None
+                raise BoardNotFoundError(f"no visible item #{item_id} in space {space!r}") from None
             if not self._item_visible_to(space, actor, item):
-                raise BoardNotFoundError(
-                    f"no visible item #{item_id} in space {space!r}"
-                )
+                raise BoardNotFoundError(f"no visible item #{item_id} in space {space!r}")
             item["links"] = self._links_of(space, item_id)
             if include_comments:
                 item["comments"] = self.comments(space, item_id)
@@ -706,8 +715,7 @@ class TeamStore:
             item["seq"] = seq
         return item
 
-    def comment_page(self, space: str, item_id: int, *, actor: Actor,
-                     after_seq: int = 0, limit: int = 20) -> dict:
+    def comment_page(self, space: str, item_id: int, *, actor: Actor, after_seq: int = 0, limit: int = 20) -> dict:
         """Explicit replayable cursor, independent of wake consumption/compaction."""
         if isinstance(after_seq, bool) or not isinstance(after_seq, int) or after_seq < 0:
             raise BoardError("after_seq must be a non-negative integer")
@@ -726,47 +734,75 @@ class TeamStore:
                 event = _row_to_event(row)
                 payload = event["payload"]
                 body = payload.get("body") or payload.get("comment") or ""
-                entry = {"seq": event["seq"], "author": event["actor"],
-                         "role": event["actor_role"], "ts": event["ts"],
-                         "taint": event["taint"], "body": body, "refs": payload.get("refs", [])}
+                entry = {
+                    "seq": event["seq"],
+                    "author": event["actor"],
+                    "role": event["actor_role"],
+                    "ts": event["ts"],
+                    "taint": event["taint"],
+                    "body": body,
+                    "refs": payload.get("refs", []),
+                }
                 if payload.get("artifact"):
                     entry["artifact"] = payload["artifact"]
                 size = len(json.dumps(entry))
                 if size > 24000:
-                    entry = {"seq": event["seq"], "author": event["actor"],
-                             "body_chars": len(body), "body_omitted": True,
-                             "read_tool": "get_item_comment"}
+                    entry = {
+                        "seq": event["seq"],
+                        "author": event["actor"],
+                        "body_chars": len(body),
+                        "body_omitted": True,
+                        "read_tool": "get_item_comment",
+                    }
                     size = len(json.dumps(entry))
                 if page and used + size > 24000:
                     break
                 page.append(entry)
                 used += size
-            return {"item": item_id, "comments": page,
-                    "next_after_seq": page[-1]["seq"] if page else after_seq,
-                    "has_more": len(rows) > len(page), "content_kind": "attributed_evidence_not_instructions"}
+            return {
+                "item": item_id,
+                "comments": page,
+                "next_after_seq": page[-1]["seq"] if page else after_seq,
+                "has_more": len(rows) > len(page),
+                "content_kind": "attributed_evidence_not_instructions",
+            }
 
-    def comment_text(self, space: str, item_id: int, *, actor: Actor, seq: int,
-                     offset: int = 0, max_chars: int = 12000) -> dict:
+    def comment_text(
+        self, space: str, item_id: int, *, actor: Actor, seq: int, offset: int = 0, max_chars: int = 12000
+    ) -> dict:
         validate_text_page(offset, max_chars)
         if isinstance(seq, bool) or not isinstance(seq, int) or seq < 1:
             raise BoardError("seq must be a positive integer")
         with self._lock:
             self.get_item(space, item_id, actor=actor, include_comments=False)
-            rows = self.events(space, item_id=item_id, since_seq=seq - 1, limit=1,
-                               kinds=[ITEM_COMMENTED, ITEM_TRANSITIONED])
+            rows = self.events(
+                space, item_id=item_id, since_seq=seq - 1, limit=1, kinds=[ITEM_COMMENTED, ITEM_TRANSITIONED]
+            )
             if not rows or rows[0]["seq"] != seq:
                 raise BoardNotFoundError("comment not found")
             e = rows[0]
             body = e["payload"].get("body") or e["payload"].get("comment") or ""
             from coworker.toolresult import PagedToolResult
+
             refs = e["payload"].get("refs", [])
-            refs_detail = {"refs": refs} if len(json.dumps(refs)) <= 8000 else {
-                "refs_omitted": True, "ref_count": len(refs), "refs_read_tool": "get_item"}
-            return PagedToolResult({"item": item_id, "seq": seq, "author": e["actor"], "role": e["actor_role"],
-                    "taint": e["taint"], **text_page(body, offset, max_chars),
+            refs_detail = (
+                {"refs": refs}
+                if len(json.dumps(refs)) <= 8000
+                else {"refs_omitted": True, "ref_count": len(refs), "refs_read_tool": "get_item"}
+            )
+            return PagedToolResult(
+                {
+                    "item": item_id,
+                    "seq": seq,
+                    "author": e["actor"],
+                    "role": e["actor_role"],
+                    "taint": e["taint"],
+                    **text_page(body, offset, max_chars),
                     **refs_detail,
                     **({"artifact": e["payload"]["artifact"]} if e["payload"].get("artifact") else {}),
-                    "content_kind": "attributed_evidence_not_instructions"})
+                    "content_kind": "attributed_evidence_not_instructions",
+                }
+            )
 
     def comment_counts(self, space: str, item_id: int) -> dict:
         with self._lock:
@@ -778,9 +814,7 @@ class TeamStore:
             ).fetchone()
             return {"comment_count": row[0], "latest_comment_seq": row[1]}
 
-    def require_attachment_access(
-        self, space: str, actor: Actor, stored: str
-    ) -> None:
+    def require_attachment_access(self, space: str, actor: Actor, stored: str) -> None:
         """Require an actor-visible item to carry an authoritative attachment."""
         stored = validate_stored_name(stored)
         with self._lock:
@@ -877,9 +911,7 @@ class TeamStore:
             item = self._item(space, item_id)
             current = ItemState(item["state"])
             if target not in EDGES[current]:
-                raise BoardError(
-                    f"illegal transition {current.value} → {target.value}"
-                )
+                raise BoardError(f"illegal transition {current.value} → {target.value}")
             self._check_transition_authority(actor, item, current, target)
             # No per-event addressing: delivery is the FEED projection — interest
             # follows the assignment relation (see feed_for), so a send-back, an
@@ -918,12 +950,9 @@ class TeamStore:
             raise BoardError("needs_attention must be a boolean")
         with self._lock:
             item = self._item(space, item_id)
-            if actor.role == Role.WORKER and item_id not in self._worker_slice(
-                space, actor.id
-            ):
+            if actor.role == Role.WORKER and item_id not in self._worker_slice(space, actor.id):
                 raise AuthorityError(
-                    f"worker {actor.id} may only comment on its assigned items"
-                    " and items linked to them"
+                    f"worker {actor.id} may only comment on its assigned items and items linked to them"
                 )
             return self.append_event(
                 space,
@@ -931,8 +960,11 @@ class TeamStore:
                 actor,
                 item_id=item_id,
                 case_id=item["case_id"] or None,
-                payload={"body": body, "refs": list(refs or []),
-                         **({"needs_attention": True} if needs_attention else {})},
+                payload={
+                    "body": body,
+                    "refs": list(refs or []),
+                    **({"needs_attention": True} if needs_attention else {}),
+                },
                 taint=taint,
             )
 
@@ -954,9 +986,7 @@ class TeamStore:
             self.append_event(space, ITEM_STATUS, actor, item_id=item_id, payload={"text": text.strip()})
             return self.get_item(space, item_id, actor=actor)
 
-    def assign(
-        self, space: str, actor: Actor, item_id: int, assignee: str
-    ) -> dict[str, Any]:
+    def assign(self, space: str, actor: Actor, item_id: int, assignee: str) -> dict[str, Any]:
         """Set the assignee. Not a message: the feed projection delivers it — the
         new assignee's interest starts with this event, and the previous
         assignee's interest ends with it (both hear it; see feed_for)."""
@@ -967,9 +997,7 @@ class TeamStore:
             item = self._item(space, item_id)
             state = ItemState(item["state"])
             if state in (ItemState.DONE, ItemState.CANCELED):
-                raise BoardError(
-                    f"cannot assign an item in state {state.value} — reopen it first"
-                )
+                raise BoardError(f"cannot assign an item in state {state.value} — reopen it first")
             event = self.append_event(
                 space,
                 ITEM_ASSIGNED,
@@ -998,20 +1026,12 @@ class TeamStore:
         self._require(actor, {Role.USER, Role.LEAD, Role.WORKER}, "claim")
         with self._lock:
             if actor.role == Role.WORKER and self.policy(space)["claims"] != "open":
-                raise AuthorityError(
-                    "claims are lead-only on this board — ask the lead to assign"
-                    " the item to you"
-                )
+                raise AuthorityError("claims are lead-only on this board — ask the lead to assign the item to you")
             item = self._item(space, item_id)
             if ItemState(item["state"]) is not ItemState.OPEN:
-                raise BoardError(
-                    f"item #{item_id} is {item['state']} — only open items can be"
-                    " claimed"
-                )
+                raise BoardError(f"item #{item_id} is {item['state']} — only open items can be claimed")
             if item["assignee"]:
-                raise BoardError(
-                    f"item #{item_id} is already claimed by {item['assignee']}"
-                )
+                raise BoardError(f"item #{item_id} is already claimed by {item['assignee']}")
             event = self.append_event(
                 space,
                 ITEM_ASSIGNED,
@@ -1032,9 +1052,7 @@ class TeamStore:
 
     def policy(self, space: str) -> dict[str, Any]:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT claims FROM team_settings WHERE space = ?", (space,)
-            ).fetchone()
+            row = self._conn.execute("SELECT claims FROM team_settings WHERE space = ?", (space,)).fetchone()
         return {"claims": row["claims"] if row else "open"}
 
     def set_policy(self, space: str, actor: Actor, *, claims: str) -> dict[str, Any]:
@@ -1042,21 +1060,16 @@ class TeamStore:
         infrastructure the log doesn't narrate."""
         self._require(actor, {Role.USER, Role.LEAD}, "set_policy")
         if claims not in CLAIM_POLICIES:
-            raise BoardError(
-                f"unknown claim policy: {claims} (use one of {CLAIM_POLICIES})"
-            )
+            raise BoardError(f"unknown claim policy: {claims} (use one of {CLAIM_POLICIES})")
         with self._lock:
             self._conn.execute(
-                "INSERT INTO team_settings (space, claims) VALUES (?, ?)"
-                " ON CONFLICT(space) DO UPDATE SET claims = ?",
+                "INSERT INTO team_settings (space, claims) VALUES (?, ?) ON CONFLICT(space) DO UPDATE SET claims = ?",
                 (space, claims, claims),
             )
             self._conn.commit()
         return {"claims": claims}
 
-    def link(
-        self, space: str, actor: Actor, src: int, kind: str, dst: int
-    ) -> dict[str, Any]:
+    def link(self, space: str, actor: Actor, src: int, kind: str, dst: int) -> dict[str, Any]:
         self._require(actor, {Role.USER, Role.LEAD}, "link")
         if kind not in LINK_KINDS:
             raise BoardError(f"unknown link kind: {kind} (use one of {LINK_KINDS})")
@@ -1079,14 +1092,8 @@ class TeamStore:
         """Attributed comments on an item — standalone comments plus the notes
         carried on transitions (a `blocked` explanation lives with its event)."""
         out = []
-        for event in self.events(
-            space, kinds=[ITEM_COMMENTED, ITEM_TRANSITIONED], item_id=item_id
-        ):
-            body = (
-                event["payload"].get("body")
-                if event["kind"] == ITEM_COMMENTED
-                else event["payload"].get("comment")
-            )
+        for event in self.events(space, kinds=[ITEM_COMMENTED, ITEM_TRANSITIONED], item_id=item_id):
+            body = event["payload"].get("body") if event["kind"] == ITEM_COMMENTED else event["payload"].get("comment")
             if body:
                 out.append(
                     {
@@ -1140,12 +1147,13 @@ class TeamStore:
                 ),
             )
             if payload.get("proposal"):
-                self._conn.execute("UPDATE team_items SET proposal = ? WHERE space = ? AND id = ?",
-                    (_canonical(payload["proposal"]), space, item_id))
+                self._conn.execute(
+                    "UPDATE team_items SET proposal = ? WHERE space = ? AND id = ?",
+                    (_canonical(payload["proposal"]), space, item_id),
+                )
             if payload.get("parent") is not None:
                 self._conn.execute(
-                    "INSERT OR IGNORE INTO team_links (space, src, kind, dst)"
-                    " VALUES (?, ?, 'parent', ?)",
+                    "INSERT OR IGNORE INTO team_links (space, src, kind, dst) VALUES (?, ?, 'parent', ?)",
                     (space, item_id, payload["parent"]),
                 )
         elif kind == ITEM_TRANSITIONED:
@@ -1157,9 +1165,7 @@ class TeamStore:
             self._merge_refs(space, item_id, payload.get("refs"))
         elif kind == ITEM_COMMENTED:
             self._merge_refs(space, item_id, payload.get("refs"))
-            self._merge_attachment_refs(
-                space, item_id, payload.get("attachments"), seq
-            )
+            self._merge_attachment_refs(space, item_id, payload.get("attachments"), seq)
         elif kind == ITEM_ASSIGNED:
             self._conn.execute(
                 "UPDATE team_items SET assignee = ?, updated_seq = ?, status = '', status_ts = ''"
@@ -1173,8 +1179,7 @@ class TeamStore:
             )
         elif kind == ITEM_LINKED:
             self._conn.execute(
-                "INSERT OR IGNORE INTO team_links (space, src, kind, dst)"
-                " VALUES (?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO team_links (space, src, kind, dst) VALUES (?, ?, ?, ?)",
                 (space, payload.get("src"), payload.get("kind"), payload.get("dst")),
             )
         # Comment bodies and journal entries have no materialized state: their
@@ -1182,9 +1187,7 @@ class TeamStore:
         # refs a comment carries fold onto the item; authoritative attachment
         # markers also fold into their indexed projection.
 
-    def _merge_refs(
-        self, space: str, item_id: int | None, refs: list | None
-    ) -> None:
+    def _merge_refs(self, space: str, item_id: int | None, refs: list | None) -> None:
         if not refs or item_id is None:
             return
         row = self._conn.execute(
@@ -1211,8 +1214,7 @@ class TeamStore:
             return
         for stored in attachments:
             self._conn.execute(
-                "INSERT OR IGNORE INTO team_attachment_refs"
-                " (space, stored, item_id, event_seq) VALUES (?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO team_attachment_refs (space, stored, item_id, event_seq) VALUES (?, ?, ?, ?)",
                 (space, validate_stored_name(str(stored)), item_id, seq),
             )
 
@@ -1223,9 +1225,7 @@ class TeamStore:
         grandfathered at upgrade use event_seq=0 so rebuild preserves that fixed
         compatibility boundary; refs added after the migration are never inferred.
         """
-        rows = self._conn.execute(
-            "SELECT space, id, refs FROM team_items"
-        ).fetchall()
+        rows = self._conn.execute("SELECT space, id, refs FROM team_items").fetchall()
         for row in rows:
             try:
                 refs = json.loads(row["refs"] or "[]")
@@ -1251,35 +1251,26 @@ class TeamStore:
         if actor.role == Role.SYSTEM:
             raise AuthorityError("system events cannot transition items")
         if target == ItemState.DONE and actor.role == Role.WORKER:
-            raise AuthorityError(
-                "workers finish by moving to review — done is the verdict after"
-                " verification"
-            )
+            raise AuthorityError("workers finish by moving to review — done is the verdict after verification")
         if actor.role == Role.WORKER:
             if item["assignee"] != actor.id:
-                raise AuthorityError(
-                    f"worker {actor.id} is not assigned item #{item['id']}"
-                )
+                raise AuthorityError(f"worker {actor.id} is not assigned item #{item['id']}")
             if target not in WORKER_TARGETS:
                 raise AuthorityError(
-                    f"workers may move their item to"
-                    f" {sorted(state.value for state in WORKER_TARGETS)} only"
+                    f"workers may move their item to {sorted(state.value for state in WORKER_TARGETS)} only"
                 )
 
     def _worker_slice(self, space: str, worker_id: str) -> set[int]:
         # Assigned items, items the worker filed itself, and items directly
         # linked to either — its slice of the board, nothing more.
         rows = self._conn.execute(
-            "SELECT id FROM team_items WHERE space = ?"
-            " AND (assignee = ? OR creator = ?)",
+            "SELECT id FROM team_items WHERE space = ? AND (assignee = ? OR creator = ?)",
             (space, worker_id, worker_id),
         ).fetchall()
         mine = {row["id"] for row in rows}
         if not mine:
             return set()
-        linked = self._conn.execute(
-            "SELECT src, dst FROM team_links WHERE space = ?", (space,)
-        ).fetchall()
+        linked = self._conn.execute("SELECT src, dst FROM team_links WHERE space = ?", (space,)).fetchall()
         out = set(mine)
         for row in linked:
             if row["src"] in mine:
@@ -1306,16 +1297,11 @@ class TeamStore:
             return True
         if claims_open is None:
             claims_open = self.policy(space)["claims"] == "open"
-        return (
-            claims_open
-            and item["state"] == ItemState.OPEN.value
-            and not item["assignee"]
-        )
+        return claims_open and item["state"] == ItemState.OPEN.value and not item["assignee"]
 
     def _links_of(self, space: str, item_id: int) -> list[dict[str, Any]]:
         rows = self._conn.execute(
-            "SELECT src, kind, dst FROM team_links WHERE space = ?"
-            " AND (src = ? OR dst = ?)",
+            "SELECT src, kind, dst FROM team_links WHERE space = ? AND (src = ? OR dst = ?)",
             (space, item_id, item_id),
         ).fetchall()
         out = []
@@ -1333,8 +1319,7 @@ class TeamStore:
         current, hops = dst, 0
         while hops < 1000:
             row = self._conn.execute(
-                "SELECT dst FROM team_links WHERE space = ? AND src = ?"
-                " AND kind = 'parent'",
+                "SELECT dst FROM team_links WHERE space = ? AND src = ? AND kind = 'parent'",
                 (space, current),
             ).fetchone()
             if row is None:
@@ -1345,26 +1330,20 @@ class TeamStore:
         return True
 
     def _item(self, space: str, item_id: int) -> dict[str, Any]:
-        row = self._conn.execute(
-            "SELECT * FROM team_items WHERE space = ? AND id = ?", (space, item_id)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM team_items WHERE space = ? AND id = ?", (space, item_id)).fetchone()
         if row is None:
             raise BoardError(f"no item #{item_id} in space '{space}'")
         return _row_to_item(row)
 
     def _next_item_id(self, space: str) -> int:
-        row = self._conn.execute(
-            "SELECT MAX(id) AS top FROM team_items WHERE space = ?", (space,)
-        ).fetchone()
+        row = self._conn.execute("SELECT MAX(id) AS top FROM team_items WHERE space = ?", (space,)).fetchone()
         return int(row["top"] or 0) + 1
 
     def event_count(self, space: str) -> int:
         """How many records a space holds — presence probe for the grant-time
         notice and the migration collision check. No actor: counts, not content."""
         with self._lock:
-            row = self._conn.execute(
-                "SELECT COUNT(*) FROM team_events WHERE space = ?", (space,)
-            ).fetchone()
+            row = self._conn.execute("SELECT COUNT(*) FROM team_events WHERE space = ?", (space,)).fetchone()
         return int(row[0]) if row else 0
 
     def rekey_space(self, old: str, new: str) -> bool:
@@ -1376,14 +1355,10 @@ class TeamStore:
         if old == new:
             return True
         with self._lock:
-            has_new = self._conn.execute(
-                "SELECT 1 FROM team_events WHERE space = ? LIMIT 1", (new,)
-            ).fetchone()
+            has_new = self._conn.execute("SELECT 1 FROM team_events WHERE space = ? LIMIT 1", (new,)).fetchone()
             if has_new:
                 return False
-            rows = self._conn.execute(
-                "SELECT * FROM team_events WHERE space = ? ORDER BY seq", (old,)
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM team_events WHERE space = ? ORDER BY seq", (old,)).fetchall()
             try:
                 prev = GENESIS
                 for row in rows:
@@ -1402,8 +1377,7 @@ class TeamStore:
                     }
                     record["hash"] = _hash(record)
                     self._conn.execute(
-                        "UPDATE team_events SET space = ?, prev_hash = ?, hash = ? "
-                        "WHERE seq = ?",
+                        "UPDATE team_events SET space = ?, prev_hash = ?, hash = ? WHERE seq = ?",
                         (new, prev, record["hash"], row["seq"]),
                     )
                     prev = record["hash"]
@@ -1413,30 +1387,22 @@ class TeamStore:
                     "team_attachment_refs",
                     "team_settings",
                 ):
-                    self._conn.execute(
-                        f"UPDATE {table} SET space = ? WHERE space = ?", (new, old)
-                    )
+                    self._conn.execute(f"UPDATE {table} SET space = ? WHERE space = ?", (new, old))
                 # Cursor keys embed the space as a suffix ("feed:<actor>:<space>",
                 # "sub:<sub>:<space>") — rewrite the suffix, keep consumed positions.
                 cur_rows = self._conn.execute(
-                    "SELECT cursor_key FROM team_cursors"
-                    " WHERE cursor_key LIKE ? ESCAPE '\\'",
+                    "SELECT cursor_key FROM team_cursors WHERE cursor_key LIKE ? ESCAPE '\\'",
                     ("%" + _like_escape(":" + old),),
                 ).fetchall()
                 for crow in cur_rows:
                     new_key = crow["cursor_key"][: -len(old)] + new
                     self._conn.execute(
-                        "UPDATE OR REPLACE team_cursors SET cursor_key = ? "
-                        "WHERE cursor_key = ?",
+                        "UPDATE OR REPLACE team_cursors SET cursor_key = ? WHERE cursor_key = ?",
                         (new_key, crow["cursor_key"]),
                     )
-                meta = self._conn.execute(
-                    "SELECT watermark FROM team_meta WHERE space = ?", (old,)
-                ).fetchone()
+                meta = self._conn.execute("SELECT watermark FROM team_meta WHERE space = ?", (old,)).fetchone()
                 if meta is not None and rows:
-                    self._conn.execute(
-                        "DELETE FROM team_meta WHERE space = ?", (old,)
-                    )
+                    self._conn.execute("DELETE FROM team_meta WHERE space = ?", (old,))
                     self._conn.execute(
                         "INSERT INTO team_meta (space, head_hash, watermark) "
                         "VALUES (?, ?, ?) ON CONFLICT(space) DO UPDATE SET "
@@ -1452,9 +1418,7 @@ class TeamStore:
         return True
 
     def _head_hash(self, space: str) -> str:
-        row = self._conn.execute(
-            "SELECT head_hash FROM team_meta WHERE space = ?", (space,)
-        ).fetchone()
+        row = self._conn.execute("SELECT head_hash FROM team_meta WHERE space = ?", (space,)).fetchone()
         return row["head_hash"] if row else GENESIS
 
     def _require(self, actor: Actor, roles: set[Role], verb: str) -> None:
@@ -1512,5 +1476,10 @@ def validate_text_page(offset: int, max_chars: int) -> None:
 
 def text_page(text: str, offset: int, max_chars: int) -> dict:
     end = min(len(text), offset + max_chars)
-    return {"text": text[offset:end], "offset": offset, "next_offset": end,
-            "total_chars": len(text), "has_more": end < len(text)}
+    return {
+        "text": text[offset:end],
+        "offset": offset,
+        "next_offset": end,
+        "total_chars": len(text),
+        "has_more": end < len(text),
+    }

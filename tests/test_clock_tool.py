@@ -4,15 +4,15 @@ working; a value that changes by itself has no place in it."""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from coworker.clock import clock_tools, current_time
 
 
 def test_current_time_reports_local_and_utc_for_the_same_instant():
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     out = current_time()
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
     local = datetime.fromisoformat(out["local"])
     utc = datetime.fromisoformat(out["utc"].replace("Z", "+00:00"))
     assert local.tzinfo is not None and utc.tzinfo is not None

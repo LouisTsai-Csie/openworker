@@ -265,17 +265,11 @@ def test_complete_text_turn_with_defaults():
             {"role": "user", "content": "hi"},
         ],
     )
-    assert (
-        turn.text == "hello"
-        and turn.finish_reason == "stop"
-        and not turn.has_tool_calls
-    )
+    assert turn.text == "hello" and turn.finish_reason == "stop" and not turn.has_tool_calls
     assert fake.kwargs["model"] == "claude-sonnet-4-6"
     # System rides as a block list so the last block can carry the prompt-cache
     # breakpoint (see _add_cache_breakpoints).
-    assert fake.kwargs["system"] == [
-        {"type": "text", "text": "sys", "cache_control": {"type": "ephemeral"}}
-    ]
+    assert fake.kwargs["system"] == [{"type": "text", "text": "sys", "cache_control": {"type": "ephemeral"}}]
     assert fake.kwargs["max_tokens"] == DEFAULT_MAX_TOKENS  # required param, injected
     assert "tools" not in fake.kwargs
 
@@ -284,9 +278,7 @@ def test_complete_parses_tool_use_blocks():
     response = SimpleNamespace(
         content=[
             SimpleNamespace(type="text", text="on it"),
-            SimpleNamespace(
-                type="tool_use", id="c1", name="write_file", input={"path": "a.txt"}
-            ),
+            SimpleNamespace(type="tool_use", id="c1", name="write_file", input={"path": "a.txt"}),
         ],
         stop_reason="tool_use",
     )
@@ -311,9 +303,7 @@ def test_complete_parses_tool_use_blocks():
     ],
 )
 def test_complete_maps_stop_reasons(stop_reason, expected):
-    provider = AnthropicProvider(
-        client=_FakeClient(response=_text_response(stop_reason=stop_reason))
-    )
+    provider = AnthropicProvider(client=_FakeClient(response=_text_response(stop_reason=stop_reason)))
     turn = provider.complete(model="m", messages=[{"role": "user", "content": "x"}])
     assert turn.finish_reason == expected
 
@@ -352,9 +342,7 @@ def test_complete_converts_tools():
             }
         ],
     )
-    assert fake.kwargs["tools"] == [
-        {"name": "f", "description": "d", "input_schema": {"type": "object"}}
-    ]
+    assert fake.kwargs["tools"] == [{"name": "f", "description": "d", "input_schema": {"type": "object"}}]
 
 
 def test_ensure_client_without_key_raises(monkeypatch):
@@ -367,9 +355,7 @@ def test_ensure_client_without_key_raises(monkeypatch):
 
 
 def _delta(index, **delta_attrs):
-    return SimpleNamespace(
-        type="content_block_delta", index=index, delta=SimpleNamespace(**delta_attrs)
-    )
+    return SimpleNamespace(type="content_block_delta", index=index, delta=SimpleNamespace(**delta_attrs))
 
 
 def test_stream_yields_text_deltas_then_final_turn():
@@ -383,22 +369,14 @@ def test_stream_yields_text_deltas_then_final_turn():
         _delta(0, type="text_delta", text="hel"),
         _delta(0, type="text_delta", text="lo"),
         SimpleNamespace(type="content_block_stop", index=0),
-        SimpleNamespace(
-            type="message_delta", delta=SimpleNamespace(stop_reason="end_turn")
-        ),
+        SimpleNamespace(type="message_delta", delta=SimpleNamespace(stop_reason="end_turn")),
         SimpleNamespace(type="message_stop"),
     ]
     provider = AnthropicProvider(client=_FakeClient(events=events))
-    chunks = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )
+    chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
     assert [c.text_delta for c in chunks[:-1]] == ["hel", "lo"]
     final = chunks[-1].turn
-    assert (
-        final.text == "hello"
-        and final.finish_reason == "stop"
-        and not final.has_tool_calls
-    )
+    assert final.text == "hello" and final.finish_reason == "stop" and not final.has_tool_calls
 
 
 def test_stream_accumulates_split_tool_json():
@@ -411,14 +389,10 @@ def test_stream_accumulates_split_tool_json():
         _delta(0, type="input_json_delta", partial_json='{"path": "a'),
         _delta(0, type="input_json_delta", partial_json='.txt", "content": "hi"}'),
         SimpleNamespace(type="content_block_stop", index=0),
-        SimpleNamespace(
-            type="message_delta", delta=SimpleNamespace(stop_reason="tool_use")
-        ),
+        SimpleNamespace(type="message_delta", delta=SimpleNamespace(stop_reason="tool_use")),
     ]
     provider = AnthropicProvider(client=_FakeClient(events=events))
-    chunks = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )
+    chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
     final = chunks[-1].turn
     assert final.finish_reason == "tool_calls"
     assert final.tool_calls[0].id == "c1"
@@ -439,14 +413,10 @@ def test_stream_mixed_text_and_tool_blocks():
             content_block=SimpleNamespace(type="tool_use", id="c1", name="f"),
         ),
         _delta(1, type="input_json_delta", partial_json=""),  # no-args tool call
-        SimpleNamespace(
-            type="message_delta", delta=SimpleNamespace(stop_reason="tool_use")
-        ),
+        SimpleNamespace(type="message_delta", delta=SimpleNamespace(stop_reason="tool_use")),
     ]
     provider = AnthropicProvider(client=_FakeClient(events=events))
-    chunks = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )
+    chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
     assert chunks[0].text_delta == "working"
     final = chunks[-1].turn
     assert final.text == "working"
@@ -483,9 +453,7 @@ def test_resolve_api_key_env_then_secrets(monkeypatch):
 
     class _Secrets:
         def get(self, name):
-            return (
-                {"api_key": "sk-ant-stored"} if name == "provider:anthropic" else None
-            )
+            return {"api_key": "sk-ant-stored"} if name == "provider:anthropic" else None
 
     assert resolve_api_key(_Secrets()) == "sk-ant-stored"
     assert resolve_api_key(None) is None
@@ -573,9 +541,7 @@ def test_thinking_config_is_model_family_aware():
 
     # Off (hidden override 0): no thinking param on any family.
     client2 = _FakeClient(response=_text_response())
-    AnthropicProvider(client=client2).complete(
-        model="claude-fable-5", messages=[{"role": "user", "content": "x"}]
-    )
+    AnthropicProvider(client=client2).complete(model="claude-fable-5", messages=[{"role": "user", "content": "x"}])
     assert "thinking" not in client2.kwargs
 
 
@@ -615,9 +581,7 @@ def test_stream_accumulates_thinking_and_signature():
             content_block=SimpleNamespace(type="text"),
         ),
         _delta(1, type="text_delta", text="done"),
-        SimpleNamespace(
-            type="message_delta", delta=SimpleNamespace(stop_reason="end_turn")
-        ),
+        SimpleNamespace(type="message_delta", delta=SimpleNamespace(stop_reason="end_turn")),
     ]
     provider = AnthropicProvider(client=_FakeClient(events=events), thinking_budget=4096)
     chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
@@ -676,9 +640,7 @@ def test_fable_requests_carry_server_side_fallback():
 
     # Other models stay on the plain endpoint with no fallback params.
     client2 = _FakeClient(response=_text_response())
-    AnthropicProvider(client=client2).complete(
-        model="claude-opus-4-8", messages=[{"role": "user", "content": "x"}]
-    )
+    AnthropicProvider(client=client2).complete(model="claude-opus-4-8", messages=[{"role": "user", "content": "x"}])
     assert "betas" not in client2.kwargs and "fallbacks" not in client2.kwargs
 
 
@@ -710,9 +672,7 @@ def test_complete_with_default_cap_carries_an_explicit_timeout():
 
     assert DEFAULT_MAX_TOKENS > NONSTREAMING_TOKEN_CEILING
     fake = _FakeClient(response=_text_response("ok"))
-    AnthropicProvider(client=fake).complete(
-        model="claude-sonnet-4-6", messages=[{"role": "user", "content": "x"}]
-    )
+    AnthropicProvider(client=fake).complete(model="claude-sonnet-4-6", messages=[{"role": "user", "content": "x"}])
     assert fake.kwargs["timeout"] == LONG_REQUEST_TIMEOUT
 
 

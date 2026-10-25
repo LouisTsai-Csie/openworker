@@ -95,9 +95,7 @@ def test_anthropic_stream_captures_usage():
         SimpleNamespace(type="message_stop"),
     ]
     provider = AnthropicProvider(client=_FakeAnthropicClient(events))
-    turn = _final_turn(
-        list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
-    )
+    turn = _final_turn(list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}])))
     assert turn.usage == TokenUsage(input=7, output=42, cache_read=100, cache_write=25)
 
 
@@ -120,14 +118,10 @@ def test_anthropic_complete_captures_usage():
 def test_anthropic_stream_without_usage_leaves_none():
     events = [
         SimpleNamespace(type="message_start"),  # no message/usage attrs
-        SimpleNamespace(
-            type="message_delta", delta=SimpleNamespace(stop_reason="end_turn")
-        ),
+        SimpleNamespace(type="message_delta", delta=SimpleNamespace(stop_reason="end_turn")),
     ]
     provider = AnthropicProvider(client=_FakeAnthropicClient(events))
-    turn = _final_turn(
-        list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
-    )
+    turn = _final_turn(list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}])))
     assert turn.usage is None
 
 
@@ -173,9 +167,7 @@ def _openai_chunks():
 def test_openai_stream_requests_and_captures_usage():
     fake = _FakeOpenAIClient(_openai_chunks())
     provider = OpenAIProvider(client=fake)
-    turn = _final_turn(
-        list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
-    )
+    turn = _final_turn(list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}])))
     assert fake.calls[0]["stream_options"] == {"include_usage": True}
     # Cached share is carved out of prompt_tokens into cache_read.
     assert turn.usage == TokenUsage(input=100, output=9, cache_read=40)
@@ -184,9 +176,7 @@ def test_openai_stream_requests_and_captures_usage():
 def test_openai_stream_retries_without_stream_options_when_rejected():
     fake = _FakeOpenAIClient(_openai_chunks(), reject_stream_options=True)
     provider = OpenAIProvider(client=fake)
-    turn = _final_turn(
-        list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
-    )
+    turn = _final_turn(list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}])))
     assert "stream_options" not in fake.calls[-1]
     assert turn.text == "hi"  # the turn still completes; only metering is lost
 
@@ -199,9 +189,7 @@ def test_openai_complete_captures_usage_without_cache_details():
                 finish_reason="stop",
             )
         ],
-        usage=SimpleNamespace(
-            prompt_tokens=30, completion_tokens=4, prompt_tokens_details=None
-        ),
+        usage=SimpleNamespace(prompt_tokens=30, completion_tokens=4, prompt_tokens_details=None),
     )
     fake = _FakeOpenAIClient(response)
     provider = OpenAIProvider(client=fake)
@@ -232,9 +220,7 @@ def _gemini_response(text, usage_metadata=None):
     return SimpleNamespace(
         candidates=[
             SimpleNamespace(
-                content=SimpleNamespace(
-                    parts=[SimpleNamespace(text=text, function_call=None)]
-                ),
+                content=SimpleNamespace(parts=[SimpleNamespace(text=text, function_call=None)]),
                 finish_reason=SimpleNamespace(name="STOP"),
             )
         ],
@@ -265,9 +251,7 @@ def test_gemini_stream_keeps_last_usage_metadata():
         ),
     ]
     provider = GeminiProvider(client=_FakeGeminiClient(responses))
-    turn = _final_turn(
-        list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
-    )
+    turn = _final_turn(list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}])))
     # input = prompt minus cached; thinking tokens fold into output.
     assert turn.usage == TokenUsage(input=40, output=18, cache_read=50)
 
@@ -295,9 +279,7 @@ def test_bedrock_converse_stream_captures_metadata_usage():
         }
     )
     client = _BedrockConverseClient(client=fake)
-    turn = _final_turn(
-        list(client.stream(model="m", messages=[{"role": "user", "content": "x"}]))
-    )
+    turn = _final_turn(list(client.stream(model="m", messages=[{"role": "user", "content": "x"}])))
     assert turn.usage == TokenUsage(input=11, output=3, cache_read=8, cache_write=2)
 
 

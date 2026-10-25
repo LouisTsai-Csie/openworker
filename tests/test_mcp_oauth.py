@@ -41,9 +41,7 @@ def _no_pending():
 
 
 def test_config_parses_auth_field(tmp_path, monkeypatch):
-    _state(
-        tmp_path, monkeypatch, {"granola": GRANOLA, "plain": {"url": "https://x/mcp"}}
-    )
+    _state(tmp_path, monkeypatch, {"granola": GRANOLA, "plain": {"url": "https://x/mcp"}})
     servers = {s.name: s for s in load_mcp_servers()}
     assert servers["granola"].auth == "oauth"
     assert servers["granola"].transport == "http"
@@ -61,9 +59,7 @@ def test_token_storage_roundtrip(tmp_path, monkeypatch):
     async def run():
         assert await storage.get_tokens() is None
         await storage.set_tokens(
-            OAuthToken.model_validate(
-                {"access_token": "at", "token_type": "Bearer", "refresh_token": "rt"}
-            )
+            OAuthToken.model_validate({"access_token": "at", "token_type": "Bearer", "refresh_token": "rt"})
         )
         await storage.set_client_info(
             OAuthClientInformationFull.model_validate(
@@ -218,9 +214,7 @@ async def test_storage_reports_remaining_lifetime_and_blanks_stale_access(tmp_pa
 
     now = 1_000_000.0
     monkeypatch.setattr(mcp_oauth.time, "time", lambda: now)
-    await storage.set_tokens(
-        OAuthToken(access_token="A", expires_in=3600, refresh_token="R")
-    )
+    await storage.set_tokens(OAuthToken(access_token="A", expires_in=3600, refresh_token="R"))
 
     # Fresh: full remaining lifetime, access token intact.
     tok = await storage.get_tokens()
@@ -268,8 +262,6 @@ async def test_provider_seeds_and_persists_oauth_metadata(tmp_path):
         "token_endpoint": "https://data.example/api/auth/token",
     }
     secrets.put("mcp-oauth:dlai", {"oauth_metadata": md})
-    auth = mcp_oauth.build_auth(
-        "dlai", "https://data.example/api/mcp", secrets, interactive=False
-    )
+    auth = mcp_oauth.build_auth("dlai", "https://data.example/api/mcp", secrets, interactive=False)
     await auth._initialize()
     assert str(auth.context.oauth_metadata.token_endpoint) == md["token_endpoint"]

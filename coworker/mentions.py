@@ -42,15 +42,11 @@ class MentionSessionStore:
         if self.path and self.path.is_file():
             try:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
-                self._threads = [
-                    MentionThread(**raw) for raw in data.get("threads", [])
-                ]
+                self._threads = [MentionThread(**raw) for raw in data.get("threads", [])]
             except (OSError, ValueError, TypeError, AttributeError):
                 # A corrupt file must never block startup. AttributeError covers a
                 # file that is valid JSON but not an object (`[]`, `null`, a string).
-                logger.warning(
-                    "mention_threads.json at %s is unreadable; starting empty", self.path
-                )
+                logger.warning("mention_threads.json at %s is unreadable; starting empty", self.path)
                 self._threads = []
 
     def _save(self) -> None:
@@ -84,9 +80,7 @@ class MentionSessionStore:
                     t.channel = channel
                     self._save()
                     return t
-            rec = MentionThread(
-                thread_target=thread_target, session_id=session_id, channel=channel
-            )
+            rec = MentionThread(thread_target=thread_target, session_id=session_id, channel=channel)
             self._threads.append(rec)
             self._save()
             return rec

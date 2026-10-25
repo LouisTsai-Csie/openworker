@@ -50,9 +50,7 @@ def test_project_menu_derived_and_named(tmp_path):
     assert menu["derived"]["kind"] == "folder"
     assert menu["named"] == []
 
-    named = client.post(
-        "/v1/sessions/s1/project-name", json={"kind": "memory", "name": "myproj"}
-    ).json()
+    named = client.post("/v1/sessions/s1/project-name", json={"kind": "memory", "name": "myproj"}).json()
     assert named["ok"] and named["key"] == str(ws.resolve())
     menu = client.get("/v1/sessions/s1/project-menu", params={"kind": "memory"}).json()
     assert [n["name"] for n in menu["named"]] == ["myproj"]
@@ -66,16 +64,10 @@ def test_binding_swaps_memory_key(tmp_path):
     other.mkdir()
     _seed_session(manager, "s1", ws)
 
-    manager.session_store.names().name_current(
-        "memory", "openworker", str(other.resolve())
-    )
-    manager.memory_store.add(
-        "the real fact", scope=Scope.WORKSPACE, workspace=str(other.resolve())
-    )
+    manager.session_store.names().name_current("memory", "openworker", str(other.resolve()))
+    manager.memory_store.add("the real fact", scope=Scope.WORKSPACE, workspace=str(other.resolve()))
 
-    put = client.put(
-        "/v1/sessions/s1/bindings", json={"kind": "memory", "name": "openworker"}
-    ).json()
+    put = client.put("/v1/sessions/s1/bindings", json={"kind": "memory", "name": "openworker"}).json()
     assert put["ok"] and put["bindings"] == {"memory": "openworker"}
 
     record = manager.session_store.load("s1")
@@ -92,12 +84,8 @@ def test_binding_swaps_memory_key(tmp_path):
 def test_binding_rejects_unknown_name_and_kind(tmp_path):
     client, manager = _fixture(tmp_path)
     _seed_session(manager, "s1", tmp_path)
-    assert not client.put(
-        "/v1/sessions/s1/bindings", json={"kind": "memory", "name": "ghost"}
-    ).json()["ok"]
-    assert not client.put(
-        "/v1/sessions/s1/bindings", json={"kind": "nope", "name": "x"}
-    ).json()["ok"]
+    assert not client.put("/v1/sessions/s1/bindings", json={"kind": "memory", "name": "ghost"}).json()["ok"]
+    assert not client.put("/v1/sessions/s1/bindings", json={"kind": "nope", "name": "x"}).json()["ok"]
 
 
 def test_bindings_survive_turn_save(tmp_path):
@@ -107,9 +95,7 @@ def test_bindings_survive_turn_save(tmp_path):
     ws.mkdir()
     _seed_session(manager, "s1", ws)
     manager.session_store.names().name_current("board", "b1", "/somewhere")
-    assert client.put(
-        "/v1/sessions/s1/bindings", json={"kind": "board", "name": "b1"}
-    ).json()["ok"]
+    assert client.put("/v1/sessions/s1/bindings", json={"kind": "board", "name": "b1"}).json()["ok"]
 
     # simulate a turn-save rebuilding the record WITHOUT bindings
     rec = manager.session_store.load("s1")
@@ -144,16 +130,22 @@ def test_worktree_sessions_share_memory_key(tmp_path):
     (repo / "f").write_text("x")
     subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@t", "add", "f"],
-        cwd=repo, check=True, capture_output=True,
+        cwd=repo,
+        check=True,
+        capture_output=True,
     )
     subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "i"],
-        cwd=repo, check=True, capture_output=True,
+        cwd=repo,
+        check=True,
+        capture_output=True,
     )
     wt = tmp_path / "wt"
     subprocess.run(
         ["git", "worktree", "add", "-q", str(wt)],
-        cwd=repo, check=True, capture_output=True,
+        cwd=repo,
+        check=True,
+        capture_output=True,
     )
     _seed_session(manager, "a", repo)
     _seed_session(manager, "b", wt)
@@ -167,9 +159,7 @@ def test_grant_notice_fires_on_existing_memory(tmp_path):
     _, manager = _fixture(tmp_path)
     granted = tmp_path / "known"
     granted.mkdir()
-    manager.memory_store.add(
-        "fact", scope=Scope.WORKSPACE, workspace=str(granted.resolve())
-    )
+    manager.memory_store.add("fact", scope=Scope.WORKSPACE, workspace=str(granted.resolve()))
     notice = manager._project_notice(str(granted))
     assert notice is not None and "project memory (1 entries)" in notice
 

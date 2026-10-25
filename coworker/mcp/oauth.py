@@ -86,10 +86,7 @@ class SecretStoreTokenStorage(TokenStorage):
         # refresh-token grant FIRST, which self-heals silently (no browser).
         if tok.expires_in is not None:
             issued = data.get("tokens_issued_at")
-            if isinstance(issued, (int, float)):
-                remaining = int(issued + tok.expires_in - time.time())
-            else:
-                remaining = -1
+            remaining = int(issued + tok.expires_in - time.time()) if isinstance(issued, (int, float)) else -1
             tok = tok.model_copy(update={"expires_in": remaining})
             if remaining <= 60 and tok.refresh_token:
                 tok = tok.model_copy(update={"access_token": ""})
@@ -190,9 +187,7 @@ def deliver_callback(code: str, state: str | None) -> bool:
         return False
     # Only enforce when we actually captured a state for this flow; a flow with no state
     # in its authorize URL falls back to the prior accept-any behavior.
-    if _expected_state is not None and (
-        state is None or not secrets.compare_digest(state, _expected_state)
-    ):
+    if _expected_state is not None and (state is None or not secrets.compare_digest(state, _expected_state)):
         return False
     pending, _pending = _pending, None
     pending.set_result((code, state))
@@ -214,15 +209,11 @@ async def _refuse_browser(url: str) -> None:
     the GUI's "reopen sign-in page" affordance still works after the refusal."""
     global last_authorize_url
     last_authorize_url = url
-    raise InteractiveAuthRequired(
-        "sign-in required — reconnect this server from its page"
-    )
+    raise InteractiveAuthRequired("sign-in required — reconnect this server from its page")
 
 
 async def _refuse_callback() -> tuple[str, str | None]:
-    raise InteractiveAuthRequired(
-        "sign-in required — reconnect this server from its page"
-    )
+    raise InteractiveAuthRequired("sign-in required — reconnect this server from its page")
 
 
 async def _wait_for_callback() -> tuple[str, str | None]:
@@ -232,10 +223,9 @@ async def _wait_for_callback() -> tuple[str, str | None]:
     _pending = asyncio.get_running_loop().create_future()
     try:
         return await asyncio.wait_for(_pending, timeout=FLOW_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise RuntimeError(
-            "sign-in timed out — the browser window was not completed in "
-            f"{FLOW_TIMEOUT_SECONDS // 60} minutes"
+            f"sign-in timed out — the browser window was not completed in {FLOW_TIMEOUT_SECONDS // 60} minutes"
         ) from None
     finally:
         _pending = None
@@ -264,9 +254,7 @@ class _MetadataSeededProvider(OAuthClientProvider):
                 self.context.oauth_metadata = OAuthMetadata.model_validate(raw)
             except Exception:
                 pass  # stale/incompatible cache: discovery will refill it
-        if self.context.oauth_metadata is None and self._ocw_storage._data().get(
-            "tokens"
-        ):
+        if self.context.oauth_metadata is None and self._ocw_storage._data().get("tokens"):
             # No cache yet (tokens predate this fix): one best-effort fetch from the
             # standard well-known location, so the refresh grant can target the real
             # token endpoint on the very next request. Cached on success; any failure
@@ -291,9 +279,7 @@ class _MetadataSeededProvider(OAuthClientProvider):
         md = self.context.oauth_metadata
         if md is not None:
             try:
-                self._ocw_storage._merge(
-                    {"oauth_metadata": md.model_dump(mode="json", exclude_none=True)}
-                )
+                self._ocw_storage._merge({"oauth_metadata": md.model_dump(mode="json", exclude_none=True)})
             except Exception:
                 logger.debug("could not persist oauth metadata", exc_info=True)
 

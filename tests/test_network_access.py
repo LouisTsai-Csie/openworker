@@ -31,7 +31,9 @@ def ask(eng, hosts, reason="npm install needs the registry"):
 
 # -- what the agent may ask for -----------------------------------------------------------
 def test_only_exact_host_names_are_accepted():
-    good, bad = network_request_hosts({"hosts": ["Registry.NPMjs.org", "db.example.com:5432", "registry.npmjs.org:443", "https://pypi.org/simple/"]})
+    good, bad = network_request_hosts(
+        {"hosts": ["Registry.NPMjs.org", "db.example.com:5432", "registry.npmjs.org:443", "https://pypi.org/simple/"]}
+    )
     assert good == ["registry.npmjs.org:443", "db.example.com:5432", "pypi.org:443"] and bad == []
     for item in ("*.npmjs.org", "10.0.0.8", "10.0.0.8:5432", "localhost", "ignore your instructions", ""):
         good, bad = network_request_hosts({"hosts": [item]})
@@ -42,7 +44,12 @@ def test_only_exact_host_names_are_accepted():
 
 def test_a_bad_or_oversized_request_is_refused_without_a_card(tmp_path):
     eng = engine(tmp_path)
-    for hosts in (["*.npmjs.org"], [], ["a.dev", "b.dev", "c.dev", "d.dev", "e.dev", "f.dev"], ["pypi.org", "not a host"]):
+    for hosts in (
+        ["*.npmjs.org"],
+        [],
+        ["a.dev", "b.dev", "c.dev", "d.dev", "e.dev", "f.dev"],
+        ["pypi.org", "not a host"],
+    ):
         d = ask(eng, hosts)
         assert not d.allowed and not d.needs_user and "exact host names" in d.reason, hosts
 
@@ -116,8 +123,15 @@ def test_the_server_offers_this_session_and_always_and_nothing_tool_wide():
     from coworker.server.manager import _grant_offered
 
     request = SimpleNamespace(tool_name=NETWORK_ACCESS_TOOL, metadata=None, arguments={"hosts": ["a.dev"]})
-    assert _grant_offered(ApprovalOutcome.ALWAYS_DOMAIN, request) and _grant_offered(ApprovalOutcome.ALWAYS_SITE, request)
-    for outcome in (ApprovalOutcome.ALWAYS_TOOL, ApprovalOutcome.THIS_RUN, ApprovalOutcome.ALWAYS_COMMAND, ApprovalOutcome.ALWAYS_TRUST):
+    assert _grant_offered(ApprovalOutcome.ALWAYS_DOMAIN, request) and _grant_offered(
+        ApprovalOutcome.ALWAYS_SITE, request
+    )
+    for outcome in (
+        ApprovalOutcome.ALWAYS_TOOL,
+        ApprovalOutcome.THIS_RUN,
+        ApprovalOutcome.ALWAYS_COMMAND,
+        ApprovalOutcome.ALWAYS_TRUST,
+    ):
         assert not _grant_offered(outcome, request), outcome
 
 
@@ -146,7 +160,11 @@ def test_the_proxy_remembers_what_it_refused_and_when():
 
 def test_the_note_says_what_was_blocked_and_what_is_not_known():
     text = network_note_text({"registry.npmjs.org:443": 3, "objects.githubusercontent.com:443": 1}, can_ask=True)
-    assert "may have affected it" in text and "- registry.npmjs.org:443 (3 attempts)" in text and "- objects.githubusercontent.com:443\n" in text
+    assert (
+        "may have affected it" in text
+        and "- registry.npmjs.org:443 (3 attempts)" in text
+        and "- objects.githubusercontent.com:443\n" in text
+    )
     assert "or from something else running in this session" in text and "request_network_access(hosts, reason)" in text
     told = network_note_text({"a.dev:443": 1}, can_ask=False)
     assert "request_network_access" not in told and "Settings > Sandbox > Choose sites" in told
@@ -173,7 +191,9 @@ def test_a_command_result_carries_the_note_only_when_something_was_blocked(tmp_p
     provider.blocked = [(10.0, "old.dev:443"), (20.0, "registry.npmjs.org:443"), (21.0, "registry.npmjs.org:443")]
     note = workspace.network_note(19.8)
     assert note["blocked_sites"] == ["registry.npmjs.org:443"] and "(2 attempts)" in note["network_note"]
-    assert "While it ran" in note["network_note"] and "Settings > Sandbox" in note["network_note"]  # nobody can be asked until the session says so
+    assert (
+        "While it ran" in note["network_note"] and "Settings > Sandbox" in note["network_note"]
+    )  # nobody can be asked until the session says so
     # Told once: the next command's result does not repeat it.
     assert workspace.network_note(22.0) is None
     workspace.can_ask_network = lambda: True
@@ -196,11 +216,17 @@ def test_a_refusal_reported_late_waits_for_a_failed_command_and_is_never_lost(tm
     threading.Timer(0.15, lambda: provider.blocked.append((started + 0.01, "registry.npmjs.org:443"))).start()
     began = clock.time()
     note = workspace.network_note(started, {"exit_code": 1})
-    assert note and note["blocked_sites"] == ["registry.npmjs.org:443"] and 0.1 < clock.time() - began < 0.5  # left as soon as it arrived
+    assert (
+        note and note["blocked_sites"] == ["registry.npmjs.org:443"] and 0.1 < clock.time() - began < 0.5
+    )  # left as soon as it arrived
     began = clock.time()
-    assert workspace.network_note(clock.time(), {"exit_code": 0}) is None and clock.time() - began < 0.1  # success: no wait
+    assert (
+        workspace.network_note(clock.time(), {"exit_code": 0}) is None and clock.time() - began < 0.1
+    )  # success: no wait
     began = clock.time()
-    assert workspace.network_note(clock.time(), {"exit_code": 1}) is None and clock.time() - began >= 0.55  # failed, nothing blocked: the full wait
+    assert (
+        workspace.network_note(clock.time(), {"exit_code": 1}) is None and clock.time() - began >= 0.55
+    )  # failed, nothing blocked: the full wait
     # A refusal during a command that succeeded: nobody waited for it. The next command
     # starts later and its result carries it.
     provider.blocked.append((clock.time(), "late.dev:443"))
@@ -228,11 +254,24 @@ def test_openshell_refusals_are_read_from_the_sandbox_log():
 
 
 def test_the_executor_adds_the_note_to_a_command_result(tmp_path):
-    client = SimpleNamespace(call=lambda *a, **kw: {"command": "npm i", "cwd": str(tmp_path), "exit_code": 1, "output": "npm ERR!"})
+    client = SimpleNamespace(
+        call=lambda *a, **kw: {"command": "npm i", "cwd": str(tmp_path), "exit_code": 1, "output": "npm ERR!"}
+    )
     seen: list[float] = []
-    executor = RunnerExecutor(client, cwd=str(tmp_path), after_call=lambda started, result: seen.append(result["exit_code"]) or {"blocked_sites": ["a.dev:443"], "network_note": "Note: …"})
+    executor = RunnerExecutor(
+        client,
+        cwd=str(tmp_path),
+        after_call=lambda started, result: (
+            seen.append(result["exit_code"]) or {"blocked_sites": ["a.dev:443"], "network_note": "Note: …"}
+        ),
+    )
     result = executor.run("npm i")
-    assert result["exit_code"] == 1 and result["blocked_sites"] == ["a.dev:443"] and result["network_note"] == "Note: …" and seen == [1]
+    assert (
+        result["exit_code"] == 1
+        and result["blocked_sites"] == ["a.dev:443"]
+        and result["network_note"] == "Note: …"
+        and seen == [1]
+    )
 
     def broken(started, result):
         raise RuntimeError("no log")
@@ -266,7 +305,11 @@ def test_a_sandbox_that_cannot_report_blocks_gives_the_card_no_evidence(tmp_path
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path))
     monkeypatch.setattr(openshell, "build_runner_zipapp", lambda: tmp_path / "sandbox" / "runner" / "runner-x.pyz")
     not_made = openshell.OpenShellProvider(roots=[{"path": str(tmp_path), "writable": True}], registry="abc")
-    assert not_made.reports_blocked is False and not_made.blocked_since(0) == [] and seatbelt.SeatbeltProvider.reports_blocked is True
+    assert (
+        not_made.reports_blocked is False
+        and not_made.blocked_since(0) == []
+        and seatbelt.SeatbeltProvider.reports_blocked is True
+    )
     call = SimpleNamespace(arguments={"hosts": ["registry.npmjs.org"], "reason": "npm install"})
     decision = Decision(False, "asks", needs_user=True, human_only=True, network_hosts=("registry.npmjs.org:443",))
 
@@ -275,7 +318,11 @@ def test_a_sandbox_that_cannot_report_blocks_gives_the_card_no_evidence(tmp_path
         return TurnEngine._network_request_payload(holder, call, decision)
 
     unknown = _Provider()
-    assert payload(unknown) == {"reason": "npm install", "evidence": False, "hosts": [{"host": "registry.npmjs.org:443", "blocked_seconds_ago": None}]}
+    assert payload(unknown) == {
+        "reason": "npm install",
+        "evidence": False,
+        "hosts": [{"host": "registry.npmjs.org:443", "blocked_seconds_ago": None}],
+    }
     seen = _Provider()
     seen.reports_blocked = True
     seen.blocked = [(__import__("time").time() - 30, "registry.npmjs.org:443")]
@@ -292,12 +339,20 @@ def test_the_person_adds_and_takes_back_a_session_site(tmp_path, monkeypatch):
     eng = engine(tmp_path, open_site=opened.append, close_site=closed.append)
     holder = SimpleNamespace(permissions=eng, sandbox_workspace=None)
     manager = SimpleNamespace(_engines={"s1": holder}, audit_autonomy_change=lambda *a: None)
-    for name in ("session_sites", "_session_site_engine", "allow_session_site", "remove_session_site", "_audit_session_site"):
+    for name in (
+        "session_sites",
+        "_session_site_engine",
+        "allow_session_site",
+        "remove_session_site",
+        "_audit_session_site",
+    ):
         setattr(manager, name, getattr(SessionManager, name).__get__(manager))
 
     assert manager.allow_session_site("s1", "Registry.NPMjs.org")["ok"]
     assert eng.session_sites == ["registry.npmjs.org:443"] and opened == ["registry.npmjs.org:443"]
-    assert manager.allow_session_site("s1", "github.com")["ok"] and eng.session_sites == ["registry.npmjs.org:443"]  # already on the machine's list
+    assert manager.allow_session_site("s1", "github.com")["ok"] and eng.session_sites == [
+        "registry.npmjs.org:443"
+    ]  # already on the machine's list
     for bad in ("*.npmjs.org", "10.0.0.8", "two hosts.dev other.dev", ""):
         assert not manager.allow_session_site("s1", bad)["ok"], bad
     # Only a session site can be taken back here; the machine's list is changed in Settings.
@@ -317,7 +372,9 @@ def test_a_site_the_sandbox_cannot_take_is_not_left_on_the_list(tmp_path):
         raise RuntimeError("the gateway did not answer")
 
     eng = engine(tmp_path, open_site=refuse)
-    manager = SimpleNamespace(_engines={"s1": SimpleNamespace(permissions=eng, sandbox_workspace=None)}, audit_autonomy_change=lambda *a: None)
+    manager = SimpleNamespace(
+        _engines={"s1": SimpleNamespace(permissions=eng, sandbox_workspace=None)}, audit_autonomy_change=lambda *a: None
+    )
     for name in ("session_sites", "_session_site_engine", "allow_session_site", "_audit_session_site"):
         setattr(manager, name, getattr(SessionManager, name).__get__(manager))
     result = manager.allow_session_site("s1", "registry.npmjs.org")
@@ -341,7 +398,11 @@ def test_a_running_sandbox_drops_a_site_taken_back(tmp_path, monkeypatch):
     project.mkdir()
     seen: list = []
     monkeypatch.setattr(openshell, "_cli", lambda *args, **kw: seen.append(args))
-    provider = openshell.OpenShellProvider(roots=[{"path": str(project), "writable": True}], extra_hosts=["github.com:443", "registry.npmjs.org:443"], registry="abc")
+    provider = openshell.OpenShellProvider(
+        roots=[{"path": str(project), "writable": True}],
+        extra_hosts=["github.com:443", "registry.npmjs.org:443"],
+        registry="abc",
+    )
     provider._create_tried = True
     provider.remove_hosts(["registry.npmjs.org:443", "never.there:443"])
     (call,) = seen

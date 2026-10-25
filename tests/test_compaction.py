@@ -269,9 +269,7 @@ def test_summary_quality_problem_names_the_fault():
 def test_build_state_and_outbound_view():
     msgs = convo(turns=6)
     fake = FakeSummarizer(text=GOOD_SUMMARY + "\nthe gist")
-    state = build_state(
-        msgs, provider=fake, model="m", keep_tokens=estimate_tokens(msgs[-4:]) + 10
-    )
+    state = build_state(msgs, provider=fake, model="m", keep_tokens=estimate_tokens(msgs[-4:]) + 10)
     assert state is not None and not state.trimmed
     assert state.user_messages[0] == "request 0"
 
@@ -293,8 +291,11 @@ def test_repeated_compaction_summarizes_prior_plus_new_turns():
         msgs.append(user(f"request {i}"))
         msgs.append(assistant(f"answer {i} " + "x" * 2000))
     second = build_state(
-        msgs, provider=fake, model="m",
-        keep_tokens=estimate_tokens(msgs[-4:]) + 10, prior=first,
+        msgs,
+        provider=fake,
+        model="m",
+        keep_tokens=estimate_tokens(msgs[-4:]) + 10,
+        prior=first,
     )
     assert second is not None and second.boundary_index > first.boundary_index
     # the second summarizer call folds the prior summary in
@@ -309,8 +310,11 @@ def test_build_state_none_when_boundary_stale():
     fake = FakeSummarizer()
     state = build_state(msgs, provider=fake, model="m", keep_tokens=estimate_tokens(msgs[-2:]) + 10)
     again = build_state(
-        msgs, provider=fake, model="m",
-        keep_tokens=10_000_000, prior=state,
+        msgs,
+        provider=fake,
+        model="m",
+        keep_tokens=10_000_000,
+        prior=state,
     )
     assert again is None  # nothing new fits below the prior boundary
 
@@ -348,8 +352,13 @@ def test_trim_none_when_too_small():
 
 def test_state_dict_round_trip():
     state = CompactionState(
-        boundary_index=7, summary_text="s", working_state="w",
-        user_messages=["u1"], created_at=1.5, model_used="m", trimmed=True,
+        boundary_index=7,
+        summary_text="s",
+        working_state="w",
+        user_messages=["u1"],
+        created_at=1.5,
+        model_used="m",
+        trimmed=True,
     )
     assert CompactionState.from_dict(state.as_dict()) == state
     assert CompactionState.from_dict(None) is None

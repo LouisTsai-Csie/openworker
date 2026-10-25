@@ -97,9 +97,7 @@ class ProviderRouter(ProviderClient):
         **settings: Any,
     ):
         self._note_use(model)
-        return self._client_for(model).complete(
-            model=self._bare(model), messages=messages, tools=tools, **settings
-        )
+        return self._client_for(model).complete(model=self._bare(model), messages=messages, tools=tools, **settings)
 
     def stream(
         self,
@@ -110,9 +108,7 @@ class ProviderRouter(ProviderClient):
         **settings: Any,
     ):
         self._note_use(model)
-        return self._client_for(model).stream(
-            model=self._bare(model), messages=messages, tools=tools, **settings
-        )
+        return self._client_for(model).stream(model=self._bare(model), messages=messages, tools=tools, **settings)
 
     def capabilities(self, model: str):
         return capabilities_for(model)

@@ -12,9 +12,7 @@ from aisuite.agents import ToolMetadata, tool
 
 
 def request_directory_tool() -> object:
-    def request_directory(
-        reason: str, path: str = "", writable: bool = False, primary: bool = False
-    ) -> dict:
+    def request_directory(reason: str, path: str = "", writable: bool = False, primary: bool = False) -> dict:
         """Ask the user for access to a directory when the task needs files outside the current
         ones (e.g. to read a project the user mentioned, or to save a deliverable somewhere
         specific). Explain why in `reason`; optionally suggest a `path` and whether you need

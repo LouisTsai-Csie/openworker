@@ -25,11 +25,7 @@ EXIT_OK = "cmd /c exit 0" if _WIN else "true"
 EXIT_FAIL = "cmd /c exit 1" if _WIN else "false"
 SLEEP_5 = "Start-Sleep -Seconds 5" if _WIN else "sleep 5"
 PWD = "(Get-Location).Path" if _WIN else "pwd"  # PowerShell's `pwd` is a table that cuts long paths
-PRINT_1000 = (
-    'foreach ($i in 1..1000) { "line$i" }'
-    if _WIN
-    else "for i in $(seq 1 1000); do echo line$i; done"
-)
+PRINT_1000 = 'foreach ($i in 1..1000) { "line$i" }' if _WIN else "for i in $(seq 1 1000); do echo line$i; done"
 
 
 # Every behaviour below is checked twice: on the in-process executor (direct mode) and on
@@ -58,7 +54,10 @@ def executor(request, tmp_path):
         except seatbelt.SeatbeltUnavailable as exc:
             pytest.skip(str(exc))
         provider = seatbelt.SeatbeltProvider(
-            roots=[{"path": str(tmp_path), "writable": True}], cwd=tmp_path, runner_path=_runner_zipapp(tmp_path), network=False
+            roots=[{"path": str(tmp_path), "writable": True}],
+            cwd=tmp_path,
+            runner_path=_runner_zipapp(tmp_path),
+            network=False,
         )
     else:
         provider = RunnerLocalProvider(cwd=tmp_path, runner_path=_runner_zipapp(tmp_path))
@@ -167,11 +166,7 @@ def test_run_shell_accepts_description_and_clamped_timeout(executor):
 
 # -- background tasks ------------------------------------------------------------
 
-ECHO_THEN_SLEEP = (
-    "Write-Output started; Start-Sleep -Seconds 30"
-    if _WIN
-    else "echo started; sleep 30"
-)
+ECHO_THEN_SLEEP = "Write-Output started; Start-Sleep -Seconds 30" if _WIN else "echo started; sleep 30"
 QUICK_ECHO = "Write-Output quick_done" if _WIN else "echo quick_done"
 
 
@@ -213,9 +208,7 @@ def _poll_output(reg, task_id, *, until_status=None, deadline=10.0):
 def test_background_task_runs_and_exits(executor):
     reg = ToolRegistry()
     reg.register_all(shell_tools(executor))
-    started = reg.execute(
-        "run_shell", {"command": QUICK_ECHO, "run_in_background": True}
-    )
+    started = reg.execute("run_shell", {"command": QUICK_ECHO, "run_in_background": True})
     assert started["status"] == "running" and started["task_id"]
 
     acc, res = _poll_output(reg, started["task_id"], until_status="exited")
@@ -231,9 +224,7 @@ def test_background_task_runs_and_exits(executor):
 def test_background_task_kill(executor):
     reg = ToolRegistry()
     reg.register_all(shell_tools(executor))
-    started = reg.execute(
-        "run_shell", {"command": ECHO_THEN_SLEEP, "run_in_background": True}
-    )
+    started = reg.execute("run_shell", {"command": ECHO_THEN_SLEEP, "run_in_background": True})
     acc, _ = _poll_output(reg, started["task_id"])
     assert "started" in acc  # it's alive and producing output
 
@@ -247,10 +238,5 @@ def test_background_task_kill(executor):
 def test_background_unknown_task_errors(executor):
     reg = ToolRegistry()
     reg.register_all(shell_tools(executor))
-    assert (
-        "unknown task"
-        in reg.execute("shell_task_output", {"task_id": "bg-99"})["error"]
-    )
-    assert (
-        "unknown task" in reg.execute("shell_task_kill", {"task_id": "bg-99"})["error"]
-    )
+    assert "unknown task" in reg.execute("shell_task_output", {"task_id": "bg-99"})["error"]
+    assert "unknown task" in reg.execute("shell_task_kill", {"task_id": "bg-99"})["error"]

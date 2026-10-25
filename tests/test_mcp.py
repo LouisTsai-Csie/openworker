@@ -61,10 +61,7 @@ def test_load_merges_global_and_workspace(tmp_path, monkeypatch):
         },
     )
 
-    servers = {
-        s.name: s
-        for s in load_mcp_servers(ws, secrets=SecretStore(), workspace_trusted=True)
-    }
+    servers = {s.name: s for s in load_mcp_servers(ws, secrets=SecretStore(), workspace_trusted=True)}
     # Global wins on name clash; a non-clashing trusted workspace server still loads.
     assert servers["fs"].args == ["global"]
     assert servers["ws_only"].args == ["ws"]
@@ -102,26 +99,19 @@ def test_untrusted_workspace_mcp_ignored(tmp_path, monkeypatch):
 
     # Default / explicit untrusted: global only; no name hijack, no evil server.
     for kwargs in ({}, {"workspace_trusted": False}):
-        servers = {
-            s.name: s for s in load_mcp_servers(ws, secrets=SecretStore(), **kwargs)
-        }
+        servers = {s.name: s for s in load_mcp_servers(ws, secrets=SecretStore(), **kwargs)}
         assert set(servers) == {"fs"}
         assert servers["fs"].args == ["global"]
 
     # Trusted: the evil stdio server loads, but the clashing `fs` name still resolves
     # to the global def — a trusted repo cannot silently redefine a global server.
-    trusted = {
-        s.name: s
-        for s in load_mcp_servers(ws, secrets=SecretStore(), workspace_trusted=True)
-    }
+    trusted = {s.name: s for s in load_mcp_servers(ws, secrets=SecretStore(), workspace_trusted=True)}
     assert trusted["fs"].args == ["global"]
     assert "evil" in trusted
 
 
 @pytest.mark.asyncio
-async def test_prepare_mcp_tools_does_not_spawn_untrusted_workspace(
-    tmp_path, monkeypatch
-):
+async def test_prepare_mcp_tools_does_not_spawn_untrusted_workspace(tmp_path, monkeypatch):
     """End-to-end for #213: untrusted workspace MCP never reaches MCPManager.ensure."""
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
     ws = tmp_path / "cloned-repo"
@@ -143,9 +133,7 @@ async def test_prepare_mcp_tools_does_not_spawn_untrusted_workspace(
 
     async def _boom(server, *, interactive: bool = False):
         ensure_calls.append(server.name)
-        raise AssertionError(
-            f"untrusted workspace MCP must not spawn: {server.name!r}"
-        )
+        raise AssertionError(f"untrusted workspace MCP must not spawn: {server.name!r}")
 
     monkeypatch.setattr(manager.mcp, "ensure", _boom)
 
@@ -188,9 +176,7 @@ def test_tool_name_sanitizes():
 
 def test_schema_and_metadata():
     server = MCPServerDef(name="fs", transport="stdio", requires_approval=True)
-    fns = build_callables(
-        server, [_fake_tool("read_file")], lambda t, a: None, asyncio.new_event_loop()
-    )
+    fns = build_callables(server, [_fake_tool("read_file")], lambda t, a: None, asyncio.new_event_loop())
     fn = fns[0]
     assert fn.__name__ == "mcp__fs__read_file"
     meta = fn.__aisuite_tool_metadata__
@@ -251,8 +237,7 @@ async def test_remote_tool_routing_is_not_overridable_by_arguments():
 
     routed_tool = seen[0][0]
     assert routed_tool == "read_file", (
-        f"routing hijacked: call reached {routed_tool!r} instead of the "
-        "approved 'read_file'"
+        f"routing hijacked: call reached {routed_tool!r} instead of the approved 'read_file'"
     )
 
 
@@ -300,16 +285,15 @@ async def test_stdio_startup_crash_captures_stderr_tail(tmp_path, monkeypatch):
         command="/bin/sh",
         args=["-c", "echo 'usage: doomed --flag' >&2; exit 7"],
     )
-    with pytest.raises(Exception):
+    # The SDK's anyio transport surfaces a failed launch as a group, not a bare error.
+    with pytest.raises(ExceptionGroup):
         await mgr.ensure(server)
     tail = mgr.last_stderr("doomed")
     assert tail is not None and "usage: doomed --flag" in tail
 
 
 @pytest.mark.asyncio
-async def test_prepare_records_failure_status_and_session_notice(
-    tmp_path, monkeypatch
-):
+async def test_prepare_records_failure_status_and_session_notice(tmp_path, monkeypatch):
     """A crashing global server surfaces: last_error + status=error + one-shot
     session failure drain — instead of the pre-drill silent skip."""
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
@@ -515,9 +499,7 @@ def test_delete_mcp_shuts_down_connection_and_forgets_tokens(tmp_path):
 
     mgr = SessionManager(data_dir=tmp_path / "data")
     put_global_server("gone-srv", {"url": "https://x.example/mcp", "auth": "oauth"})
-    mgr.secrets.put(
-        mcp_oauth.PROFILE_PREFIX + "gone-srv", {"tokens": {"access_token": "A"}}
-    )
+    mgr.secrets.put(mcp_oauth.PROFILE_PREFIX + "gone-srv", {"tokens": {"access_token": "A"}})
     conn = _Conn(SimpleNamespace(), tools=[])
     mgr.mcp._conns["gone-srv"] = conn
 
@@ -541,11 +523,16 @@ async def test_session_notice_fires_once_per_failure_episode(tmp_path, monkeypat
 
     mgr = SessionManager(data_dir=tmp_path / "data")
     server = SimpleNamespace(
-        name="flaky", transport="stdio", url=None, auth=None, enabled=True, include_tools=None, exclude_tools=None, requires_approval=True
+        name="flaky",
+        transport="stdio",
+        url=None,
+        auth=None,
+        enabled=True,
+        include_tools=None,
+        exclude_tools=None,
+        requires_approval=True,
     )
-    monkeypatch.setattr(
-        "coworker.server.manager.load_mcp_servers", lambda *a, **k: [server]
-    )
+    monkeypatch.setattr("coworker.server.manager.load_mcp_servers", lambda *a, **k: [server])
 
     fail_with: list[str] = ["boom one"]
 
@@ -586,11 +573,16 @@ async def test_notice_dedupe_survives_restart(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
     server = SimpleNamespace(
-        name="flaky", transport="stdio", url=None, auth=None, enabled=True, include_tools=None, exclude_tools=None, requires_approval=True
+        name="flaky",
+        transport="stdio",
+        url=None,
+        auth=None,
+        enabled=True,
+        include_tools=None,
+        exclude_tools=None,
+        requires_approval=True,
     )
-    monkeypatch.setattr(
-        "coworker.server.manager.load_mcp_servers", lambda *a, **k: [server]
-    )
+    monkeypatch.setattr("coworker.server.manager.load_mcp_servers", lambda *a, **k: [server])
 
     async def ensure(s, **kw):
         raise RuntimeError("same boom")
@@ -620,11 +612,16 @@ async def test_notice_dedupe_ignores_per_process_noise(tmp_path, monkeypatch):
     from coworker.server import SessionManager
 
     server = SimpleNamespace(
-        name="flaky", transport="stdio", url=None, auth=None, enabled=True, include_tools=None, exclude_tools=None, requires_approval=True
+        name="flaky",
+        transport="stdio",
+        url=None,
+        auth=None,
+        enabled=True,
+        include_tools=None,
+        exclude_tools=None,
+        requires_approval=True,
     )
-    monkeypatch.setattr(
-        "coworker.server.manager.load_mcp_servers", lambda *a, **k: [server]
-    )
+    monkeypatch.setattr("coworker.server.manager.load_mcp_servers", lambda *a, **k: [server])
 
     errors = ["credential process <function f at 0x102ab40f0> pid 84121"]
 

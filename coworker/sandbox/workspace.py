@@ -29,7 +29,9 @@ OPENSHELL = "openshell"
 SEATBELT = "seatbelt"
 WINDOWS = "windows"
 
-REGRANT_NOTICE = "The session's folders changed; the sandbox now covers the current list. Shells and variables were kept."
+REGRANT_NOTICE = (
+    "The session's folders changed; the sandbox now covers the current list. Shells and variables were kept."
+)
 RESTART_NOTICE = (
     "The sandbox was restarted because the session's folders changed. The shell started again: "
     "variables and background tasks from before are gone, files are untouched."
@@ -60,7 +62,11 @@ class DirectWorkspace(Workspace):
         return self._executor
 
     def describe(self) -> dict[str, Any]:
-        return {"provider": DIRECT, "enforcement": "none", "reason": "commands run in the OpenWorker process, unconfined"}
+        return {
+            "provider": DIRECT,
+            "enforcement": "none",
+            "reason": "commands run in the OpenWorker process, unconfined",
+        }
 
 
 class RunnerWorkspace(Workspace):
@@ -99,7 +105,11 @@ class RunnerWorkspace(Workspace):
         self.hello: dict[str, Any] = {}
         self.client = RunnerClient(lambda: provider.open_runner())  # looked up when it connects
         self._executor = RunnerExecutor(
-            self.client, cwd=str(Path(cwd).expanduser().resolve()), shell=shell, before_call=self.sync_roots, after_call=self.network_note
+            self.client,
+            cwd=str(Path(cwd).expanduser().resolve()),
+            shell=shell,
+            before_call=self.sync_roots,
+            after_call=self.network_note,
         )
         # Whether the agent can ask the person for a site (`request_network_access`): set by
         # the session's builder; false where nobody can answer (full access, no such tool).
@@ -269,7 +279,9 @@ class RunnerWorkspace(Workspace):
         not wait. A refusal that still arrives after its result is told with the next one."""
         new = self._blocked_untold()
         lag = float(getattr(self.provider, "blocked_lag", 0.0) or 0.0)
-        failed = result is not None and (result.get("exit_code") != 0 or bool(result.get("timed_out")) or bool(result.get("error")))
+        failed = result is not None and (
+            result.get("exit_code") != 0 or bool(result.get("timed_out")) or bool(result.get("error"))
+        )
         if not new and lag and failed and self.reports_blocked:
             deadline = time.time() + lag
             while not new and time.time() < deadline:
@@ -282,13 +294,19 @@ class RunnerWorkspace(Workspace):
         for _, entry in new:
             counts[entry] = counts.get(entry, 0) + 1
         late = any(when < started - 0.5 for when, _ in new)
-        return {"blocked_sites": list(counts), "network_note": network_note_text(counts, can_ask=self._asking(), late=late)}
+        return {
+            "blocked_sites": list(counts),
+            "network_note": network_note_text(counts, can_ask=self._asking(), late=late),
+        }
 
     def _blocked_untold(self) -> list[tuple[float, str]]:
         return [item for item in self.blocked_since(self._blocked_told) if item[0] > self._blocked_told]
 
     def describe(self) -> dict[str, Any]:
-        return {**self.provider.describe(), "runner": {k: self.hello.get(k) for k in ("runner_version", "os", "machine", "instance_id")}}
+        return {
+            **self.provider.describe(),
+            "runner": {k: self.hello.get(k) for k in ("runner_version", "os", "machine", "instance_id")},
+        }
 
     def add_hosts(self, hosts: Sequence[str]) -> None:
         """The person allowed a site (OPE-219): the sandbox's network list grows at once, for
@@ -325,7 +343,7 @@ _NOTE_SITES = 10  # more than this many blocked sites in one command are counted
 
 
 def _site_name(entry: str) -> str:
-    """"github.com:443" reads as "github.com": the port only matters when it is not the web's."""
+    """ "github.com:443" reads as "github.com": the port only matters when it is not the web's."""
     return entry[:-4] if entry.endswith(":443") else entry
 
 
@@ -343,7 +361,11 @@ def network_note_text(counts: dict[str, int], *, can_ask: bool, late: bool = Fal
     )
     return (
         "Note: this command ran in a sandbox, and the sandbox's network rules may have affected it.\n"
-        + ("Since your previous command, the sandbox blocked connections to:\n" if late else "While it ran, the sandbox blocked connections to:\n")
+        + (
+            "Since your previous command, the sandbox blocked connections to:\n"
+            if late
+            else "While it ran, the sandbox blocked connections to:\n"
+        )
         + "\n".join(lines)
         + "\n"
         "These attempts may have come from this command or from something else running in this session. " + ask
@@ -408,7 +430,9 @@ def open_workspace(
         from coworker.sandbox.registry import SandboxRegistry
 
         return RunnerWorkspace(
-            SeatbeltProvider(roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added),
+            SeatbeltProvider(
+                roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added
+            ),
             cwd=cwd,
             registry=SandboxRegistry(),
             session_id=session_id,
@@ -423,7 +447,15 @@ def open_workspace(
         label = "-".join(part for part in (session_id[:24], agent[:24]) if part)
         registry = SandboxRegistry()
         return RunnerWorkspace(
-            OpenShellProvider(roots=listed, cwd=str(cwd), label=label, credentials=grants, profile=profile, extra_hosts=added, registry=registry.id),
+            OpenShellProvider(
+                roots=listed,
+                cwd=str(cwd),
+                label=label,
+                credentials=grants,
+                profile=profile,
+                extra_hosts=added,
+                registry=registry.id,
+            ),
             cwd=cwd,
             registry=registry,
             session_id=session_id,
@@ -436,7 +468,9 @@ def open_workspace(
         from coworker.sandbox.registry import SandboxRegistry
 
         return RunnerWorkspace(
-            WindowsProvider(roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added),
+            WindowsProvider(
+                roots=listed, cwd=str(cwd), credentials=grants, profile=profile, tool_dirs=tool_dirs, extra_hosts=added
+            ),
             cwd=cwd,
             registry=SandboxRegistry(),
             session_id=session_id,
@@ -444,4 +478,6 @@ def open_workspace(
             live_roots=roots,
             start=start,
         )
-    raise ValueError(f"unknown sandbox provider: {name!r} (known: {DIRECT}, {SEATBELT}, {WINDOWS}, {OPENSHELL}, {RUNNER_LOCAL})")
+    raise ValueError(
+        f"unknown sandbox provider: {name!r} (known: {DIRECT}, {SEATBELT}, {WINDOWS}, {OPENSHELL}, {RUNNER_LOCAL})"
+    )

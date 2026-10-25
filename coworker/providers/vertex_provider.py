@@ -64,9 +64,7 @@ def load_credentials(service_account_json: str | None) -> Any:
 
     if raw.startswith("{"):
         info = json.loads(raw)
-        return service_account.Credentials.from_service_account_info(
-            info, scopes=_SCOPES
-        )
+        return service_account.Credentials.from_service_account_info(info, scopes=_SCOPES)
     return service_account.Credentials.from_service_account_file(raw, scopes=_SCOPES)
 
 
@@ -216,9 +214,7 @@ class VertexProvider(ProviderClient):
         **settings: Any,
     ) -> AssistantTurn:
         family, rest = self._split(model)
-        return self._family_client(family).complete(
-            model=rest, messages=messages, tools=tools, **settings
-        )
+        return self._family_client(family).complete(model=rest, messages=messages, tools=tools, **settings)
 
     def stream(
         self,
@@ -229,9 +225,7 @@ class VertexProvider(ProviderClient):
         **settings: Any,
     ):
         family, rest = self._split(model)
-        return self._family_client(family).stream(
-            model=rest, messages=messages, tools=tools, **settings
-        )
+        return self._family_client(family).stream(model=rest, messages=messages, tools=tools, **settings)
 
     def capabilities(self, model: str) -> ModelCapabilities:
         qualified = model if model.startswith("vertex:") else f"vertex:{model}"

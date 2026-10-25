@@ -32,9 +32,7 @@ def _manager(tmp_path) -> SessionManager:
 def _tg_reply(text: str) -> MessageEvent:
     return MessageEvent(
         text=text,
-        source=SessionSource(
-            platform="telegram", chat_id="99", user_id="tg-user", user_name="TG"
-        ),
+        source=SessionSource(platform="telegram", chat_id="99", user_id="tg-user", user_name="TG"),
     )
 
 

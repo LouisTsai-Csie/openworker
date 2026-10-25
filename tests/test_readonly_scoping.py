@@ -6,6 +6,7 @@ also covered ~/.aws/credentials, another repository's history, and OpenWorker's 
 file. The self-protection floor does not cover that: it guards those files against
 modification, not reading.
 """
+
 from __future__ import annotations
 
 

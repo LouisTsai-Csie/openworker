@@ -11,11 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-
-try:
-    import tomllib  # stdlib since 3.11
-except ModuleNotFoundError:  # 3.10, the floor requires-python declares
-    import tomli as tomllib  # type: ignore[no-redef]
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -67,9 +63,7 @@ class Config:
     # the summary itself never gets written. Environment override:
     # COWORKER_COMPACTION_SUMMARY_MAX_TOKENS.
     compaction_summary_max_tokens: int | None = None
-    allowed_commands: list[str] = field(
-        default_factory=lambda: list(DEFAULT_ALLOWED_COMMANDS)
-    )
+    allowed_commands: list[str] = field(default_factory=lambda: list(DEFAULT_ALLOWED_COMMANDS))
     # In "custom" permission mode, these tools are auto-approved (e.g. file edits)
     # while everything else still asks.
     auto_allow: list[str] = field(default_factory=list)
@@ -105,9 +99,7 @@ class Config:
     # default shipped once as "connected but relay OFF" on every machine
     # without a hand-edited config.toml. Empty override ⇒ relay disabled
     # (manual Socket Mode still works); dev/BYO deployments point elsewhere.
-    cloud_relay_ws_url: str = (
-        "wss://l4z1paxb83.execute-api.us-east-1.amazonaws.com/ocw-connect"
-    )
+    cloud_relay_ws_url: str = "wss://l4z1paxb83.execute-api.us-east-1.amazonaws.com/ocw-connect"
     # Hosted machines service the union view proxies to (spec: "Union view on
     # the signed-in desktop"). Empty override ⇒ the cloud machines surface is
     # off entirely; dev/BYO deployments point elsewhere.
@@ -296,9 +288,7 @@ def _nonnegative_int(value: Any, source: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ValueError(
-            f"tool_result_max_bytes must be an integer >= 0, got {value!r} ({source})"
-        )
+        raise ValueError(f"tool_result_max_bytes must be an integer >= 0, got {value!r} ({source})")
     return value
 
 
@@ -310,9 +300,7 @@ def _effort_level(value: Any, source: str) -> str | None:
     if not text:
         return None
     if text not in EFFORT_LEVELS:
-        raise ValueError(
-            f"reasoning_effort must be one of {', '.join(EFFORT_LEVELS)}, got {value!r} ({source})"
-        )
+        raise ValueError(f"reasoning_effort must be one of {', '.join(EFFORT_LEVELS)}, got {value!r} ({source})")
     return text
 
 
@@ -322,9 +310,7 @@ def _positive_int(value: Any, source: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise ValueError(
-            f"max_output_tokens must be a positive integer, got {value!r} ({source})"
-        )
+        raise ValueError(f"max_output_tokens must be a positive integer, got {value!r} ({source})")
     return value
 
 
@@ -349,9 +335,7 @@ def load_config(
                     setattr(cfg, key, value)
             if workspace_trusted:
                 cfg.allowed_commands = list(
-                    dict.fromkeys(
-                        [*cfg.allowed_commands, *workspace_allowed_commands(workspace)]
-                    )
+                    dict.fromkeys([*cfg.allowed_commands, *workspace_allowed_commands(workspace)])
                 )
     cfg.max_output_tokens = _positive_int(cfg.max_output_tokens, "config.toml")
     raw = (os.environ.get(MAX_OUTPUT_TOKENS_ENV) or "").strip()
@@ -400,16 +384,10 @@ def load_config(
     return cfg
 
 
-def _positive_int_setting(
-    value: Any, name: str, env_var: str
-) -> int | None:
+def _positive_int_setting(value: Any, name: str, env_var: str) -> int | None:
     """A config.toml value overridden by `env_var`; both must be positive integers."""
-    if value is not None and (
-        isinstance(value, bool) or not isinstance(value, int) or value <= 0
-    ):
-        raise ValueError(
-            f"{name} must be a positive integer, got {value!r} (config.toml)"
-        )
+    if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value <= 0):
+        raise ValueError(f"{name} must be a positive integer, got {value!r} (config.toml)")
     raw = (os.environ.get(env_var) or "").strip()
     if not raw:
         return value
@@ -418,7 +396,5 @@ def _positive_int_setting(
     except ValueError:
         parsed = 0
     if parsed <= 0:
-        raise ValueError(
-            f"{name} must be a positive integer, got {raw!r} ({env_var})"
-        )
+        raise ValueError(f"{name} must be a positive integer, got {raw!r} ({env_var})")
     return parsed

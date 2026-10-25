@@ -44,11 +44,7 @@ def _door(secrets: SecretStore, config: Config, connector: str) -> dict[str, Any
     base = (config.cloud_base_url or "").rstrip("/")
     if not base:
         return None
-    if (
-        profile.get("machine_credential")
-        and profile.get("broker_user_id")
-        and profile.get("connection_id")
-    ):
+    if profile.get("machine_credential") and profile.get("broker_user_id") and profile.get("connection_id"):
         return {
             "kind": "machine",
             "url": base + "/v1/machine/subscriptions",
@@ -132,9 +128,7 @@ def register(
 
 def _post(door: dict[str, Any], path: str, body: dict[str, Any]) -> None:
     try:
-        httpx.post(
-            door["url"] + path, json={**door["ids"], **body}, headers=door["headers"], timeout=_TIMEOUT
-        )
+        httpx.post(door["url"] + path, json={**door["ids"], **body}, headers=door["headers"], timeout=_TIMEOUT)
     except httpx.HTTPError as exc:  # best effort: the next reconcile catches up
         logger.info("subscription %s not reported: %s", path or "remove", type(exc).__name__)
 

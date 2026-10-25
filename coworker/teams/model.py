@@ -9,11 +9,11 @@ custom fields; anyone needing those graduates to a real tracker via connectors.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 
-class ItemState(str, Enum):
+class ItemState(StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     BLOCKED = "blocked"
@@ -42,7 +42,7 @@ EDGES: dict[ItemState, set[ItemState]] = {
 WORKER_TARGETS = {ItemState.IN_PROGRESS, ItemState.BLOCKED, ItemState.REVIEW}
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     USER = "user"
     LEAD = "lead"
     WORKER = "worker"
@@ -62,7 +62,7 @@ class Actor:
 
 
 LINK_KINDS = ("parent", "blocks")  # link(src, "parent", dst): dst is src's parent
-                                   # link(src, "blocks", dst): src blocks dst
+# link(src, "blocks", dst): src blocks dst
 
 # `note` is any observation — the journal is not only for investigations. `raw` is
 # a capture (log excerpt, command output); reads skip raw unless asked, and large

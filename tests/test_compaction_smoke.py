@@ -24,9 +24,7 @@ class LongSessionProvider(ProviderClient):
         self.summary_prompts: list[str] = []
 
     def complete(self, *, model, messages, tools=None, **settings):
-        if messages and "compacting an AI coworker" in str(
-            messages[0].get("content", "")
-        ):
+        if messages and "compacting an AI coworker" in str(messages[0].get("content", "")):
             self.summary_prompts.append(str(messages[1]["content"]))
             return AssistantTurn(
                 text=(
@@ -68,13 +66,10 @@ def test_long_session_survives_repeated_compaction(tmp_path):
                 pass
             # Every turn must produce a real reply — an empty assistant message means
             # the stream got dropped, not answered.
-            last = next(
-                m for m in reversed(engine.messages) if m.get("role") == "assistant"
-            )
+            last = next(m for m in reversed(engine.messages) if m.get("role") == "assistant")
             assert f"turn {i + 1}:" in str(last.get("content", ""))
             if engine.compaction_state is not None and (
-                not boundaries
-                or engine.compaction_state.boundary_index != boundaries[-1]
+                not boundaries or engine.compaction_state.boundary_index != boundaries[-1]
             ):
                 boundaries.append(engine.compaction_state.boundary_index)
             mgr.save(sid, engine)

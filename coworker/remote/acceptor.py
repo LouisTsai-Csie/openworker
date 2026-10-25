@@ -139,11 +139,7 @@ class RemoteAcceptor:
                     # deploys to this machine (OPE-149); its fingerprint is
                     # what the user checks against `openworker machine status`.
                     "seal_pubkey": row.get("seal_pubkey") or "",
-                    "seal_fingerprint": (
-                        _fingerprint(row["seal_pubkey"])
-                        if row.get("seal_pubkey")
-                        else ""
-                    ),
+                    "seal_fingerprint": (_fingerprint(row["seal_pubkey"]) if row.get("seal_pubkey") else ""),
                 }
             )
         return rows
@@ -259,6 +255,7 @@ def mount_acceptor(
                 return live
             await asyncio.sleep(0.5)
         return None
+
     audit = audit or NullAuditLog()
     multi_tenant = tenant_resolver is not None
     _desktop_tenant = {"org_id": "", "actor": ""}
@@ -328,10 +325,7 @@ def mount_acceptor(
         except Exception:
             body = {}
         device_code = pysecrets.token_urlsafe(24)
-        user_code = "-".join(
-            "".join(pysecrets.choice(_USER_CODE_ALPHABET) for _ in range(4))
-            for _ in range(2)
-        )
+        user_code = "-".join("".join(pysecrets.choice(_USER_CODE_ALPHABET) for _ in range(4)) for _ in range(2))
         acceptor.ephemera.put_grant(
             {
                 "device_code": device_code,
@@ -352,9 +346,7 @@ def mount_acceptor(
             # A deployment that serves the SPA hands out a clickable approval
             # deep link (the joiner prints it); desktop has no approval web
             # page, so the hint is the instruction there.
-            "verification_url": (
-                approval_url.format(code=user_code) if approval_url else ""
-            ),
+            "verification_url": (approval_url.format(code=user_code) if approval_url else ""),
             "verification_hint": "Approve in the OpenWorker app: Settings → Machines",
         }
 
@@ -615,10 +607,7 @@ def mount_acceptor(
         seal_pubkey = known.get("seal_pubkey") or ""
         if not seal_pubkey:
             return JSONResponse(
-                {
-                    "error": "machine has no pinned sealing key yet — "
-                    "reconnect it once on current code, then retry"
-                },
+                {"error": "machine has no pinned sealing key yet — reconnect it once on current code, then retry"},
                 status_code=409,
             )
         names = [str(n) for n in (payload.get("profiles") or []) if str(n).strip()]
@@ -629,14 +618,12 @@ def mount_acceptor(
             # Ledger hashes come from the client (it alone saw the values);
             # they only ever drive the staleness display, never a decision.
             hashes = payload.get("hashes") or {}
-            ledger = {
-                name: str(hashes.get(name) or "browser-sealed") for name in names
-            }
+            ledger = {name: str(hashes.get(name) or "browser-sealed") for name in names}
         else:
             profiles: dict[str, Any] = {}
             for name in names:
                 data = wallet.get(name)  # resolved: refs to desktop-only env vars
-                if data is None:        # would silently break on the box
+                if data is None:  # would silently break on the box
                     return JSONResponse(
                         {"error": f"profile '{name}' not in the wallet"},
                         status_code=400,
@@ -645,16 +632,12 @@ def mount_acceptor(
             sealed = seal_b64(seal_pubkey, json.dumps({"profiles": profiles}).encode())
             ledger = {name: _hash_profile(data) for name, data in profiles.items()}
         try:
-            status, body, _ = await live.rpc.request_frame(
-                {"type": "secret_deploy", "sealed_b64": sealed}
-            )
-        except (asyncio.TimeoutError, ConnectionError):
+            status, body, _ = await live.rpc.request_frame({"type": "secret_deploy", "sealed_b64": sealed})
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         if status != 200:
             detail = _safe_json(body)
-            return JSONResponse(
-                {"error": detail.get("error", "deploy failed")}, status_code=502
-            )
+            return JSONResponse({"error": detail.get("error", "deploy failed")}, status_code=502)
         for name, value_hash in ledger.items():
             registry.record_deploy(machine_id, name, value_hash)
             audit.emit(
@@ -716,7 +699,7 @@ def mount_acceptor(
                     "sealed_b64": sealed,
                 }
             )
-        except (asyncio.TimeoutError, ConnectionError):
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         detail = _safe_json(body)
         audit.emit(
@@ -745,9 +728,14 @@ def mount_acceptor(
             return JSONResponse({"error": "unknown machine"}, status_code=404)
         if deploy_allowed is not None and not deploy_allowed(tenant):
             audit.emit(
-                "create", entity_type="managed_grant", entity_name=name, entity_uid=machine_id,
-                detail={"denied": "key_push_disabled"}, success=False,
-                actor=tenant["actor"], org_id=tenant["org_id"],
+                "create",
+                entity_type="managed_grant",
+                entity_name=name,
+                entity_uid=machine_id,
+                detail={"denied": "key_push_disabled"},
+                success=False,
+                actor=tenant["actor"],
+                org_id=tenant["org_id"],
             )
             return JSONResponse(
                 {"error": "key_push_disabled", "message": "key pushes are turned off for this org."},
@@ -764,14 +752,18 @@ def mount_acceptor(
             status, body, _ = await live.rpc.request_frame(
                 {"type": "managed_grant_sealed", "connector": name, "sealed_b64": sealed}
             )
-        except (asyncio.TimeoutError, ConnectionError):
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         detail = _safe_json(body)
         audit.emit(
-            "create", entity_type="managed_grant", entity_name=name, entity_uid=machine_id,
+            "create",
+            entity_type="managed_grant",
+            entity_name=name,
+            entity_uid=machine_id,
             detail={"machine": known["name"], "source": "browser-sealed"},
             success=status == 200 and bool(detail.get("ok")),
-            actor=tenant["actor"], org_id=tenant["org_id"],
+            actor=tenant["actor"],
+            org_id=tenant["org_id"],
         )
         return JSONResponse(detail, status_code=status if status != 200 else 200)
 
@@ -792,16 +784,12 @@ def mount_acceptor(
         if not names:
             return JSONResponse({"error": "profiles required"}, status_code=400)
         try:
-            status, body, _ = await live.rpc.request_frame(
-                {"type": "secret_revoke", "profiles": names}
-            )
-        except (asyncio.TimeoutError, ConnectionError):
+            status, body, _ = await live.rpc.request_frame({"type": "secret_revoke", "profiles": names})
+        except (TimeoutError, ConnectionError):
             return JSONResponse({"error": "machine unreachable"}, status_code=503)
         if status != 200:
             detail = _safe_json(body)
-            return JSONResponse(
-                {"error": detail.get("error", "revoke failed")}, status_code=502
-            )
+            return JSONResponse({"error": detail.get("error", "revoke failed")}, status_code=502)
         for name in names:
             registry.remove_deploy(machine_id, name)
             audit.emit(
@@ -844,18 +832,13 @@ def mount_acceptor(
                 # header the caller could set.
                 actor=str(tenant.get("actor") or ""),
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return JSONResponse({"error": "machine timed out"}, status_code=504)
         except ConnectionError:
             return JSONResponse({"error": "machine disconnected"}, status_code=503)
         # Tier-2 snapshot: every successful unfiltered session-list fetch doubles
         # as the offline fallback (greyed, never vanished). Metadata only.
-        if (
-            request.method == "GET"
-            and path == "v1/sessions"
-            and not request.url.query
-            and status == 200
-        ):
+        if request.method == "GET" and path == "v1/sessions" and not request.url.query and status == 200:
             try:
                 registry.save_sessions_snapshot(machine_id, payload.decode("utf-8"))
             except Exception:
@@ -865,9 +848,7 @@ def mount_acceptor(
         transcript_match = _TRANSCRIPT_PATH.fullmatch(path)
         if request.method == "GET" and transcript_match and status == 200:
             try:
-                registry.save_transcript(
-                    machine_id, transcript_match.group(1), payload.decode("utf-8")
-                )
+                registry.save_transcript(machine_id, transcript_match.group(1), payload.decode("utf-8"))
             except Exception:
                 pass
         return Response(content=payload, status_code=status, media_type=content_type)
@@ -885,15 +866,13 @@ def mount_acceptor(
         live = acceptor.live(machine_id)
         if live is not None:
             try:
-                status, payload, _ = await live.rpc.request(
-                    "GET", f"/v1/sessions/{session_id}/messages"
-                )
+                status, payload, _ = await live.rpc.request("GET", f"/v1/sessions/{session_id}/messages")
                 if status == 200:
                     text = payload.decode("utf-8")
                     registry.save_transcript(machine_id, session_id, text)
                     data = json.loads(text)
                     return {"messages": data.get("messages", []), "live": True}
-            except (asyncio.TimeoutError, ConnectionError, ValueError):
+            except (TimeoutError, ConnectionError, ValueError):
                 pass  # fall through to the cache
         cached = registry.transcript(machine_id, session_id)
         if cached is None:
@@ -918,12 +897,10 @@ def mount_acceptor(
             try:
                 status, payload, _ = await live.rpc.request("GET", "/v1/sessions")
                 if status == 200:
-                    registry.save_sessions_snapshot(
-                        machine_id, payload.decode("utf-8")
-                    )
+                    registry.save_sessions_snapshot(machine_id, payload.decode("utf-8"))
                     data = json.loads(payload.decode("utf-8"))
                     return {"sessions": data.get("sessions", []), "live": True}
-            except (asyncio.TimeoutError, ConnectionError, ValueError):
+            except (TimeoutError, ConnectionError, ValueError):
                 pass  # fall through to the snapshot
         snapshot = registry.sessions_snapshot(machine_id)
         if snapshot is None:
@@ -983,13 +960,10 @@ def mount_acceptor(
                     await _reject(
                         ws,
                         "not-enrolled",
-                        "unknown machine and no valid enrollment token — arm the "
-                        "controller and join with a fresh URL",
+                        "unknown machine and no valid enrollment token — arm the controller and join with a fresh URL",
                     )
                     return
-                if binding["fingerprint"] and binding["fingerprint"] != _fingerprint(
-                    pubkey
-                ):
+                if binding["fingerprint"] and binding["fingerprint"] != _fingerprint(pubkey):
                     # A device-flow token names the identity the user approved;
                     # any other machine presenting it burns it and gets nothing.
                     await _reject(
@@ -1005,13 +979,9 @@ def mount_acceptor(
 
             # Both paths prove possession of the private key.
             nonce = pysecrets.token_bytes(_CHALLENGE_BYTES)
-            await ws.send_text(
-                json.dumps({"type": "challenge", "nonce": ch.encode_body(nonce)})
-            )
+            await ws.send_text(json.dumps({"type": "challenge", "nonce": ch.encode_body(nonce)}))
             auth = json.loads(await ws.receive_text())
-            if auth.get("type") != "auth" or not verify_b64(
-                pubkey, nonce, str(auth.get("signature", ""))
-            ):
+            if auth.get("type") != "auth" or not verify_b64(pubkey, nonce, str(auth.get("signature", ""))):
                 await _reject(ws, "bad-signature")
                 return
 
@@ -1031,9 +1001,7 @@ def mount_acceptor(
             # The challenge only proves the identity key; the sealing key is
             # pinned only if that same identity key signed it. Without this a
             # middlebox could swap in its own key and read wallet deploys.
-            if seal_pubkey and not verify_seal_attestation(
-                pubkey, seal_pubkey, str(hello.get("seal_sig", ""))
-            ):
+            if seal_pubkey and not verify_seal_attestation(pubkey, seal_pubkey, str(hello.get("seal_sig", ""))):
                 await _reject(
                     ws,
                     "bad-seal-attestation",
@@ -1130,9 +1098,7 @@ def mount_acceptor(
 
                         async def _send_newer(doc=doc, current=current, reported=reported):
                             try:
-                                status, body, _ = await rpc.request_frame(
-                                    {"type": "policy", "policy": doc}
-                                )
+                                status, body, _ = await rpc.request_frame({"type": "policy", "policy": doc})
                                 parsed = _safe_json(body)
                                 ok = status == 200 and bool(parsed.get("ok"))
                                 _record(
@@ -1142,16 +1108,14 @@ def mount_acceptor(
                                     _int(parsed.get("version")) if ok else reported,
                                     "applied" if ok and parsed.get("applied") else ("ignored" if ok else "failed"),
                                 )
-                            except (asyncio.TimeoutError, ConnectionError):
+                            except (TimeoutError, ConnectionError):
                                 _record(policy_status, machine_id, known, reported, "unreachable")
 
                         _policy_task = asyncio.create_task(_send_newer())
                         policy_tasks.add(_policy_task)
                         _policy_task.add_done_callback(policy_tasks.discard)
                     else:
-                        await ws.send_text(
-                            json.dumps({"type": "policy_current", "version": reported})
-                        )
+                        await ws.send_text(json.dumps({"type": "policy_current", "version": reported}))
                 elif kind == "audit":
                     # Box-originated audit batch (cloud sink). Accepted only where a
                     # sink exists; a controller without one says so and the box backs
@@ -1230,11 +1194,7 @@ def mount_acceptor(
         # 1006 the moment the socket opens (python clients are lenient, which
         # hid this until the first real browser hit the hosted tier — the
         # api_token gate here only ever covered the desktop deployment).
-        offered = {
-            part.strip()
-            for part in ws.headers.get("sec-websocket-protocol", "").split(",")
-            if part.strip()
-        }
+        offered = {part.strip() for part in ws.headers.get("sec-websocket-protocol", "").split(",") if part.strip()}
         await ws.accept(subprotocol="openworker" if "openworker" in offered else None)
         live.stream_counter += 1
         stream_id = f"s{live.stream_counter}"
@@ -1254,9 +1214,7 @@ def mount_acceptor(
             )
             while True:
                 text = await ws.receive_text()
-                await live.rpc.send_frame(
-                    {"type": "ws_msg", "stream": stream_id, "text": text}
-                )
+                await live.rpc.send_frame({"type": "ws_msg", "stream": stream_id, "text": text})
         except (WebSocketDisconnect, ConnectionError):
             pass
         finally:
@@ -1280,9 +1238,7 @@ async def _reject(ws: WebSocket, reason: str, detail: str | None = None) -> None
 def _hash_profile(data: Any) -> str:
     import hashlib
 
-    return hashlib.sha256(
-        json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
+    return hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def _wallet_hash(wallet, profile: str) -> str | None:

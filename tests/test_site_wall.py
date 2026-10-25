@@ -23,7 +23,11 @@ def test_a_site_on_the_list_runs_without_a_card_in_every_asking_mode(tmp_path):
             d = eng.evaluate("web_fetch", {"url": url}, None)
             assert d.allowed and not d.needs_user, (mode, url, d.reason)
     # The wildcard covers subdomains only, as in the sandbox's own proxy.
-    assert not engine(tmp_path, Mode.INTERACTIVE).evaluate("web_fetch", {"url": "https://githubusercontent.com/"}, None).allowed
+    assert (
+        not engine(tmp_path, Mode.INTERACTIVE)
+        .evaluate("web_fetch", {"url": "https://githubusercontent.com/"}, None)
+        .allowed
+    )
 
 
 def test_bypass_refuses_a_site_off_the_list_with_no_card(tmp_path):
@@ -82,8 +86,14 @@ def test_web_search_is_held_to_the_provider_host(tmp_path):
 
 def test_no_wall_without_a_site_list(tmp_path):
     # Not sandboxed, or "Allow everything": today's behaviour, untouched.
-    assert PermissionEngine(workspace_root=tmp_path, mode=Mode.BYPASS_APPROVALS).evaluate("web_fetch", {"url": "https://weather.com/"}, None).allowed
-    d = PermissionEngine(workspace_root=tmp_path, mode=Mode.INTERACTIVE).evaluate("web_fetch", {"url": "https://weather.com/"}, None)
+    assert (
+        PermissionEngine(workspace_root=tmp_path, mode=Mode.BYPASS_APPROVALS)
+        .evaluate("web_fetch", {"url": "https://weather.com/"}, None)
+        .allowed
+    )
+    d = PermissionEngine(workspace_root=tmp_path, mode=Mode.INTERACTIVE).evaluate(
+        "web_fetch", {"url": "https://weather.com/"}, None
+    )
     assert d.needs_user and not d.human_only and not d.site
     # An empty list is a wall with nothing ticked.
     empty = PermissionEngine(workspace_root=tmp_path, mode=Mode.BYPASS_APPROVALS, sandbox_sites=[])
@@ -92,7 +102,9 @@ def test_no_wall_without_a_site_list(tmp_path):
 
 def test_other_tools_are_untouched_by_the_wall(tmp_path):
     eng = engine(tmp_path, Mode.BYPASS_APPROVALS)
-    assert eng.evaluate("run_shell", {"command": "curl https://weather.com"}, None).allowed  # the sandbox holds commands
+    assert eng.evaluate(
+        "run_shell", {"command": "curl https://weather.com"}, None
+    ).allowed  # the sandbox holds commands
     assert eng.evaluate("read_file", {"path": "a.txt"}, None).allowed
 
 
@@ -106,10 +118,18 @@ def test_always_site_is_offered_only_for_egress_tools(tmp_path):
     from coworker.server.manager import SessionManager
 
     manager = SessionManager(workspace=str(tmp_path), data_dir=tmp_path / "state")
+
     def request(tool, args):
         return SimpleNamespace(tool_name=tool, arguments=args, metadata=None)
-    assert manager.approval_outcome("always_site", request("web_fetch", {"url": "https://weather.com/"}), "s1") is ApprovalOutcome.ALWAYS_SITE
-    assert manager.approval_outcome("always_site", request("web_search", {"query": "x"}), "s2") is ApprovalOutcome.ALWAYS_SITE
+
+    assert (
+        manager.approval_outcome("always_site", request("web_fetch", {"url": "https://weather.com/"}), "s1")
+        is ApprovalOutcome.ALWAYS_SITE
+    )
+    assert (
+        manager.approval_outcome("always_site", request("web_search", {"query": "x"}), "s2")
+        is ApprovalOutcome.ALWAYS_SITE
+    )
     # A raw resolve for another tool degrades to a single allow, like every other grant.
     assert manager.approval_outcome("always_site", request("write_file", {"path": "a"}), "s3") is ApprovalOutcome.ONCE
 
@@ -137,8 +157,11 @@ def test_session_sandbox_summary(tmp_path, monkeypatch):
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path))
     grant = SimpleNamespace(name="gh", title="GitHub CLI")
     provider = SimpleNamespace(
-        name="openshell", profile="allowlist", extra_hosts=["github.com:443"],
-        roots=[{"path": "/home/sam/code/app", "writable": True}], grants=[grant],
+        name="openshell",
+        profile="allowlist",
+        extra_hosts=["github.com:443"],
+        roots=[{"path": "/home/sam/code/app", "writable": True}],
+        grants=[grant],
     )
     engine = SimpleNamespace(
         sandbox_workspace=SimpleNamespace(provider=provider, started=False),

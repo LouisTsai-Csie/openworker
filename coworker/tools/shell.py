@@ -54,9 +54,7 @@ class LocalExecutor(_StdlibLocalExecutor):
         from coworker import toolchain
 
         extra = [*kwargs.pop("extra_path_dirs", ()), str(toolchain.bin_dir())]
-        super().__init__(
-            cwd=cwd, base_env=_shell_base_env(), extra_path_dirs=extra, **kwargs
-        )
+        super().__init__(cwd=cwd, base_env=_shell_base_env(), extra_path_dirs=extra, **kwargs)
 
 
 _RUN_SHELL_SCHEMA = {

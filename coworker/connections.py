@@ -40,8 +40,7 @@ class PersonaConnectionStore:
         if self.path and self.path.is_file():
             data = json.loads(self.path.read_text(encoding="utf-8"))
             self._rows = {
-                pid: {str(c): bool(v) for c, v in (row or {}).items()}
-                for pid, row in data.get("personas", {}).items()
+                pid: {str(c): bool(v) for c, v in (row or {}).items()} for pid, row in data.get("personas", {}).items()
             }
 
     def _save(self) -> None:
@@ -59,9 +58,7 @@ class PersonaConnectionStore:
         NOT seed; use :meth:`defaults_for` to seed from a manifest."""
         return dict(self._rows.get(persona_id, {}))
 
-    def defaults_for(
-        self, persona_id: str, manifest, *, connected: set[str]
-    ) -> dict[str, bool]:
+    def defaults_for(self, persona_id: str, manifest, *, connected: set[str]) -> dict[str, bool]:
         """The persona's default connector map, seeding it from the manifest on first read.
 
         Seeding rule: a ``recommends`` item of kind ``connector`` with ``tier == "core"`` defaults
@@ -113,8 +110,7 @@ class SessionConnectionStore:
         if self.path and self.path.is_file():
             data = json.loads(self.path.read_text(encoding="utf-8"))
             self._rows = {
-                sid: {str(c): bool(v) for c, v in (row or {}).items()}
-                for sid, row in data.get("sessions", {}).items()
+                sid: {str(c): bool(v) for c, v in (row or {}).items()} for sid, row in data.get("sessions", {}).items()
             }
 
     def _save(self) -> None:

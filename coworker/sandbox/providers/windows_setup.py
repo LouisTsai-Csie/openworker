@@ -38,7 +38,7 @@ from coworker.sandbox import netproxy
 OPEN, CLOSED = "open", "closed"
 ACCOUNTS = {OPEN: "OWSandboxOpenNet", CLOSED: "OWSandboxClosedNet"}  # 20 characters at most
 LEGACY_ACCOUNTS = ("OpenWorkerSandbox", "OwSandbox")  # the first build and the spike
-ROOT = Path(os.environ.get("ProgramData", r"C:\ProgramData")) / "OpenWorker" / "sandbox"
+ROOT = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "OpenWorker" / "sandbox"
 SANDBOXES = ROOT / "sandboxes"
 CRED_FILE = ROOT / "account.cred"
 STATE_FILE = ROOT / "setup.json"
@@ -54,7 +54,7 @@ SETUP_VERSION = 2
 # The elevated script. `$UserSid` is the account that may read the passwords (the person
 # running setup); the rest comes from the constants above. `$WfpExe $WfpArg` runs
 # windows_wfp.py (the Python here, or the frozen binary's `sandbox-wfp`).
-SETUP_SCRIPT = r'''
+SETUP_SCRIPT = r"""
 param([string]$UserSid, [string]$Root, [string]$Rule, [int]$Version, [string]$OpenAccount, [string]$ClosedAccount,
       [string]$Legacy, [string]$LegacyRules, [string]$WfpExe, [string]$WfpArg, [int]$PortLow, [int]$PortHigh)
 $ErrorActionPreference = "Stop"
@@ -148,9 +148,9 @@ $changed += "sandboxes-folder"
   ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $Root "setup.json") -Encoding ASCII
 icacls (Join-Path $Root "setup.json") /grant "*S-1-1-0:R" | Out-Null
 Write-Output "ok $openSid $closedSid"
-'''
+"""
 
-REMOVE_SCRIPT = r'''
+REMOVE_SCRIPT = r"""
 param([string]$Root, [string]$Rule, [string]$Accounts, [string]$LegacyRules, [string]$WfpExe, [string]$WfpArg)
 $ErrorActionPreference = "Continue"
 Remove-NetFirewallRule -DisplayName $Rule -ErrorAction SilentlyContinue
@@ -167,7 +167,7 @@ foreach ($name in ($Accounts -split ",")) {
 }
 Remove-Item -Recurse -Force $Root -ErrorAction SilentlyContinue
 Write-Output "removed"
-'''
+"""
 
 
 def state() -> dict[str, Any] | None:
@@ -263,7 +263,9 @@ def _powershell(script: str, arguments: list[str], *, elevate: bool) -> subproce
             f"$p = Start-Process -FilePath powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden "
             f"-ArgumentList @({quoted}, '*>', '{out}'); exit $p.ExitCode"
         )
-        done = subprocess.run(["powershell.exe", "-NoProfile", "-Command", starter], capture_output=True, text=True, timeout=900)
+        done = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-Command", starter], capture_output=True, text=True, timeout=900
+        )
         said = Path(out).read_text(encoding="utf-8", errors="replace") if os.path.exists(out) else ""
         return subprocess.CompletedProcess(done.args, done.returncode, said, done.stderr)
     finally:
@@ -359,7 +361,17 @@ def run_setup() -> tuple[bool, str]:
 
 def run_remove() -> tuple[bool, str]:
     names = ",".join([*ACCOUNTS.values(), *LEGACY_ACCOUNTS])
-    arguments = ["-Root", str(ROOT), "-Rule", FIREWALL_RULE, "-Accounts", names, "-LegacyRules", ";".join(LEGACY_RULES), *_wfp_arguments()]
+    arguments = [
+        "-Root",
+        str(ROOT),
+        "-Rule",
+        FIREWALL_RULE,
+        "-Accounts",
+        names,
+        "-LegacyRules",
+        ";".join(LEGACY_RULES),
+        *_wfp_arguments(),
+    ]
     done = _powershell(REMOVE_SCRIPT, arguments, elevate=not is_elevated())
     said = (done.stdout or "").strip()
     return done.returncode == 0 and "removed" in said, said
@@ -383,20 +395,56 @@ def checks() -> list[tuple[str, bool, str]]:
     recorded = state()
     rows: list[tuple[str, bool, str]] = []
     if recorded and not current():
-        rows.append(("the sandbox accounts exist (setup has run)", False, "an older setup is recorded; run `openworker machine sandbox setup` again"))
+        rows.append(
+            (
+                "the sandbox accounts exist (setup has run)",
+                False,
+                "an older setup is recorded; run `openworker machine sandbox setup` again",
+            )
+        )
         return rows
-    rows.append(("the sandbox accounts exist (setup has run)", bool(recorded), "" if recorded else "run `openworker machine sandbox setup`"))
+    rows.append(
+        (
+            "the sandbox accounts exist (setup has run)",
+            bool(recorded),
+            "" if recorded else "run `openworker machine sandbox setup`",
+        )
+    )
     if not recorded:
         return rows
     usable = account(OPEN) is not None and account(CLOSED) is not None
-    rows.append(("this user can start sandboxes as those accounts", usable, "" if usable else f"{CRED_FILE} is not readable by this user; run setup as this user"))
+    rows.append(
+        (
+            "this user can start sandboxes as those accounts",
+            usable,
+            "" if usable else f"{CRED_FILE} is not readable by this user; run setup as this user",
+        )
+    )
     rule = _firewall_rule_enabled()
-    rows.append(("the closed account's outbound traffic is blocked (firewall rule)", rule, "" if rule else "the rule is missing; run setup again"))
+    rows.append(
+        (
+            "the closed account's outbound traffic is blocked (firewall rule)",
+            rule,
+            "" if rule else "the rule is missing; run setup again",
+        )
+    )
     from coworker.sandbox import windows_wfp
 
     present = windows_wfp.present()
     if present is None:
-        rows.append(("the closed account's loopback filters exist", filters_recorded(), "recorded by setup; proved from inside at every session start"))
+        rows.append(
+            (
+                "the closed account's loopback filters exist",
+                filters_recorded(),
+                "recorded by setup; proved from inside at every session start",
+            )
+        )
     else:
-        rows.append(("the closed account's loopback filters exist", present, "" if present else "the filters are missing; run setup again"))
+        rows.append(
+            (
+                "the closed account's loopback filters exist",
+                present,
+                "" if present else "the filters are missing; run setup again",
+            )
+        )
     return rows

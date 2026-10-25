@@ -14,9 +14,6 @@ import zipfile
 from pathlib import Path
 
 import pytest
-
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the tool runner needs Unix sockets")
-
 from coworker.agents.base import AgentContext
 from coworker import catalog
 from coworker.roots import RootDir
@@ -24,6 +21,9 @@ from coworker.sandbox.bundle import build_runner_zipapp
 from coworker.sandbox.providers.runner_local import RunnerLocalProvider
 from coworker.sandbox.workspace import RunnerWorkspace
 from coworker.tools import ToolRegistry
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the tool runner needs Unix sockets")
+
 
 CAPABILITIES = ["code_files", "git", "search"]
 
@@ -35,7 +35,11 @@ def _seed(folder: Path) -> None:
     (folder / "README.md").write_text("# Demo\n\nSome text.\n")
     (folder / "node_modules").mkdir()
     (folder / "node_modules" / "junk.js").write_text("// TODO: never shown\n")
-    for cmd in (["init", "-q"], ["add", "-A"], ["-c", "user.name=T", "-c", "user.email=t@example.com", "commit", "-qm", "first"]):
+    for cmd in (
+        ["init", "-q"],
+        ["add", "-A"],
+        ["-c", "user.name=T", "-c", "user.email=t@example.com", "commit", "-qm", "first"],
+    ):
         subprocess.run(["git", "-C", str(folder), *cmd], check=True, capture_output=True)
 
 
@@ -113,7 +117,9 @@ def test_reading_tools_answer_alike(twins, name, args, kwargs):
     if name == "git_log":  # commit hashes differ between the twin repositories by design
         import re
 
-        direct_answer, runner_answer = (re.sub(r"'hash': '[0-9a-f]+'", "'hash': '<h>'", x) for x in (direct_answer, runner_answer))
+        direct_answer, runner_answer = (
+            re.sub(r"'hash': '[0-9a-f]+'", "'hash': '<h>'", x) for x in (direct_answer, runner_answer)
+        )
     assert direct_answer == runner_answer
 
 
@@ -132,7 +138,9 @@ def test_editing_tools_answer_alike_and_leave_the_same_files(twins):
         ),
         (
             "apply_patch",
-            ("*** Begin Patch\n*** Add File: notes/added.txt\n+made by a patch\n*** Delete File: src/util.py\n*** End Patch\n",),
+            (
+                "*** Begin Patch\n*** Add File: notes/added.txt\n+made by a patch\n*** Delete File: src/util.py\n*** End Patch\n",
+            ),
             {},
         ),
         ("write_file", ("../escape.txt", "no"), {}),  # outside the session's folders
@@ -191,7 +199,9 @@ def test_the_packed_runner_carries_the_toolkits_and_needs_no_site_packages(tmp_p
     )
     (tmp_path / "ws").mkdir()
     (tmp_path / "ws" / "a.txt").write_text("a")
-    done = subprocess.run([sys.executable, "-S", "-c", probe, str(zipapp), str(tmp_path / "ws")], capture_output=True, text=True)
+    done = subprocess.run(
+        [sys.executable, "-S", "-c", probe, str(zipapp), str(tmp_path / "ws")], capture_output=True, text=True
+    )
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == "['a.txt']"
 
@@ -217,6 +227,8 @@ def test_a_session_workspace_makes_its_sandbox_on_first_use(tmp_path):
         assert sandbox.executor.run("echo again")["exit_code"] == 0 and made == ["create"]
     finally:
         sandbox.close()
-    unused = RunnerWorkspace(RunnerLocalProvider(cwd=folder, runner_path=build_runner_zipapp(tmp_path / "dist2")), cwd=folder, start=False)
+    unused = RunnerWorkspace(
+        RunnerLocalProvider(cwd=folder, runner_path=build_runner_zipapp(tmp_path / "dist2")), cwd=folder, start=False
+    )
     unused.close()  # never started: nothing to take down
     assert not unused.started

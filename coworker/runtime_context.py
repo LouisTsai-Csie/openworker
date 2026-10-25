@@ -1,4 +1,5 @@
 """Bounded, secret-free runtime discovery. No subprocesses or config-file reads."""
+
 from __future__ import annotations
 
 import shutil
@@ -26,7 +27,16 @@ def capture(workspace, roots) -> dict:
         "tools_available": {name: shutil.which(name) is not None for name in ("git", "python3", "node", "npm", "uv")},
         "project_entries": {
             name: present(name)
-            for name in (".venv", "node_modules", "web/node_modules", "pyproject.toml", "package.json", "web/package.json", "tests", "web/e2e")
+            for name in (
+                ".venv",
+                "node_modules",
+                "web/node_modules",
+                "pyproject.toml",
+                "package.json",
+                "web/package.json",
+                "tests",
+                "web/e2e",
+            )
         },
         "configuration_values": "not exposed",
     }

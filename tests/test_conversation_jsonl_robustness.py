@@ -44,9 +44,7 @@ def test_load_skips_a_corrupt_middle_line(tmp_path):
     jsonl = tmp_path / "state" / "conversations" / f"{sid}.jsonl"
     jsonl.parent.mkdir(parents=True, exist_ok=True)
     jsonl.write_text(
-        '{"role": "user", "content": "first"}\n'
-        "not json at all\n"
-        '{"role": "assistant", "content": "third"}\n',
+        '{"role": "user", "content": "first"}\nnot json at all\n{"role": "assistant", "content": "third"}\n',
         encoding="utf-8",
     )
     # Register the session in the index so load() reaches the .jsonl.

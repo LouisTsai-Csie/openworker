@@ -7,11 +7,11 @@ No token streaming in v1, so granularity is per-message/per-tool. Streaming late
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     TURN_START = "turn_start"
     ASSISTANT_DELTA = "assistant_delta"
     REASONING_DELTA = "reasoning_delta"  # model thinking text (display-only, never replayed)
@@ -21,15 +21,9 @@ class EventType(str, Enum):
     DIRECTORY_REQUESTED = "directory_requested"  # agent asks the user to grant a folder
     TOOL_REQUESTED = "tool_requested"  # agent asks for a missing CLI tool (scanner, etc.)
     CONNECTOR_REQUESTED = "connector_requested"  # request_connector / grant_connector gate (§11.6)
-    QUESTION_REQUESTED = (
-        "question_requested"  # agent asks the user a free-text/multiple-choice question
-    )
-    PLAN_PROPOSED = (
-        "plan_proposed"  # agent presents a plan for approval (plan mode exit)
-    )
-    TEAM_PROPOSED = (
-        "team_proposed"  # a lead proposes a worker roster (the staffing gate)
-    )
+    QUESTION_REQUESTED = "question_requested"  # agent asks the user a free-text/multiple-choice question
+    PLAN_PROPOSED = "plan_proposed"  # agent presents a plan for approval (plan mode exit)
+    TEAM_PROPOSED = "team_proposed"  # a lead proposes a worker roster (the staffing gate)
     ITEMS_PROPOSED = (
         "items_proposed"  # a lead proposes work items (the decomposition gate);
         # unlike propose_plan this is mode-independent — approval creates the items

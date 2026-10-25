@@ -65,9 +65,7 @@ def bin_dir() -> Path:
 
 def _platform_key() -> str:
     """`<os>_<arch>` using the naming the upstream release assets use."""
-    system = {"darwin": "darwin", "linux": "linux", "win32": "windows"}.get(
-        sys.platform, sys.platform
-    )
+    system = {"darwin": "darwin", "linux": "linux", "win32": "windows"}.get(sys.platform, sys.platform)
     machine = platform.machine().lower()
     arch = "arm64" if machine in ("arm64", "aarch64") else "amd64"
     return f"{system}_{arch}"
@@ -241,9 +239,7 @@ def describe(name: str) -> dict[str, str] | None:
 def _verify(blob: bytes, expected: str) -> None:
     actual = hashlib.sha256(blob).hexdigest()
     if actual != expected:
-        raise ValueError(
-            f"checksum mismatch: expected {expected}, got {actual} — refusing to install"
-        )
+        raise ValueError(f"checksum mismatch: expected {expected}, got {actual} — refusing to install")
 
 
 def install(name: str, *, timeout: int = 120) -> str:

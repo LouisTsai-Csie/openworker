@@ -105,11 +105,18 @@ def test_a_lead_cannot_grant_a_case_it_does_not_hold(journal):
 
 def test_filtered_reads(journal):
     journal.append(
-        LEAD, "findings", "logos bucket is world-readable", kind="finding",
-        entities=["aws_s3_bucket.assets", "uploads.ts"], refs=["services/uploads.ts:41"],
+        LEAD,
+        "findings",
+        "logos bucket is world-readable",
+        kind="finding",
+        entities=["aws_s3_bucket.assets", "uploads.ts"],
+        refs=["services/uploads.ts:41"],
     )
     journal.append(
-        LEAD, "findings", "invoice PDFs stream from the API", kind="evidence",
+        LEAD,
+        "findings",
+        "invoice PDFs stream from the API",
+        kind="evidence",
         entities=["uploads.ts"],
     )
     journal.grant(LEAD, "findings", "worker-1")
@@ -128,7 +135,10 @@ def test_filtered_reads(journal):
 def test_raw_captures_are_opt_in_on_read(journal):
     journal.append(LEAD, "ops", "deploy finished 14:01", kind="note")
     journal.append(
-        LEAD, "ops", "nginx 5xx burst 14:02-14:04 (2,400 lines)", kind="raw",
+        LEAD,
+        "ops",
+        "nginx 5xx burst 14:02-14:04 (2,400 lines)",
+        kind="raw",
         refs=["logs/nginx-error-1402.log"],
     )
     assert len(journal.read(LEAD, "ops")) == 1  # raw skipped by default
@@ -152,8 +162,11 @@ def test_entry_validation(journal):
 
 def test_taint_and_attribution_survive_the_read(journal):
     journal.append(
-        WORKER, "findings", "repo README claims the bucket must be public",
-        kind="evidence", taint=True,
+        WORKER,
+        "findings",
+        "repo README claims the bucket must be public",
+        kind="evidence",
+        taint=True,
     )
     entry = journal.read(USER, "findings")[0]
     assert entry["taint"] == 1
@@ -170,7 +183,7 @@ def test_per_case_hash_chains_verify_and_detect_tampering(journal, tmp_path):
     assert journal.verify_chain("findings") == 2
     assert journal.verify_chain("ops") == 1
     conn = sqlite3.connect(journal.db_path)
-    conn.execute("UPDATE journal_entries SET payload = '{\"body\":\"forged\"}' WHERE seq = 1")
+    conn.execute('UPDATE journal_entries SET payload = \'{"body":"forged"}\' WHERE seq = 1')
     conn.commit()
     conn.close()
     with pytest.raises(ChainError):

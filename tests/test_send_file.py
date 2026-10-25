@@ -45,9 +45,7 @@ def test_send_file_success_within_workspace(tmp_path):
     ws.mkdir()
     (ws / "report.pdf").write_bytes(b"%PDF-fake")
     record: list = []
-    tool = make_send_file_tool(
-        _secrets(tmp_path), workspace=ws, file_senders=_fake_sender(record)
-    )
+    tool = make_send_file_tool(_secrets(tmp_path), workspace=ws, file_senders=_fake_sender(record))
 
     out = tool("slack:C9:1700.1", "report.pdf", comment="here you go")
     assert out == {
@@ -66,9 +64,7 @@ def test_send_file_rejects_paths_outside_roots(tmp_path):
     ws.mkdir()
     outside = tmp_path / "elsewhere.txt"
     outside.write_text("secret")
-    tool = make_send_file_tool(
-        _secrets(tmp_path), workspace=ws, file_senders=_fake_sender([])
-    )
+    tool = make_send_file_tool(_secrets(tmp_path), workspace=ws, file_senders=_fake_sender([]))
 
     # Absolute path outside every base, and a traversal attempt — both refused.
     assert "error" in tool("slack:C9", str(outside))
@@ -96,9 +92,7 @@ def test_send_file_unsupported_platform_and_missing_token(tmp_path):
     ws = tmp_path / "ws"
     ws.mkdir()
     (ws / "a.txt").write_text("x")
-    tool = make_send_file_tool(
-        _secrets(tmp_path), workspace=ws, file_senders=_fake_sender([])
-    )
+    tool = make_send_file_tool(_secrets(tmp_path), workspace=ws, file_senders=_fake_sender([]))
     assert "not supported" in tool("telegram:123", "a.txt")["error"]
 
     no_token = make_send_file_tool(
@@ -122,10 +116,7 @@ def test_send_file_screenshot_is_html_only_and_renames_to_png(tmp_path):
         render_html=lambda p: b"PNG-bytes-for-" + Path(p).name.encode(),
     )
 
-    assert (
-        "only applies to .html"
-        in tool("slack:C9", "notes.md", as_screenshot=True)["error"]
-    )
+    assert "only applies to .html" in tool("slack:C9", "notes.md", as_screenshot=True)["error"]
 
     out = tool("slack:C9", "dash.html", as_screenshot=True)
     assert out["ok"] and out["filename"] == "dash.png"
@@ -142,16 +133,10 @@ def test_thread_send_message_grant_never_covers_send_file(tmp_path):
     from coworker.connectors.tools import make_send_file_tool, make_send_message_tool
 
     msg_meta = make_send_message_tool(_secrets(tmp_path)).__aisuite_tool_metadata__
-    file_meta = make_send_file_tool(
-        _secrets(tmp_path), workspace=tmp_path
-    ).__aisuite_tool_metadata__
+    file_meta = make_send_file_tool(_secrets(tmp_path), workspace=tmp_path).__aisuite_tool_metadata__
 
-    allowed = engine.evaluate(
-        "send_message", {"target": target, "text": "hi"}, msg_meta
-    )
+    allowed = engine.evaluate("send_message", {"target": target, "text": "hi"}, msg_meta)
     assert allowed.allowed and "standing rule" in allowed.reason
 
-    asked = engine.evaluate(
-        "send_file", {"target": target, "path": "report.pdf"}, file_meta
-    )
+    asked = engine.evaluate("send_file", {"target": target, "path": "report.pdf"}, file_meta)
     assert not asked.allowed and asked.needs_user

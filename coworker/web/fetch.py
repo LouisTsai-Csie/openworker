@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, ClassVar
 from collections.abc import Callable
 
 import aisuite as ai
@@ -45,7 +45,7 @@ _SCHEMA = {
 class _TextExtractor(HTMLParser):
     """Collect visible text, skipping script/style/etc."""
 
-    _SKIP = {"script", "style", "noscript", "svg", "head"}
+    _SKIP: ClassVar[set[str]] = {"script", "style", "noscript", "svg", "head"}
 
     def __init__(self) -> None:
         super().__init__()
@@ -78,9 +78,7 @@ def _html_to_text(html: str) -> str:
 
 def make_web_fetch_tool() -> Callable[..., Any]:
     def web_fetch(url: str, max_chars: int = _MAX) -> dict[str, Any]:
-        if not isinstance(url, str) or not url.lower().startswith(
-            ("http://", "https://")
-        ):
+        if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
             return {"error": "url must start with http:// or https://"}
         cap = max_chars if isinstance(max_chars, int) and max_chars > 0 else _MAX
         cap = min(cap, 100000)

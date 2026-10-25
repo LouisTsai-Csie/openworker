@@ -146,6 +146,4 @@ class ProviderClient(ABC):
     ):
         """Yield StreamChunks. Default: no token streaming — one final chunk with the
         full turn. Providers that support streaming (OpenAIProvider) override this."""
-        yield StreamChunk(
-            turn=self.complete(model=model, messages=messages, tools=tools, **settings)
-        )
+        yield StreamChunk(turn=self.complete(model=model, messages=messages, tools=tools, **settings))

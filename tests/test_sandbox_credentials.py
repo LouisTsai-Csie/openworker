@@ -67,20 +67,35 @@ def test_an_entry_is_a_file_or_a_folder_with_a_label(tmp_path):
     file (configuration), so the keys stay out unless added; the kubeconfig is one file."""
     home = _home(tmp_path)
     got = {g.name: g for g in creds.granted([{"name": n, "enabled": True} for n in ("aws", "kube")], home=str(home))}
-    assert got["aws"].kind == "file" and got["aws"].relative == os.path.join(".aws", "config") and got["aws"].label == "configuration"
+    assert (
+        got["aws"].kind == "file"
+        and got["aws"].relative == os.path.join(".aws", "config")
+        and got["aws"].label == "configuration"
+    )
     assert got["kube"].kind == "file" and got["kube"].hosts == ["k8s.example.com:6443"]
-    assert creds.kind_of("~/.aws", home=str(home)) == "folder" and creds.kind_of("~/.aws/config", home=str(home)) == "file"
+    assert (
+        creds.kind_of("~/.aws", home=str(home)) == "folder" and creds.kind_of("~/.aws/config", home=str(home)) == "file"
+    )
     assert creds.kind_of("~/.nothing", home=str(home)) == ""
     # a user's own entry for the keys file, and the folder form of AWS still work
     (home / ".npmrc").write_text("token\n")
-    rows = [{"name": "aws-credentials", "enabled": True, "path": "~/.aws/credentials", "label": "credential"}, {"name": "aws", "enabled": True, "path": "~/.aws"}]
+    rows = [
+        {"name": "aws-credentials", "enabled": True, "path": "~/.aws/credentials", "label": "credential"},
+        {"name": "aws", "enabled": True, "path": "~/.aws"},
+    ]
     got = {g.name: g for g in creds.granted(rows, home=str(home))}
-    assert got["aws"].kind == "folder" and got["aws-credentials"].kind == "file" and got["aws-credentials"].label == "credential"
+    assert (
+        got["aws"].kind == "folder"
+        and got["aws-credentials"].kind == "file"
+        and got["aws-credentials"].label == "credential"
+    )
     run = tmp_path / "run2"
     run.mkdir()
     copied = creds.copy_in(list(got.values()), str(run), home=str(home))
     sb = Path(copied.home)
-    assert copied.env["AWS_SHARED_CREDENTIALS_FILE"] == str(sb / ".aws" / "credentials") and copied.env["AWS_CONFIG_FILE"] == str(sb / ".aws" / "config")
+    assert copied.env["AWS_SHARED_CREDENTIALS_FILE"] == str(sb / ".aws" / "credentials") and copied.env[
+        "AWS_CONFIG_FILE"
+    ] == str(sb / ".aws" / "config")
     assert [e["label"] for e in creds.entries([{"name": "x", "label": "bogus"}]) if e["name"] == "x"] == ["credential"]
 
 
@@ -107,7 +122,9 @@ def test_copy_in_makes_a_private_home_and_the_tools_environment(tmp_path):
     grants = creds.granted([{"name": n, "enabled": True} for n in ("ssh", "gh", "aws", "kube")], home=str(home))
     run = tmp_path / "run"
     run.mkdir()
-    copied = creds.copy_in(grants, str(run), home=str(home), ssh_proxy_command="/usr/bin/nc -X connect -x 127.0.0.1:4545 %h %p")
+    copied = creds.copy_in(
+        grants, str(run), home=str(home), ssh_proxy_command="/usr/bin/nc -X connect -x 127.0.0.1:4545 %h %p"
+    )
     sb = Path(copied.home)
     assert sb == run / "home"
     assert (sb / ".ssh" / "id_ed25519").read_text() == "PRIVATE KEY\n"
@@ -117,8 +134,15 @@ def test_copy_in_makes_a_private_home_and_the_tools_environment(tmp_path):
     assert (sb / ".gitconfig").exists()  # git's settings always come along
     assert not (sb / "Documents").exists()  # nothing that was not granted
     config = (sb / ".ssh" / "config").read_text()
-    assert config.startswith("# Added by OpenWorker") and "ProxyCommand /usr/bin/nc -X connect -x 127.0.0.1:4545 %h %p" in config
-    key_path = str(sb / ".ssh" / "id_ed25519").replace("\\", "/") if sys.platform == "win32" else str(sb / ".ssh" / "id_ed25519")
+    assert (
+        config.startswith("# Added by OpenWorker")
+        and "ProxyCommand /usr/bin/nc -X connect -x 127.0.0.1:4545 %h %p" in config
+    )
+    key_path = (
+        str(sb / ".ssh" / "id_ed25519").replace("\\", "/")
+        if sys.platform == "win32"
+        else str(sb / ".ssh" / "id_ed25519")
+    )
     assert f"IdentityFile {key_path}" in config and "IdentityAgent none" in config
     ssh_exe = r'"C:\Windows\System32\OpenSSH\ssh.exe"' if sys.platform == "win32" else "/usr/bin/ssh"
     assert config.endswith("Host work\n  HostName git.example.com\n")  # the user's own config still there, after ours
@@ -128,10 +152,19 @@ def test_copy_in_makes_a_private_home_and_the_tools_environment(tmp_path):
     assert copied.env["OPENWORKER_PATH_PREPEND"] == str(sb / "bin")
     assert copied.env["HOME"] == str(sb)
     assert copied.env["GH_CONFIG_DIR"] == str(sb / ".config" / "gh")
-    assert copied.env["AWS_CONFIG_FILE"] == str(sb / ".aws" / "config") and "AWS_SHARED_CREDENTIALS_FILE" not in copied.env
+    assert (
+        copied.env["AWS_CONFIG_FILE"] == str(sb / ".aws" / "config") and "AWS_SHARED_CREDENTIALS_FILE" not in copied.env
+    )
     assert not (sb / ".aws" / "credentials").exists()  # the profiles file only; the keys stay out
     assert copied.env["KUBECONFIG"] == str(sb / ".kube" / "config")
-    assert copied.hosts == ["*.amazonaws.com:443", "api.github.com:443", "github.com:22", "github.com:443", "gitlab.com:22", "k8s.example.com:6443"]
+    assert copied.hosts == [
+        "*.amazonaws.com:443",
+        "api.github.com:443",
+        "github.com:22",
+        "github.com:443",
+        "gitlab.com:22",
+        "k8s.example.com:6443",
+    ]
     # the real files were not touched
     assert (home / ".ssh" / "config").read_text() == "Host work\n  HostName git.example.com\n"
     text = creds.context_lines(copied)
@@ -148,7 +181,9 @@ def test_no_grants_means_no_lines_for_the_agent(tmp_path):
 
 # -- the network ------------------------------------------------------------------------
 def test_proxy_allows_the_grants_hosts_including_ssh_and_wildcards():
-    proxy = netproxy.AllowListProxy("allowlist", extra_hosts=["github.com:22", "*.amazonaws.com:443", "k8s.example.com:6443"])
+    proxy = netproxy.AllowListProxy(
+        "allowlist", extra_hosts=["github.com:22", "*.amazonaws.com:443", "k8s.example.com:6443"]
+    )
     try:
         assert proxy.allows("github.com", 22) and not proxy.allows("github.com", 443)  # only what is listed
         assert proxy.allows("s3.us-east-1.amazonaws.com", 443) and not proxy.allows("amazonaws.com", 443)
@@ -160,12 +195,16 @@ def test_proxy_allows_the_grants_hosts_including_ssh_and_wildcards():
 
 def test_openshell_policy_carries_the_home_and_the_hosts():
     policy = openshell_policy.render(
-        [{"path": "/home/sam/proj", "writable": True}], home="/tmp/ow-x/home", extra_hosts=["github.com:22", "*.amazonaws.com:443"]
+        [{"path": "/home/sam/proj", "writable": True}],
+        home="/tmp/ow-x/home",
+        extra_hosts=["github.com:22", "*.amazonaws.com:443"],
     )
     assert "/tmp/ow-x/home" in policy["filesystem_policy"]["read_write"]
     extra = policy["network_policies"]["credentials"]
     assert extra["endpoints"] == [{"host": "github.com", "port": 22}, {"host": "*.amazonaws.com", "port": 443}]
-    mounts = openshell_policy.mounts([{"path": "/home/sam/proj", "writable": True}], "/opt/r", "/tmp/ow-x/home")["docker"]["mounts"]
+    mounts = openshell_policy.mounts([{"path": "/home/sam/proj", "writable": True}], "/opt/r", "/tmp/ow-x/home")[
+        "docker"
+    ]["mounts"]
     assert {"type": "bind", "source": "/tmp/ow-x/home", "target": "/tmp/ow-x/home", "read_only": False} in mounts
 
 
@@ -217,7 +256,10 @@ def test_ssh_and_gh_copies_work_inside_seatbelt_and_ssh_goes_through_the_proxy(t
 
     monkeypatch.setattr(netproxy.socket, "create_connection", connect)
     provider = seatbelt.SeatbeltProvider(
-        roots=[{"path": str(project), "writable": True}], cwd=project, runner_path=build_runner_zipapp(tmp_path / "dist"), credentials=grants
+        roots=[{"path": str(project), "writable": True}],
+        cwd=project,
+        runner_path=build_runner_zipapp(tmp_path / "dist"),
+        credentials=grants,
     )
     ws = RunnerWorkspace(provider, cwd=project)
     try:
@@ -229,9 +271,15 @@ def test_ssh_and_gh_copies_work_inside_seatbelt_and_ssh_goes_through_the_proxy(t
         assert ws.describe()["credentials"][0]["name"] == "ssh"
         assert "SSH keys" in ws.context()
         # ssh: the ProxyCommand in the copied config carries the connection through the proxy
-        assert run("command -v ssh")["output"].strip() == os.path.join(provider.copied.home, "bin", "ssh")  # the wrapper wins
-        out = run("ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no -v git@github.com true 2>&1 | grep -i 'remote protocol version\\|proxy\\|banner' | head -3")
-        assert "SSH-2.0-OpenSSH_9.9 fake" in out["output"] or "Remote protocol version 2.0" in out["output"], out["output"]
+        assert run("command -v ssh")["output"].strip() == os.path.join(
+            provider.copied.home, "bin", "ssh"
+        )  # the wrapper wins
+        out = run(
+            "ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no -v git@github.com true 2>&1 | grep -i 'remote protocol version\\|proxy\\|banner' | head -3"
+        )
+        assert "SSH-2.0-OpenSSH_9.9 fake" in out["output"] or "Remote protocol version 2.0" in out["output"], out[
+            "output"
+        ]
     finally:
         ws.close()
         fake.close()
@@ -244,7 +292,9 @@ def test_a_failed_creation_leaves_no_copied_credential_behind(tmp_path, monkeypa
 
     home = _home(tmp_path)
     grants = creds.granted([{"name": "ssh", "enabled": True}], home=str(home))
-    provider = seatbelt.SeatbeltProvider(roots=[{"path": str(tmp_path), "writable": True}], cwd=tmp_path, credentials=grants, network=False)
+    provider = seatbelt.SeatbeltProvider(
+        roots=[{"path": str(tmp_path), "writable": True}], cwd=tmp_path, credentials=grants, network=False
+    )
     folder = provider._dir
 
     def broken() -> None:
@@ -264,7 +314,9 @@ def test_a_presets_variables_point_at_its_copy(tmp_path):
     (home / ".docker").mkdir()
     (home / ".docker" / "config.json").write_text('{"auths": {}}\n')
     (home / ".config" / "gcloud").mkdir(parents=True)
-    grants = creds.granted([{"name": n, "enabled": True} for n in ("npm", "docker", "gcloud", "terraform")], home=str(home))
+    grants = creds.granted(
+        [{"name": n, "enabled": True} for n in ("npm", "docker", "gcloud", "terraform")], home=str(home)
+    )
     assert [g.name for g in grants] == ["npm", "docker", "gcloud"]  # no Terraform Cloud login on this machine
     run = tmp_path / "run"
     copied = creds.copy_in(grants, str(run), home=str(home))

@@ -81,14 +81,18 @@ class RunnerClient:
         # The first answer can take a while on a cold machine: a VM just started reads
         # the runner and the image's Python from a disk that is still warming up (the very
         # first sandbox on the Linux VM missed 20 s, 2026-09-29). Later calls are fast.
-        hello = self._call_on(transport, "runner.hello", {"protocol_version": P.PROTOCOL_VERSION}, timeout=_HELLO_TIMEOUT)
+        hello = self._call_on(
+            transport, "runner.hello", {"protocol_version": P.PROTOCOL_VERSION}, timeout=_HELLO_TIMEOUT
+        )
         previous, self.instance_id, self.hello = self.instance_id, hello["instance_id"], hello
         if previous is None:
             threading.Thread(target=self._ping_loop, daemon=True).start()
         elif previous != self.instance_id:
             self.restarts += 1
             self._last_seq = self._acked = 0
-            self._fail_all(P.RunnerError(P.RUNNER_RESTARTED, "the sandbox restarted; the outcome of this command is unknown"))
+            self._fail_all(
+                P.RunnerError(P.RUNNER_RESTARTED, "the sandbox restarted; the outcome of this command is unknown")
+            )
         else:
             self._call_on(transport, "session.resume", {"last_seq": self._last_seq}, timeout=20)
             with self._state_lock:
@@ -234,7 +238,9 @@ class RunnerClient:
             return  # a replayed result nobody waits for any more
         if "error" in frame:
             err = frame["error"] or {}
-            pending.error = P.RunnerError(int(err.get("code", P.INTERNAL_ERROR)), str(err.get("message", "")), err.get("data"))
+            pending.error = P.RunnerError(
+                int(err.get("code", P.INTERNAL_ERROR)), str(err.get("message", "")), err.get("data")
+            )
         else:
             pending.result = frame.get("result") or {}
         pending.done.set()

@@ -25,9 +25,7 @@ def test_system_becomes_cached_block_list():
             {"role": "user", "content": "hi"},
         ]
     )
-    assert kwargs["system"] == [
-        {"type": "text", "text": "be terse", "cache_control": MARKER}
-    ]
+    assert kwargs["system"] == [{"type": "text", "text": "be terse", "cache_control": MARKER}]
 
 
 def test_last_message_last_block_carries_breakpoint():

@@ -55,9 +55,7 @@ def _text_part(text):
 
 
 def _call_part(name, args):
-    return SimpleNamespace(
-        text=None, function_call=SimpleNamespace(name=name, args=args)
-    )
+    return SimpleNamespace(text=None, function_call=SimpleNamespace(name=name, args=args))
 
 
 # -- message conversion -------------------------------------------------------------
@@ -143,27 +141,18 @@ def test_convert_repeated_ids_resolve_to_latest_turn():
             {
                 "role": "assistant",
                 "content": "",
-                "tool_calls": [
-                    {"id": "call_0", "function": {"name": "first", "arguments": "{}"}}
-                ],
+                "tool_calls": [{"id": "call_0", "function": {"name": "first", "arguments": "{}"}}],
             },
             {"role": "tool", "tool_call_id": "call_0", "content": "r1"},
             {
                 "role": "assistant",
                 "content": "",
-                "tool_calls": [
-                    {"id": "call_0", "function": {"name": "second", "arguments": "{}"}}
-                ],
+                "tool_calls": [{"id": "call_0", "function": {"name": "second", "arguments": "{}"}}],
             },
             {"role": "tool", "tool_call_id": "call_0", "content": "r2"},
         ]
     )
-    names = [
-        p["function_response"]["name"]
-        for c in contents
-        for p in c["parts"]
-        if "function_response" in p
-    ]
+    names = [p["function_response"]["name"] for c in contents for p in c["parts"] if "function_response" in p]
     assert names == ["first", "second"]
 
 
@@ -174,9 +163,7 @@ def test_convert_steering_user_message_merges_after_tool_results():
             {
                 "role": "assistant",
                 "content": "",
-                "tool_calls": [
-                    {"id": "c1", "function": {"name": "a", "arguments": "{}"}}
-                ],
+                "tool_calls": [{"id": "c1", "function": {"name": "a", "arguments": "{}"}}],
             },
             {"role": "tool", "tool_call_id": "c1", "content": "r1"},
             {"role": "user", "content": "actually, stop"},
@@ -202,9 +189,7 @@ def test_convert_image_data_url_to_inline_data():
             }
         ]
     )
-    assert contents[0]["parts"][1] == {
-        "inline_data": {"mime_type": "image/png", "data": "iVBORw0KGgo="}
-    }
+    assert contents[0]["parts"][1] == {"inline_data": {"mime_type": "image/png", "data": "iVBORw0KGgo="}}
 
 
 def test_convert_non_data_image_url_becomes_placeholder():
@@ -212,9 +197,7 @@ def test_convert_non_data_image_url_becomes_placeholder():
         [
             {
                 "role": "user",
-                "content": [
-                    {"type": "image_url", "image_url": {"url": "https://x/y.png"}}
-                ],
+                "content": [{"type": "image_url", "image_url": {"url": "https://x/y.png"}}],
             }
         ]
     )
@@ -250,9 +233,7 @@ def test_convert_tools_wraps_function_declarations():
     )
     assert len(tools) == 1
     declarations = tools[0]["function_declarations"]
-    assert declarations[0] == {
-        "name": "bare"
-    }  # parameter-less: no `parameters` key at all
+    assert declarations[0] == {"name": "bare"}  # parameter-less: no `parameters` key at all
     assert declarations[1]["description"] == "does things"
     assert declarations[1]["parameters"]["properties"] == {"x": {"type": "integer"}}
     assert convert_tools(None) == []
@@ -296,11 +277,7 @@ def test_complete_text_turn():
             {"role": "user", "content": "hi"},
         ],
     )
-    assert (
-        turn.text == "hello"
-        and turn.finish_reason == "stop"
-        and not turn.has_tool_calls
-    )
+    assert turn.text == "hello" and turn.finish_reason == "stop" and not turn.has_tool_calls
     assert fake.kwargs["model"] == "gemini-2.5-flash"
     assert fake.kwargs["config"]["system_instruction"] == "sys"
     assert "tools" not in fake.kwargs["config"]
@@ -337,9 +314,7 @@ def test_complete_parses_function_calls_with_synthesized_ids():
     ],
 )
 def test_complete_maps_finish_reasons(finish, expected):
-    provider = GeminiProvider(
-        client=_FakeClient(response=_response([_text_part("x")], finish_reason=finish))
-    )
+    provider = GeminiProvider(client=_FakeClient(response=_response([_text_part("x")], finish_reason=finish)))
     turn = provider.complete(model="m", messages=[{"role": "user", "content": "x"}])
     assert turn.finish_reason == expected
 
@@ -359,11 +334,7 @@ def test_complete_filters_and_aliases_settings():
     assert config["temperature"] == 0.2
     assert config["max_output_tokens"] == 512
     assert config["stop_sequences"] == ["END"]
-    assert (
-        "frequency_penalty" not in config
-        and "stop" not in config
-        and "max_tokens" not in config
-    )
+    assert "frequency_penalty" not in config and "stop" not in config and "max_tokens" not in config
 
 
 def test_complete_passes_converted_tools_in_config():
@@ -408,11 +379,7 @@ def test_stream_yields_text_deltas_then_final_turn():
     out = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))
     assert [c.text_delta for c in out[:-1]] == ["hel", "lo"]
     final = out[-1].turn
-    assert (
-        final.text == "hello"
-        and final.finish_reason == "stop"
-        and not final.has_tool_calls
-    )
+    assert final.text == "hello" and final.finish_reason == "stop" and not final.has_tool_calls
 
 
 def test_stream_collects_function_calls_across_chunks():
@@ -434,13 +401,9 @@ def test_stream_collects_function_calls_across_chunks():
 
 def test_stream_handles_enum_like_finish_reason():
     # the SDK's finish_reason is an enum with a .name; fakes may pass a plain string
-    chunks = [
-        _response([_text_part("x")], finish_reason=SimpleNamespace(name="MAX_TOKENS"))
-    ]
+    chunks = [_response([_text_part("x")], finish_reason=SimpleNamespace(name="MAX_TOKENS"))]
     provider = GeminiProvider(client=_FakeClient(chunks=chunks))
-    final = list(
-        provider.stream(model="m", messages=[{"role": "user", "content": "x"}])
-    )[-1].turn
+    final = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}]))[-1].turn
     assert final.finish_reason == "length"
 
 
@@ -497,10 +460,9 @@ def test_convert_pdf_file_part_to_inline_data():
             {"type": "file", "file": {"file_data": "not-a-url"}},
         ]
     )
-    assert parts[1] == {
-        "inline_data": {"mime_type": "application/pdf", "data": "JVBERi0="}
-    }
+    assert parts[1] == {"inline_data": {"mime_type": "application/pdf", "data": "JVBERi0="}}
     assert parts[2] == {"text": "[unsupported file attachment]"}
+
 
 # -- Gemini 3 thought signatures (2026-07 roadmap item 2) ---------------------------
 
@@ -514,9 +476,7 @@ def _sig_call_part(name, args, sig):
 
 
 def _thought_part(text, sig=None):
-    return SimpleNamespace(
-        text=text, function_call=None, thought=True, thought_signature=sig
-    )
+    return SimpleNamespace(text=text, function_call=None, thought=True, thought_signature=sig)
 
 
 def test_complete_captures_signatures_and_filters_thought_parts():

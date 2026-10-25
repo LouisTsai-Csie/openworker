@@ -104,10 +104,7 @@ def _find_reply(outbound, channel, text):
     return [
         o
         for o in outbound
-        if o["method"] == "chat.postMessage"
-        and not o.get("blocks")
-        and o["channel"] == channel
-        and o["text"] == text
+        if o["method"] == "chat.postMessage" and not o.get("blocks") and o["channel"] == channel and o["text"] == text
     ]
 
 
@@ -128,9 +125,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
                 "call_w",
             ),
             # turn 2: reply to the origin channel (pre-allowed so it doesn't ask a second time).
-            _tool(
-                "send_message", {"target": f"slack:{CHANNEL}", "text": REPLY}, "call_s"
-            ),
+            _tool("send_message", {"target": f"slack:{CHANNEL}", "text": REPLY}, "call_s"),
             # turn 3: wrap up.
             _text("Posted the acknowledgement to the channel."),
         ]
@@ -143,9 +138,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
             "slack:default",
             {"bot_token": "xoxb-test", "app_token": "xapp-test", "enabled": True},
         )
-        live = (
-            await mgr.start_gateway()
-        )  # builds the gateway + connects the SlackAdapter
+        live = await mgr.start_gateway()  # builds the gateway + connects the SlackAdapter
         assert "slack" in live
         await fake_slack.wait_socket()
 
@@ -167,9 +160,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
             )
         )
         mgr.subscriptions.subscribe(SID, f"slack:{CHANNEL}")
-        assert mgr.set_inbox_binding(
-            "ops-incidents", channel="slack", target=CHANNEL
-        )["ok"]
+        assert mgr.set_inbox_binding("ops-incidents", channel="slack", target=CHANNEL)["ok"]
         mgr.inbox_routing.set_session_override(SID, "ops-incidents")
         mgr.unattended.set(SID, True)
 
@@ -186,17 +177,13 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
 
         mgr.register_session_client(SID, _client_cb)
 
-        client = TestClient(
-            create_app(mgr)
-        )  # not entered as a CM -> no second gateway start
+        client = TestClient(create_app(mgr))  # not entered as a CM -> no second gateway start
 
         # -- Step 2 + 3a: post a channel message; it becomes a structured connector message and the
         #    agent's approval is mirrored as a Block Kit card --------------------------------------
         await fake_slack.inbound(channel=CHANNEL, user=USER, text=ALERT)
         card = await _wait_until(lambda: _find_card(fake_slack.outbound()))
-        assert (
-            card is not None
-        ), f"approval card never mirrored: {fake_slack.outbound()}"
+        assert card is not None, f"approval card never mirrored: {fake_slack.outbound()}"
 
         # (Step 2) persisted user message carries the structured, RESOLVED source sidecar.
         msgs = client.get(f"/v1/sessions/{SID}/messages").json()["messages"]
@@ -207,9 +194,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
         assert src["connector"] == "slack"
         assert src["kind"] == "channel"
         assert src["channel_id"] == CHANNEL
-        assert (
-            src["channel_name"] == CHANNEL_NAME
-        )  # resolved via conversations.info (Phase 2)
+        assert src["channel_name"] == CHANNEL_NAME  # resolved via conversations.info (Phase 2)
         assert src["sender_id"] == USER
         assert src["sender_name"] == SENDER_DISPLAY  # resolved via users.info (Phase 2)
         assert src["text"] == ALERT  # the RAW message (what the card renders)
@@ -252,9 +237,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
             action_id=button["action_id"],
             value=button["value"],
         )
-        replies = await _wait_until(
-            lambda: _find_reply(fake_slack.outbound(), CHANNEL, REPLY)
-        )
+        replies = await _wait_until(lambda: _find_reply(fake_slack.outbound(), CHANNEL, REPLY))
         assert replies, f"reply never posted back: {fake_slack.outbound()}"
         assert await _wait_until(lambda: not mgr.is_running(SID))
         assert mgr.inbox.get(item_id).state == "resolved"
@@ -277,10 +260,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
         await fake_slack.inbound(channel=CHANNEL, user=USER, text=muted_text)
         # the message is buffered for catch-up even though it's not delivered.
         assert await _wait_until(
-            lambda: any(
-                m["text"] == muted_text
-                for m in mgr.channel_buffer.recent(f"slack:{CHANNEL}")
-            )
+            lambda: any(m["text"] == muted_text for m in mgr.channel_buffer.recent(f"slack:{CHANNEL}"))
         ), "muted message was not buffered"
         # the skip-delivery decision is synchronous with the buffering above (no await between);
         # a short settle guards against any stray scheduled delivery, then assert nothing woke.
@@ -291,11 +271,7 @@ async def test_ui_refresh_cross_cutting_e2e(fake_slack, tmp_path, monkeypatch):
 
         # -- Step 5: attention == the persona's account-unconnected connector recommends ----------
         detail = client.get("/v1/personas/ops").json()
-        unconnected = [
-            r
-            for r in detail["recommends"]
-            if r["kind"] == "connector" and not r["connected"]
-        ]
+        unconnected = [r for r in detail["recommends"] if r["kind"] == "connector" and not r["connected"]]
         view = client.get(f"/v1/sessions/{SID}/connections").json()
         assert view["attention"] == len(unconnected)
         # only slack is account-connected here -> github/datadog/pagerduty remain

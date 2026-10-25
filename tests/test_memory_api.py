@@ -33,18 +33,14 @@ def _fixture(tmp_path):
 def test_memory_crud_journey(tmp_path):
     client, _ = _fixture(tmp_path)
 
-    added = client.post(
-        "/v1/memory", json={"content": "prefers short replies", "scope": "global"}
-    ).json()
+    added = client.post("/v1/memory", json={"content": "prefers short replies", "scope": "global"}).json()
     listed = client.get("/v1/memory").json()["memory"]
     assert [m["content"] for m in listed] == ["prefers short replies"]
     # rows carry what the screen renders (plus summary/created_at for future use)
     assert {"id", "scope", "content", "summary", "created_at"} <= set(listed[0])
 
     # the user fixes the sentence in place
-    patched = client.patch(
-        f"/v1/memory/{added['id']}", json={"content": "prefers detailed replies"}
-    ).json()
+    patched = client.patch(f"/v1/memory/{added['id']}", json={"content": "prefers detailed replies"}).json()
     assert patched["ok"] is True
     assert client.get("/v1/memory").json()["memory"][0]["content"] == "prefers detailed replies"
 
@@ -109,9 +105,7 @@ def test_settings_path_never_parses_as_memory_id(tmp_path):
 def test_user_rules_clamped_server_side(tmp_path):
     """Security: a hostile/buggy client can't inflate every future system prompt."""
     client, _ = _fixture(tmp_path)
-    client.put(
-        "/v1/memory/settings", json={"user_rules": "r" * (MAX_USER_RULES_CHARS + 9_000)}
-    )
+    client.put("/v1/memory/settings", json={"user_rules": "r" * (MAX_USER_RULES_CHARS + 9_000)})
     assert len(client.get("/v1/memory/settings").json()["user_rules"]) == MAX_USER_RULES_CHARS
 
 
@@ -158,15 +152,11 @@ def test_toggle_off_applies_to_a_running_session(tmp_path):
     client, manager = _fixture(tmp_path)
     engine = manager.get_engine("live-switch-session")
 
-    first = engine.registry.execute(
-        "remember", {"content": "saved while on", "scope": "global"}
-    )
+    first = engine.registry.execute("remember", {"content": "saved while on", "scope": "global"})
     assert first["saved"] is True
 
     client.put("/v1/memory/settings", json={"enabled": False})
-    blocked = engine.registry.execute(
-        "remember", {"content": "must not persist", "scope": "global"}
-    )
+    blocked = engine.registry.execute("remember", {"content": "must not persist", "scope": "global"})
     assert blocked["saved"] is False
     contents = [m["content"] for m in client.get("/v1/memory").json()["memory"]]
     assert contents == ["saved while on"]

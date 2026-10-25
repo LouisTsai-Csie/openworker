@@ -40,32 +40,80 @@ PKG = ROOT / "coworker"
 # root-level modules.
 LAYERS: dict[str, int] = {
     # L0 foundation -- no coworker dependencies beyond each other.
-    "config": 0, "secrets": 0, "basedir": 0, "clock": 0, "events": 0,
-    "statelock": 0, "attachments": 0, "pdf_support": 0, "environment": 0,
-    "toolchain": 0, "runtime_context": 0,
+    "config": 0,
+    "secrets": 0,
+    "basedir": 0,
+    "clock": 0,
+    "events": 0,
+    "statelock": 0,
+    "attachments": 0,
+    "pdf_support": 0,
+    "environment": 0,
+    "toolchain": 0,
+    "runtime_context": 0,
     # L1 governance -- decides what is allowed; depends only on foundation.
-    "permissions": 1, "risk": 1, "audit": 1, "provenance": 1, "readonly": 1,
-    "overrides": 1, "workspace_trust": 1, "unattended": 1,
+    "permissions": 1,
+    "risk": 1,
+    "audit": 1,
+    "provenance": 1,
+    "readonly": 1,
+    "overrides": 1,
+    "workspace_trust": 1,
+    "unattended": 1,
     # L2 domain -- the nouns the product is about.
-    "conversations": 2, "sessions": 2, "session_facts": 2, "inbox": 2,
-    "inbox_routing": 2, "projects": 2, "project": 2, "roots": 2, "mentions": 2,
-    "interactions": 2, "selfwake": 2, "unrouted": 2, "connections": 2,
-    "subscriptions": 2, "subscription_sync": 2, "compaction": 2, "toolresult": 2,
-    "model_config": 2, "cloud": 2, "reviewer": 2,
+    "conversations": 2,
+    "sessions": 2,
+    "session_facts": 2,
+    "inbox": 2,
+    "inbox_routing": 2,
+    "projects": 2,
+    "project": 2,
+    "roots": 2,
+    "mentions": 2,
+    "interactions": 2,
+    "selfwake": 2,
+    "unrouted": 2,
+    "connections": 2,
+    "subscriptions": 2,
+    "subscription_sync": 2,
+    "compaction": 2,
+    "toolresult": 2,
+    "model_config": 2,
+    "cloud": 2,
+    "reviewer": 2,
     # L3 capabilities -- things the agent can do.
-    "providers": 3, "tools": 3, "sandbox": 3, "connectors": 3, "mcp": 3,
-    "memory": 3, "skills": 3, "personas": 3, "agents": 3, "teams": 3,
-    "automation": 3, "remote": 3, "web": 3,
+    "providers": 3,
+    "tools": 3,
+    "sandbox": 3,
+    "connectors": 3,
+    "mcp": 3,
+    "memory": 3,
+    "skills": 3,
+    "personas": 3,
+    "agents": 3,
+    "teams": 3,
+    "automation": 3,
+    "remote": 3,
+    "web": 3,
     # L4 engine -- the turn loop.
     "engine": 4,
     # L5 composition -- assembles an agent from the layers below.
-    "agent": 5, "catalog": 5,
+    "agent": 5,
+    "catalog": 5,
     # L6 surfaces -- how a human or a network reaches the thing.
-    "server": 6, "headless": 6, "tui": 6, "cli": 6,
+    "server": 6,
+    "headless": 6,
+    "tui": 6,
+    "cli": 6,
 }
 LAYER_NAMES = {
-    0: "foundation", 1: "governance", 2: "domain", 3: "capabilities",
-    4: "engine", 5: "composition", 6: "surfaces",
+    0: "foundation",
+    1: "governance",
+    2: "domain",
+    3: "capabilities",
+    4: "engine",
+    5: "composition",
+    6: "surfaces",
 }
 # Not part of the layering: the package itself, and test doubles.
 UNLAYERED = {"", "testing"}
@@ -76,19 +124,23 @@ UNLAYERED = {"", "testing"}
 # shrinks: a new violation fails the build, and so does an entry here that has been
 # fixed, which forces the list to be pruned instead of quietly outliving the problem.
 # ARCHITECTURE.md §4 explains each one and what the fix is.
-KNOWN_CYCLES: frozenset[tuple[str, ...]] = frozenset({
-    # Plugin loading: descriptors.py ends by importing experimental, which imports
-    # ConnectorDescriptor back. Fix by inverting to a register_descriptor() call.
-    ("coworker.connectors.descriptors", "coworker.connectors.experimental"),
-})
-KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset({
-    ("coworker.agents.code", "coworker.catalog"),
-    ("coworker.agents.cowork", "coworker.catalog"),
-    ("coworker.audit", "coworker.connectors"),
-    ("coworker.interactions", "coworker.tools.ask"),
-    ("coworker.model_config", "coworker.providers.recommended"),
-    ("coworker.tools.subagent", "coworker.engine"),
-})
+KNOWN_CYCLES: frozenset[tuple[str, ...]] = frozenset(
+    {
+        # Plugin loading: descriptors.py ends by importing experimental, which imports
+        # ConnectorDescriptor back. Fix by inverting to a register_descriptor() call.
+        ("coworker.connectors.descriptors", "coworker.connectors.experimental"),
+    }
+)
+KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("coworker.agents.code", "coworker.catalog"),
+        ("coworker.agents.cowork", "coworker.catalog"),
+        ("coworker.audit", "coworker.connectors"),
+        ("coworker.interactions", "coworker.tools.ask"),
+        ("coworker.model_config", "coworker.providers.recommended"),
+        ("coworker.tools.subagent", "coworker.engine"),
+    }
+)
 
 
 def module_name(path: Path) -> str:
@@ -218,10 +270,8 @@ def main() -> int:
     import_time = sccs(modules, top)
     combined_edges = {m: top.get(m, set()) | late.get(m, set()) for m in modules}
     combined = sccs(modules, combined_edges)
-    print(f"cycles (module-level only) : {len(import_time)}"
-          f" ({sum(len(c) for c in import_time)} modules)")
-    print(f"cycles (incl. late imports): {len(combined)}"
-          f" ({sum(len(c) for c in combined)} modules)")
+    print(f"cycles (module-level only) : {len(import_time)} ({sum(len(c) for c in import_time)} modules)")
+    print(f"cycles (incl. late imports): {len(combined)} ({sum(len(c) for c in combined)} modules)")
     for comp in import_time:
         print(f"  import-time cycle: {' <-> '.join(comp)}")
     if args.verbose:
@@ -236,8 +286,10 @@ def main() -> int:
         for dst in dsts:
             # Hoisting src -> dst creates a cycle only if dst already reaches src.
             (breaking if reaches(dst, src, top) else hoistable).append((src, dst))
-    print(f"\nlate imports: {n_late} total, {len(breaking)} would create a cycle if "
-          f"hoisted, {len(hoistable)} can be hoisted")
+    print(
+        f"\nlate imports: {n_late} total, {len(breaking)} would create a cycle if "
+        f"hoisted, {len(hoistable)} can be hoisted"
+    )
     worst = sorted(((len(v), k) for k, v in late.items()), reverse=True)[:8]
     print("  most late imports:")
     for count, mod in worst:
@@ -245,8 +297,7 @@ def main() -> int:
         print(f"    {count:3}  {mod:42} must stay late: {need}")
 
     # -- layering --------------------------------------------------------------------
-    unassigned = sorted({m for m in modules if layer_of(m) is None
-                         and layer_key(m) not in UNLAYERED})
+    unassigned = sorted({m for m in modules if layer_of(m) is None and layer_key(m) not in UNLAYERED})
     counts: dict[int, int] = defaultdict(int)
     for m in modules:
         lv = layer_of(m)
@@ -305,8 +356,7 @@ def main() -> int:
         failed = True
     if failed:
         return 1
-    print(f"ok — {len(KNOWN_CYCLES)} known cycle(s), {len(KNOWN_VIOLATIONS)} known "
-          f"violation(s), nothing new")
+    print(f"ok — {len(KNOWN_CYCLES)} known cycle(s), {len(KNOWN_VIOLATIONS)} known violation(s), nothing new")
     return 0
 
 

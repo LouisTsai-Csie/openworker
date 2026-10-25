@@ -56,9 +56,7 @@ class RiskOverrideStore:
         # Trust entries: {"pattern": "..."} dicts (the written form) or bare strings.
         seen: set[str] = set()
         for entry in data.get("trust", []) or []:
-            pattern = (
-                str(entry.get("pattern", "")) if isinstance(entry, dict) else str(entry)
-            )
+            pattern = str(entry.get("pattern", "")) if isinstance(entry, dict) else str(entry)
             if pattern and pattern not in seen:
                 seen.add(pattern)
                 self._trust.append(pattern)
@@ -95,10 +93,7 @@ class RiskOverrideStore:
         self.path.write_text(
             json.dumps(
                 {
-                    "rules": [
-                        {"pattern": r.pattern, "risk": r.risk.value}
-                        for r in self._rules
-                    ],
+                    "rules": [{"pattern": r.pattern, "risk": r.risk.value} for r in self._rules],
                     "trust": [{"pattern": p} for p in self._trust],
                 },
                 indent=2,
@@ -115,8 +110,7 @@ class RiskOverrideStore:
         risk = RiskClass(risk) if not isinstance(risk, RiskClass) else risk
         if pattern.startswith("mcp__") and risk in (RiskClass.READ, RiskClass.EGRESS):
             raise ValueError(
-                "MCP tools cannot be reclassified below external (OPE-136) — "
-                "use a trust rule to stop the asking"
+                "MCP tools cannot be reclassified below external (OPE-136) — use a trust rule to stop the asking"
             )
         self._rules = [r for r in self._rules if r.pattern != pattern]
         self._rules.append(_Rule(pattern, risk))

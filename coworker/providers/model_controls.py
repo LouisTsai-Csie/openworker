@@ -23,7 +23,7 @@ import fnmatch
 import functools
 import json
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -32,12 +32,12 @@ from coworker.config import EFFORT_LEVELS
 _TABLE = Path(__file__).with_name("model_controls.json")
 
 
-class Support(str, Enum):
+class Support(StrEnum):
     SUPPORTED = "supported"
     NOT_SUPPORTED = "not_supported"
 
 
-class EffortLevel(str, Enum):
+class EffortLevel(StrEnum):
     """Ordered from faster to smarter."""
 
     LOW = "low"

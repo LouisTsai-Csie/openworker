@@ -179,9 +179,16 @@ class SeatbeltProvider:
         log = open(os.path.join(self._dir, "daemon.log"), "wb")
         self._daemon = subprocess.Popen(
             [
-                SANDBOX_EXEC, "-p", self.profile_text(),
+                SANDBOX_EXEC,
+                "-p",
+                self.profile_text(),
                 *runner_command(self._runner),
-                "serve", "--socket", self.socket_path, "--cwd", self.cwd, "--exit-with-parent",
+                "serve",
+                "--socket",
+                self.socket_path,
+                "--cwd",
+                self.cwd,
+                "--exit-with-parent",
             ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -195,7 +202,9 @@ class SeatbeltProvider:
         while not os.path.exists(self.socket_path):
             if self._daemon.poll() is not None:
                 said = Path(self._dir, "daemon.log").read_text(errors="replace").strip()
-                raise SeatbeltUnavailable(f"the sandboxed tool runner exited at once (code {self._daemon.returncode}). {said[-400:]}")
+                raise SeatbeltUnavailable(
+                    f"the sandboxed tool runner exited at once (code {self._daemon.returncode}). {said[-400:]}"
+                )
             if time.monotonic() > deadline:
                 raise SeatbeltUnavailable("the sandboxed tool runner did not come up in 15 seconds")
             time.sleep(0.02)

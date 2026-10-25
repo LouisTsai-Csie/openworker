@@ -96,9 +96,7 @@ def model_memory_bytes() -> int | None:
     return nvidia_gpu_memory_bytes() or system_memory_bytes()
 
 
-def recommended_context(
-    model_max: int | None, memory_bytes: int | None
-) -> int | None:
+def recommended_context(model_max: int | None, memory_bytes: int | None) -> int | None:
     """The context window to run a local model at, from the memory available.
 
     None when the memory is unknown: the caller keeps its own default. Never above the
@@ -140,9 +138,7 @@ _NO_WINDOW: dict[str, Any] = {"creationflags": 0x08000000} if sys.platform == "w
 
 def _run(args: list[str]) -> str:
     try:
-        return subprocess.run(
-            args, capture_output=True, text=True, timeout=5, check=False, **_NO_WINDOW
-        ).stdout.strip()
+        return subprocess.run(args, capture_output=True, text=True, timeout=5, check=False, **_NO_WINDOW).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return ""
 
@@ -189,9 +185,7 @@ def _static_facts() -> dict[str, Any]:
             if line.lower().startswith("model name"):
                 processor = line.split(":", 1)[1].strip()
                 break
-        product = " ".join(
-            _read(p) for p in ("/sys/class/dmi/id/product_name", "/sys/firmware/devicetree/base/model")
-        )
+        product = " ".join(_read(p) for p in ("/sys/class/dmi/id/product_name", "/sys/firmware/devicetree/base/model"))
         if re.search(r"DGX[ _-]*Spark", product, re.IGNORECASE):
             kind = "dgx_spark"
             graphics = "NVIDIA GB10, shares the memory"

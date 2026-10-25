@@ -155,7 +155,13 @@ class FWPM_SUBLAYER0(ctypes.Structure):
 
 def _fwp() -> Any:
     lib = ctypes.WinDLL("fwpuclnt")
-    lib.FwpmEngineOpen0.argtypes = [wintypes.LPCWSTR, U32, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(wintypes.HANDLE)]
+    lib.FwpmEngineOpen0.argtypes = [
+        wintypes.LPCWSTR,
+        U32,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.POINTER(wintypes.HANDLE),
+    ]
     lib.FwpmEngineOpen0.restype = U32
     lib.FwpmEngineClose0.argtypes = [wintypes.HANDLE]
     lib.FwpmEngineClose0.restype = U32
@@ -171,7 +177,11 @@ def _fwp() -> Any:
     lib.FwpmFilterAdd0.restype = U32
     lib.FwpmFilterDeleteByKey0.argtypes = [wintypes.HANDLE, ctypes.POINTER(GUID)]
     lib.FwpmFilterDeleteByKey0.restype = U32
-    lib.FwpmFilterGetByKey0.argtypes = [wintypes.HANDLE, ctypes.POINTER(GUID), ctypes.POINTER(ctypes.POINTER(FWPM_FILTER0))]
+    lib.FwpmFilterGetByKey0.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(GUID),
+        ctypes.POINTER(ctypes.POINTER(FWPM_FILTER0)),
+    ]
     lib.FwpmFilterGetByKey0.restype = U32
     lib.FwpmFreeMemory0.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
     lib.FwpmFreeMemory0.restype = None
@@ -194,7 +204,10 @@ class Engine:
     def __init__(self) -> None:
         self._lib = _fwp()
         self.handle = wintypes.HANDLE()
-        _check(self._lib.FwpmEngineOpen0(None, RPC_C_AUTHN_DEFAULT, None, None, ctypes.byref(self.handle)), "FwpmEngineOpen0")
+        _check(
+            self._lib.FwpmEngineOpen0(None, RPC_C_AUTHN_DEFAULT, None, None, ctypes.byref(self.handle)),
+            "FwpmEngineOpen0",
+        )
 
     def close(self) -> None:
         if self.handle:
@@ -217,7 +230,9 @@ class Engine:
         keep: list = []
         provider = FWPM_PROVIDER0()
         provider.providerKey = GUID.of(PROVIDER_KEY)
-        provider.displayData = self._display("OpenWorker sandbox", "Loopback filters for the OpenWorker sandbox account", keep)
+        provider.displayData = self._display(
+            "OpenWorker sandbox", "Loopback filters for the OpenWorker sandbox account", keep
+        )
         provider.flags = FLAG_PERSISTENT
         _check(self._lib.FwpmProviderAdd0(self.handle, ctypes.byref(provider), None), "FwpmProviderAdd0")
 
@@ -233,7 +248,9 @@ class Engine:
         sub.weight = 0xFFFF  # evaluated before the firewall's own sublayer
         _check(self._lib.FwpmSubLayerAdd0(self.handle, ctypes.byref(sub), None), "FwpmSubLayerAdd0")
 
-    def add_filter(self, key: uuid.UUID, *, layer: uuid.UUID, name: str, action: int, weight: int, conditions: list) -> int:
+    def add_filter(
+        self, key: uuid.UUID, *, layer: uuid.UUID, name: str, action: int, weight: int, conditions: list
+    ) -> int:
         keep: list = []
         array = (FWPM_FILTER_CONDITION0 * len(conditions))()
         for i, (field, match, value) in enumerate(conditions):
@@ -242,7 +259,9 @@ class Engine:
             array[i].conditionValue = value(keep)
         flt = FWPM_FILTER0()
         flt.filterKey = GUID.of(key)
-        flt.displayData = self._display(f"OpenWorker sandbox: {name}", "Written by `openworker machine sandbox setup`", keep)
+        flt.displayData = self._display(
+            f"OpenWorker sandbox: {name}", "Written by `openworker machine sandbox setup`", keep
+        )
         flt.flags = FLAG_PERSISTENT
         provider_key = GUID.of(PROVIDER_KEY)
         keep.append(provider_key)
@@ -255,7 +274,10 @@ class Engine:
         flt.filterCondition = ctypes.cast(array, ctypes.POINTER(FWPM_FILTER_CONDITION0))
         flt.action.type = action
         filter_id = U64()
-        _check(self._lib.FwpmFilterAdd0(self.handle, ctypes.byref(flt), None, ctypes.byref(filter_id)), f"FwpmFilterAdd0 ({name})")
+        _check(
+            self._lib.FwpmFilterAdd0(self.handle, ctypes.byref(flt), None, ctypes.byref(filter_id)),
+            f"FwpmFilterAdd0 ({name})",
+        )
         return int(filter_id.value)
 
     def delete_filter(self, key: uuid.UUID) -> bool:
@@ -286,9 +308,16 @@ def _user_condition(sid: str):
 
     def build(keep: list) -> FWP_CONDITION_VALUE0:
         adv = ctypes.WinDLL("advapi32")
-        adv.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [wintypes.LPCWSTR, U32, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(U32)]
+        adv.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [
+            wintypes.LPCWSTR,
+            U32,
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.POINTER(U32),
+        ]
         descriptor, size = ctypes.c_void_p(), U32()
-        if not adv.ConvertStringSecurityDescriptorToSecurityDescriptorW(f"D:(A;;CC;;;{sid})", SDDL_REVISION_1, ctypes.byref(descriptor), ctypes.byref(size)):
+        if not adv.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            f"D:(A;;CC;;;{sid})", SDDL_REVISION_1, ctypes.byref(descriptor), ctypes.byref(size)
+        ):
             raise WfpError(f"cannot build a security descriptor for {sid}")
         blob = FWP_BYTE_BLOB(size.value, descriptor)
         keep += [descriptor, blob]

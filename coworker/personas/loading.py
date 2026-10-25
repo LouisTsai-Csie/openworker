@@ -39,10 +39,7 @@ def consent_summary(m: PersonaManifest) -> dict:
         "recommended_models": list(m.models),  # old name, one release
         # Recommended connectors/MCP with reasons + tiers — the consent screen shows
         # these so the user knows what the coworker hopes to use (sharing v1).
-        "recommends": [
-            {"kind": r.kind, "ref": r.ref, "reason": r.reason, "tier": r.tier}
-            for r in m.recommends
-        ],
+        "recommends": [{"kind": r.kind, "ref": r.ref, "reason": r.reason, "tier": r.tier} for r in m.recommends],
         "version": m.version,
         "source": m.source,
         "builtin": m.builtin,
@@ -84,9 +81,7 @@ def validate_git_url(url: str) -> str:
     return url
 
 
-def git_clone(
-    url: str, dest: Path
-) -> None:  # pragma: no cover - exercised via injection
+def git_clone(url: str, dest: Path) -> None:  # pragma: no cover - exercised via injection
     """Shallow-clone a persona repo. Injectable so tests don't touch the network."""
     validate_git_url(url)
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -95,9 +90,16 @@ def git_clone(
         # redirect); "--" ends option parsing so a "-"-leading URL can't become a git flag.
         [
             "git",
-            "-c", "protocol.allow=never",
-            "-c", "protocol.https.allow=always",
-            "clone", "--depth", "1", "--", url, str(dest),
+            "-c",
+            "protocol.allow=never",
+            "-c",
+            "protocol.https.allow=always",
+            "clone",
+            "--depth",
+            "1",
+            "--",
+            url,
+            str(dest),
         ],
         check=True,
         capture_output=True,
@@ -114,9 +116,7 @@ def cache_dir_for(url: str, base: Path) -> Path:
     return base / f"{slug}-{digest}"
 
 
-def clone_persona_repo(
-    url: str, base: Path, *, clone: Callable[[str, Path], None] = git_clone
-) -> Path:
+def clone_persona_repo(url: str, base: Path, *, clone: Callable[[str, Path], None] = git_clone) -> Path:
     """Clone (or reuse) a persona repo under ``base`` and return its directory."""
     # Validate here too, not just in git_clone: this is the chokepoint every install path
     # reaches, so a hostile URL is rejected before cache_dir_for/clone even when the caller

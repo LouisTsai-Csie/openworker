@@ -28,25 +28,89 @@ import shlex
 # are not unconditionally read-only — see _FLAG_BAD below, which polices the flags that
 # turn a listed command into a writer or an executor.
 _SIMPLE_SAFE = {
-    "ls", "cat", "head", "tail", "wc", "nl", "sort", "uniq", "cut", "tr",
-    "grep", "egrep", "fgrep", "rg", "ugrep", "file", "stat", "du", "df",
-    "pwd", "echo", "printf", "which", "whoami", "id", "date", "uname",
-    "basename", "dirname", "realpath", "readlink", "jq", "column", "diff",
-    "comm", "strings", "md5sum", "shasum", "sha1sum", "sha256sum",
-    "hexdump", "xxd", "od", "true", "false", "yamllint", "actionlint",
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "nl",
+    "sort",
+    "uniq",
+    "cut",
+    "tr",
+    "grep",
+    "egrep",
+    "fgrep",
+    "rg",
+    "ugrep",
+    "file",
+    "stat",
+    "du",
+    "df",
+    "pwd",
+    "echo",
+    "printf",
+    "which",
+    "whoami",
+    "id",
+    "date",
+    "uname",
+    "basename",
+    "dirname",
+    "realpath",
+    "readlink",
+    "jq",
+    "column",
+    "diff",
+    "comm",
+    "strings",
+    "md5sum",
+    "shasum",
+    "sha1sum",
+    "sha256sum",
+    "hexdump",
+    "xxd",
+    "od",
+    "true",
+    "false",
+    "yamllint",
+    "actionlint",
 }
 
 # Git subcommands that only read. Note the per-subcommand guards below — several git
 # "read" commands grow write/exec behavior through specific flags.
 _GIT_SAFE = {
-    "status", "log", "show", "diff", "blame", "shortlog", "describe",
-    "rev-parse", "rev-list", "ls-files", "ls-tree", "grep", "cat-file",
-    "name-rev", "merge-base", "count-objects", "var", "check-ignore",
+    "status",
+    "log",
+    "show",
+    "diff",
+    "blame",
+    "shortlog",
+    "describe",
+    "rev-parse",
+    "rev-list",
+    "ls-files",
+    "ls-tree",
+    "grep",
+    "cat-file",
+    "name-rev",
+    "merge-base",
+    "count-objects",
+    "var",
+    "check-ignore",
 }
 
 _GIT_BRANCH_FLAG_OK = {
-    "--show-current", "--list", "-a", "-r", "-v", "-vv", "--contains",
-    "--merged", "--no-merged", "--all",
+    "--show-current",
+    "--list",
+    "-a",
+    "-r",
+    "-v",
+    "-vv",
+    "--contains",
+    "--merged",
+    "--no-merged",
+    "--all",
 }
 
 _FIND_BAD = ("-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint", "-fls", "-fprintf")
@@ -118,7 +182,9 @@ def _stages(command: str) -> list[list[str]] | None:
     for tok in tokens:
         if tok == "|":
             stages.append([])
-        elif tok in {";", "&", "&&", "||", "|&"} or (tok and set(tok) <= {">", "<", "&", "0", "1", "2"} and any(c in tok for c in "<>&")):
+        elif tok in {";", "&", "&&", "||", "|&"} or (
+            tok and set(tok) <= {">", "<", "&", "0", "1", "2"} and any(c in tok for c in "<>&")
+        ):
             return None  # every operator except a plain pipe rejects (incl. 2>, &>, <<)
         else:
             stages[-1].append(tok)
@@ -274,8 +340,21 @@ def is_readonly_command(command: str) -> bool:
 
 # Operands are not paths: arguments are strings, charsets, or command names.
 _NO_PATH_OPERANDS = {
-    "echo", "printf", "pwd", "whoami", "id", "date", "uname", "true", "false",
-    "which", "basename", "dirname", "tr", "command", "env",
+    "echo",
+    "printf",
+    "pwd",
+    "whoami",
+    "id",
+    "date",
+    "uname",
+    "true",
+    "false",
+    "which",
+    "basename",
+    "dirname",
+    "tr",
+    "command",
+    "env",
 }
 # The FIRST non-flag operand is a pattern/program, not a path; the rest are files.
 _PATTERN_FIRST = {"grep", "egrep", "fgrep", "rg", "ugrep", "jq", "awk", "gawk", "mawk", "nawk", "sed"}

@@ -43,17 +43,11 @@ ARTIFACTS = {
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--version", required=True, help="bare version, e.g. 0.1.2")
-    ap.add_argument(
-        "--tag", required=True, help="git tag the assets live under, e.g. v0.1.2"
-    )
+    ap.add_argument("--tag", required=True, help="git tag the assets live under, e.g. v0.1.2")
     ap.add_argument("--repo", required=True, help="owner/name, e.g. andrewyng/aisuite")
-    ap.add_argument(
-        "--dist", required=True, type=pathlib.Path, help="staged artifacts dir"
-    )
+    ap.add_argument("--dist", required=True, type=pathlib.Path, help="staged artifacts dir")
     ap.add_argument("--out", required=True, type=pathlib.Path)
-    ap.add_argument(
-        "--notes", default="", help="release notes line shown in the update prompt"
-    )
+    ap.add_argument("--notes", default="", help="release notes line shown in the update prompt")
     args = ap.parse_args()
 
     platforms: dict[str, dict[str, str]] = {}
@@ -87,9 +81,7 @@ def main() -> int:
     manifest = {
         "version": args.version,
         "notes": args.notes,
-        "pub_date": datetime.datetime.now(datetime.timezone.utc)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z"),
+        "pub_date": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "platforms": platforms,
     }
     args.out.write_text(json.dumps(manifest, indent=2) + "\n")

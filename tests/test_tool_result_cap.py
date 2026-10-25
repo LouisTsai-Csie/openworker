@@ -24,9 +24,7 @@ from coworker.tools import ToolRegistry
 
 
 def _bounded(result, *, max_bytes=10_000, spill: Path | None, step=7, tool="run_shell"):
-    return toolresult.bound_tool_result(
-        result, max_bytes=max_bytes, spill_dir=spill, step=step, tool_name=tool
-    )
+    return toolresult.bound_tool_result(result, max_bytes=max_bytes, spill_dir=spill, step=step, tool_name=tool)
 
 
 def _size(x) -> int:
@@ -140,10 +138,12 @@ def test_engine_bounds_tool_results_and_keeps_the_rest_of_the_message(tmp_path):
     permissions = PermissionEngine(workspace_root=tmp_path)
     spill = tmp_path / "spill"
     engine = TurnEngine(
-        provider=_Scripted([
-            AssistantTurn(tool_calls=[ToolCall(id="c1", name="big_out", arguments={})], finish_reason="tool_calls"),
-            AssistantTurn(text="done", finish_reason="stop"),
-        ]),
+        provider=_Scripted(
+            [
+                AssistantTurn(tool_calls=[ToolCall(id="c1", name="big_out", arguments={})], finish_reason="tool_calls"),
+                AssistantTurn(text="done", finish_reason="stop"),
+            ]
+        ),
         registry=registry,
         permissions=permissions,
         model="gpt-5.5",
@@ -169,7 +169,9 @@ def test_engine_default_cap_is_ten_thousand_and_zero_disables(tmp_path):
     permissions = PermissionEngine(workspace_root=tmp_path)
     e1 = TurnEngine(provider=_Scripted([]), registry=registry, permissions=permissions, model="m")
     assert e1._tool_result_max_bytes == toolresult.DEFAULT_TOOL_RESULT_MAX_BYTES == 10_000
-    e2 = TurnEngine(provider=_Scripted([]), registry=registry, permissions=permissions, model="m", tool_result_max_bytes=0)
+    e2 = TurnEngine(
+        provider=_Scripted([]), registry=registry, permissions=permissions, model="m", tool_result_max_bytes=0
+    )
     assert e2._tool_result_max_bytes == 0
 
 

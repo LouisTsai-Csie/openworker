@@ -84,9 +84,7 @@ class CodexProvider(OpenAIResponsesProvider):
         tools: list[dict[str, Any]] | None,
         settings: dict[str, Any],
     ) -> dict[str, Any]:
-        kwargs = super()._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings
-        )
+        kwargs = super()._request_kwargs(model=model, messages=messages, tools=tools, settings=settings)
         # This backend 400s ("Unsupported parameter") on standard sampling/cap knobs —
         # max_output_tokens and temperature confirmed live, top_p same family — which
         # silently killed every autotitle attempt on plan sessions (owner catch

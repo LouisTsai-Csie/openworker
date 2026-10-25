@@ -37,11 +37,20 @@ def test_release_lineup(tmp_path, monkeypatch):
     # 2026-09-04: the Reviewer (a solo PR reviewer for the GitHub configurations) ships
     # too. The SWE Lead is held back for 0.3.0 (owner, 2026-09-29: not fully tested yet).
     assert [e["name"] for e in reg.sidebar()] == [
-        "cowork", "cloud-posture", "dep-audit", "reviewer", "security",
+        "cowork",
+        "cloud-posture",
+        "dep-audit",
+        "reviewer",
+        "security",
     ]
     listed = {p["id"]: p for p in reg.list_all()}
     assert set(listed) == {
-        "cowork", "code", "cloud-posture", "dep-audit", "reviewer", "security",
+        "cowork",
+        "code",
+        "cloud-posture",
+        "dep-audit",
+        "reviewer",
+        "security",
     }
     assert listed["code"]["enabled"] is False and listed["code"]["surfaced"] is False
     assert listed["cloud-posture"]["group"] == "security"
@@ -72,15 +81,29 @@ def test_sidebar_defaults_to_surfaced_builtins(tmp_path, internal):
     # Leads surface (the user's entry to a team — "the team IS the lead"); team
     # workers never do.
     assert set(ids) == {
-        "cowork", "ops", "security", "cloud-posture", "dep-audit", "reviewer",
-        "swe-lead", "devsecops-lead", "devops-lead", "triage-lead",
+        "cowork",
+        "ops",
+        "security",
+        "cloud-posture",
+        "dep-audit",
+        "reviewer",
+        "swe-lead",
+        "devsecops-lead",
+        "devops-lead",
+        "triage-lead",
     }
     assert not any(
         i in ids
         for i in (
-            "swe-worker", "design-worker", "test-worker",
-            "appsec-worker", "secrets-worker", "posture-worker",
-            "logs-worker", "infra-worker", "change-worker",
+            "swe-worker",
+            "design-worker",
+            "test-worker",
+            "appsec-worker",
+            "secrets-worker",
+            "posture-worker",
+            "logs-worker",
+            "infra-worker",
+            "change-worker",
         )
     )
     assert sidebar[0]["default"] is True

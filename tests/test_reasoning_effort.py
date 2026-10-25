@@ -97,9 +97,7 @@ def test_build_engine_threads_the_level_into_model_settings(tmp_path):
 
 
 def test_build_engine_explicit_setting_wins_and_unset_is_empty(tmp_path):
-    engine = _engine_with_config(
-        tmp_path, 'reasoning_effort = "xhigh"\n', model_settings={"reasoning_effort": "low"}
-    )
+    engine = _engine_with_config(tmp_path, 'reasoning_effort = "xhigh"\n', model_settings={"reasoning_effort": "low"})
     try:
         assert engine.model_settings["reasoning_effort"] == "low"
     finally:
@@ -173,6 +171,7 @@ def test_openai_compat_mapping(model, level, effective, noted):
     assert plan.params == {"reasoning_effort": effective}
     assert bool(plan.note) == noted
 
+
 def test_nearest_supported_unknown_level_returns_none():
     """Levels outside _RANK (e.g. "none") must not raise — see #676."""
     assert nearest_supported("none", ("low", "medium", "high")) is None
@@ -214,7 +213,6 @@ def test_anthropic_none_sends_nothing(model, budget):
     plan = anthropic_effort(model, "none", budget_mode=budget)
     assert plan.requested == "none" and plan.effective is None and plan.params == {}
     assert "no effort parameter sent" in plan.note
-
 
 
 def test_every_curated_model_resolves_every_level():
@@ -301,18 +299,24 @@ def test_anthropic_none_sends_no_effort_field_and_records_it():
 def test_anthropic_complete_and_stream_send_output_config():
     fake = _FakeAnthropic(response=_anthropic_response(), events=_anthropic_events())
     provider = AnthropicProvider(client=fake)
-    turn = provider.complete(model="claude-fable-5-1", messages=[{"role": "user", "content": "x"}], reasoning_effort="xhigh")
+    turn = provider.complete(
+        model="claude-fable-5-1", messages=[{"role": "user", "content": "x"}], reasoning_effort="xhigh"
+    )
     assert fake.kwargs["output_config"] == {"effort": "xhigh"}
     assert "reasoning_effort" not in fake.kwargs
     assert turn.effort == {"requested": "xhigh", "effective": "xhigh", "param": {"output_config": {"effort": "xhigh"}}}
-    chunks = list(provider.stream(model="claude-fable-5-1", messages=[{"role": "user", "content": "x"}], reasoning_effort="low"))
+    chunks = list(
+        provider.stream(model="claude-fable-5-1", messages=[{"role": "user", "content": "x"}], reasoning_effort="low")
+    )
     assert fake.kwargs["output_config"] == {"effort": "low"}
     assert chunks[-1].turn.effort["effective"] == "low"
 
 
 def test_anthropic_budget_model_maps_to_budget_and_floors_max_tokens():
     fake = _FakeAnthropic(response=_anthropic_response())
-    turn = AnthropicProvider(client=fake).complete(model="claude-haiku-4-5", messages=[{"role": "user", "content": "x"}], reasoning_effort="max")
+    turn = AnthropicProvider(client=fake).complete(
+        model="claude-haiku-4-5", messages=[{"role": "user", "content": "x"}], reasoning_effort="max"
+    )
     assert fake.kwargs["thinking"] == {"type": "enabled", "budget_tokens": 32_000}
     assert fake.kwargs["max_tokens"] > 32_000
     assert "output_config" not in fake.kwargs
@@ -322,13 +326,17 @@ def test_anthropic_budget_model_maps_to_budget_and_floors_max_tokens():
 def test_anthropic_rejection_falls_back_once_and_is_remembered():
     fake = _FakeAnthropic(response=_anthropic_response(), reject_effort=True)
     provider = AnthropicProvider(client=fake)
-    turn = provider.complete(model="claude-sonnet-5", messages=[{"role": "user", "content": "x"}], reasoning_effort="low")
+    turn = provider.complete(
+        model="claude-sonnet-5", messages=[{"role": "user", "content": "x"}], reasoning_effort="low"
+    )
     assert len(fake.kwargs_seen) == 2  # rejected, then resent without the field
     assert "output_config" not in fake.kwargs
     assert turn.effort["requested"] == "low" and turn.effort["effective"] is None
     assert "rejected" in turn.effort["note"]
     # Next call on the same model does not try again.
-    turn2 = provider.complete(model="claude-sonnet-5", messages=[{"role": "user", "content": "y"}], reasoning_effort="low")
+    turn2 = provider.complete(
+        model="claude-sonnet-5", messages=[{"role": "user", "content": "y"}], reasoning_effort="low"
+    )
     assert len(fake.kwargs_seen) == 3 and "output_config" not in fake.kwargs
     assert turn2.effort["effective"] is None
 
@@ -344,7 +352,11 @@ def test_anthropic_unrelated_error_still_raises():
 
     fake.messages = SimpleNamespace(create=create, stream=fake.messages.stream)
     with pytest.raises(RuntimeError, match="overloaded"):
-        list(AnthropicProvider(client=fake).stream(model="claude-sonnet-5", messages=[{"role": "user", "content": "x"}], reasoning_effort="low"))
+        list(
+            AnthropicProvider(client=fake).stream(
+                model="claude-sonnet-5", messages=[{"role": "user", "content": "x"}], reasoning_effort="low"
+            )
+        )
 
 
 # -- OpenAI-compatible provider -------------------------------------------------------
@@ -365,11 +377,19 @@ class _FakeOpenAI:
 
 
 def _openai_response():
-    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="hi", tool_calls=None), finish_reason="stop")], usage=None)
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="hi", tool_calls=None), finish_reason="stop")],
+        usage=None,
+    )
 
 
 def _openai_chunks():
-    return [SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="hi", tool_calls=None), finish_reason="stop")], usage=None)]
+    return [
+        SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content="hi", tool_calls=None), finish_reason="stop")],
+            usage=None,
+        )
+    ]
 
 
 def test_openai_compat_unset_sends_nothing():
@@ -381,10 +401,16 @@ def test_openai_compat_unset_sends_nothing():
 def test_openai_compat_kimi_sends_mapped_value_on_both_paths():
     fake = _FakeOpenAI(response=_openai_response(), stream_chunks=_openai_chunks())
     provider = OpenAIProvider(client=fake)
-    turn = provider.complete(model="moonshotai/Kimi-K3", messages=[{"role": "user", "content": "x"}], reasoning_effort="high")
+    turn = provider.complete(
+        model="moonshotai/Kimi-K3", messages=[{"role": "user", "content": "x"}], reasoning_effort="high"
+    )
     assert fake.calls[-1]["reasoning_effort"] == "high"
     assert turn.effort == {"requested": "high", "effective": "high", "param": {"reasoning_effort": "high"}}
-    chunks = list(provider.stream(model="moonshotai/Kimi-K3", messages=[{"role": "user", "content": "x"}], reasoning_effort="xhigh"))
+    chunks = list(
+        provider.stream(
+            model="moonshotai/Kimi-K3", messages=[{"role": "user", "content": "x"}], reasoning_effort="xhigh"
+        )
+    )
     assert fake.calls[-1]["reasoning_effort"] == "max"
     assert chunks[-1].turn.effort["effective"] == "max" and "sent max" in chunks[-1].turn.effort["note"]
 
@@ -392,7 +418,9 @@ def test_openai_compat_kimi_sends_mapped_value_on_both_paths():
 def test_openai_compat_rejection_drops_the_parameter_and_records_it():
     fake = _FakeOpenAI(response=_openai_response(), reject_effort=True)
     provider = OpenAIProvider(client=fake)
-    turn = provider.complete(model="some/other-model", messages=[{"role": "user", "content": "x"}], reasoning_effort="high")
+    turn = provider.complete(
+        model="some/other-model", messages=[{"role": "user", "content": "x"}], reasoning_effort="high"
+    )
     assert len(fake.calls) == 2 and "reasoning_effort" not in fake.calls[-1]
     assert turn.effort["effective"] is None and "rejected" in turn.effort["note"]
     provider.complete(model="some/other-model", messages=[{"role": "user", "content": "y"}], reasoning_effort="high")
@@ -401,9 +429,16 @@ def test_openai_compat_rejection_drops_the_parameter_and_records_it():
 
 def test_openai_compat_none_goes_on_the_wire_for_unlisted_models():
     fake = _FakeOpenAI(response=_openai_response())
-    turn = OpenAIProvider(client=fake).complete(model="ollama:glm-5.3:cloud", messages=[{"role": "user", "content": "x"}], reasoning_effort="none")
+    turn = OpenAIProvider(client=fake).complete(
+        model="ollama:glm-5.3:cloud", messages=[{"role": "user", "content": "x"}], reasoning_effort="none"
+    )
     assert fake.calls[-1]["reasoning_effort"] == "none"
-    assert turn.effort == {"requested": "none", "effective": "none", "param": {"reasoning_effort": "none"}, "note": "no-thinking request; OpenAI vocabulary assumed"}
+    assert turn.effort == {
+        "requested": "none",
+        "effective": "none",
+        "param": {"reasoning_effort": "none"},
+        "note": "no-thinking request; OpenAI vocabulary assumed",
+    }
 
 
 def test_openai_compat_rejected_none_is_dropped_but_not_remembered():
@@ -411,7 +446,9 @@ def test_openai_compat_rejected_none_is_dropped_but_not_remembered():
     value — but that rejection must not stop the real levels from being sent afterwards."""
     fake = _FakeOpenAI(response=_openai_response(), reject_effort=True)
     provider = OpenAIProvider(client=fake)
-    turn = provider.complete(model="some/other-model", messages=[{"role": "user", "content": "x"}], reasoning_effort="none")
+    turn = provider.complete(
+        model="some/other-model", messages=[{"role": "user", "content": "x"}], reasoning_effort="none"
+    )
     assert len(fake.calls) == 2 and "reasoning_effort" not in fake.calls[-1]
     assert turn.effort["effective"] is None and "rejected" in turn.effort["note"]
     provider.complete(model="some/other-model", messages=[{"role": "user", "content": "y"}], reasoning_effort="high")
@@ -435,7 +472,13 @@ class _EffortProvider(ProviderClient):
 def _run(tmp_path, provider, **engine_kwargs):
     registry = ToolRegistry()
     registry.register_all(ai.toolkits.files(root=str(tmp_path), allow_write=True))
-    engine = TurnEngine(provider=provider, registry=registry, permissions=PermissionEngine(workspace_root=tmp_path), model="m", **engine_kwargs)
+    engine = TurnEngine(
+        provider=provider,
+        registry=registry,
+        permissions=PermissionEngine(workspace_root=tmp_path),
+        model="m",
+        **engine_kwargs,
+    )
 
     async def _collect():
         return [ev async for ev in engine.run("hello")]

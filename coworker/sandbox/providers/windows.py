@@ -111,7 +111,10 @@ class WindowsProvider:
         self.kind = windows_setup.OPEN if self.open_network else windows_setup.CLOSED
         account = windows_setup.account(self.kind)
         if account is None:
-            raise WindowsUnavailable(windows_setup.problem() or f"the {self.kind} sandbox account is not usable; run `openworker machine sandbox setup` again")
+            raise WindowsUnavailable(
+                windows_setup.problem()
+                or f"the {self.kind} sandbox account is not usable; run `openworker machine sandbox setup` again"
+            )
         self._account = account
         # The entries on the folders and the pipe's descriptor name the account.
         self.session_sid = account[1]
@@ -176,8 +179,19 @@ class WindowsProvider:
         env_file = os.path.join(self._dir, "env.json")
         Path(env_file).write_text(json.dumps(self._environment()), encoding="utf-8")
         serve = serve_arguments(self.socket_path, self._dir, also_sids=[sid])
-        argv = [*runner_command(self._runner_inside), "serve", *serve, "--env-file", env_file, "--cwd", self.cwd, "--exit-with-parent"]
-        self._daemon = winsec.spawn_as_account(argv, account=name, password=password, desktop=self._desktop, cwd=self.cwd, stderr_path=log)
+        argv = [
+            *runner_command(self._runner_inside),
+            "serve",
+            *serve,
+            "--env-file",
+            env_file,
+            "--cwd",
+            self.cwd,
+            "--exit-with-parent",
+        ]
+        self._daemon = winsec.spawn_as_account(
+            argv, account=name, password=password, desktop=self._desktop, cwd=self.cwd, stderr_path=log
+        )
         try:
             wait_for_runner(self.socket_path, self._daemon)
         except RuntimeError as exc:
@@ -219,16 +233,30 @@ class WindowsProvider:
             return
         staging = tempfile.mkdtemp(prefix="owc-")
         try:
-            self.copied = creds.copy_in(self.grants, staging, inside_home=home_inside, ssh_proxy_command=self._ssh_proxy_command(), windows=True)
+            self.copied = creds.copy_in(
+                self.grants, staging, inside_home=home_inside, ssh_proxy_command=self._ssh_proxy_command(), windows=True
+            )
             shipped: list[str] = []
             for folder, _dirs, files in os.walk(self.copied.home):
                 rel_folder = os.path.relpath(folder, self.copied.home)
                 for name in files:
                     rel = name if rel_folder == "." else os.path.join(rel_folder, name)
                     data = Path(folder, name).read_bytes()
-                    client.call("fs.write", {"path": os.path.join(home_inside, rel), "data_b64": base64.b64encode(data).decode(), "make_parents": True}, timeout=30)
+                    client.call(
+                        "fs.write",
+                        {
+                            "path": os.path.join(home_inside, rel),
+                            "data_b64": base64.b64encode(data).decode(),
+                            "make_parents": True,
+                        },
+                        timeout=30,
+                    )
                     shipped.append(rel.split(os.sep)[0])
-            client.call("runner.cleanup_at_exit", {"paths": sorted({os.path.join(home_inside, top) for top in shipped})}, timeout=15)
+            client.call(
+                "runner.cleanup_at_exit",
+                {"paths": sorted({os.path.join(home_inside, top) for top in shipped})},
+                timeout=15,
+            )
             client.call("env.set", {"vars": self.copied.env}, timeout=15)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
@@ -238,7 +266,14 @@ class WindowsProvider:
         if self._relay_silence is not None:
             argv += ["--silence-seconds", str(self._relay_silence)]
         return PipeTransport(
-            subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0, **spawn_kwargs())
+            subprocess.Popen(
+                argv,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                bufsize=0,
+                **spawn_kwargs(),
+            )
         )
 
     def verify(self, client: Any) -> None:
@@ -283,7 +318,9 @@ class WindowsProvider:
             )
         via = client.call("net.probe", {"host": "127.0.0.1", "port": self._proxy.port}, timeout=15)
         if not via.get("ok"):
-            raise WindowsUnavailable(f"the sandbox cannot reach the allow-list proxy on port {self._proxy.port}: {via.get('error')}")
+            raise WindowsUnavailable(
+                f"the sandbox cannot reach the allow-list proxy on port {self._proxy.port}: {via.get('error')}"
+            )
 
     # -- the entries ----------------------------------------------------------------------
     def _wanted_entries(self) -> list[tuple[str, str]]:
@@ -297,7 +334,9 @@ class WindowsProvider:
         for folder, _kind in list(wanted):
             parent = os.path.dirname(folder)
             while parent.lower().startswith(home.lower()) and len(parent) >= len(home):
-                if (parent, "traverse") not in wanted and not any(f.lower() == parent.lower() and k != "traverse" for f, k in wanted):
+                if (parent, "traverse") not in wanted and not any(
+                    f.lower() == parent.lower() and k != "traverse" for f, k in wanted
+                ):
                     wanted.append((parent, "traverse"))
                 if parent.lower() == home.lower():
                     break
@@ -307,7 +346,9 @@ class WindowsProvider:
     def _grant(self, folder: str, kind: str) -> None:
         from coworker.sandbox import winsec
 
-        {"write": winsec.grant_write, "read": winsec.grant_read, "traverse": winsec.grant_traverse}[kind](folder, self.session_sid)
+        {"write": winsec.grant_write, "read": winsec.grant_read, "traverse": winsec.grant_traverse}[kind](
+            folder, self.session_sid
+        )
         self._granted.append((folder, kind))
 
     def _revoke(self, folder: str, kind: str) -> None:

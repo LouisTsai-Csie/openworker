@@ -37,9 +37,7 @@ def _profile_connected(descriptor, profile: dict[str, Any]) -> bool:
     # flag is what marks it connected, so don't require the manual fields.
     if profile.get("mode") == "relay":
         return True
-    required = [
-        f.key for f in descriptor.fields if f.required and f.key != "allowed_users"
-    ]
+    required = [f.key for f in descriptor.fields if f.required and f.key != "allowed_users"]
     return bool(profile) and all(bool(profile.get(k)) for k in required)
 
 
@@ -61,7 +59,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
         if d.experimental and not show_experimental:
             continue
         profile = secrets.get(f"{d.name}:default") or {}
-        if d.mcp_url and profile.get("mode") == "mcp":
+        if d.mcp_url and profile.get("mode") == "mcp":  # noqa: SIM108 — the branch carries a comment
             # MCP-backed connect: the profile is just a marker — connected-ness
             # lives with the OAuth tokens (mcp-oauth:<name> in the SecretStore).
             connected = _mcp_tokens_present(secrets, d.name)
@@ -125,9 +123,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
             entry["connected"] = bool(accounts)
             entry["enabled"] = bool(profile.get("enabled", True)) and bool(accounts)
             entry["account"] = default_email or None
-            entry["managed_profile"] = any(
-                a["email"] == default_email and a["managed"] for a in accounts
-            )
+            entry["managed_profile"] = any(a["email"] == default_email and a["managed"] for a in accounts)
             entry["filters"] = gmail_accounts.get_filters(secrets)
         if d.name == "google_calendar":
             # Multi-account, same shape as gmail: each `google_calendar:account:*`
@@ -140,9 +136,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
             entry["connected"] = bool(accounts)
             entry["enabled"] = bool(profile.get("enabled", True)) and bool(accounts)
             entry["account"] = default_email or None
-            entry["managed_profile"] = any(
-                a["email"] == default_email and a["managed"] for a in accounts
-            )
+            entry["managed_profile"] = any(a["email"] == default_email and a["managed"] for a in accounts)
         if d.name == "github":
             # Managed relay is multi-installation: each `github:install:*`
             # profile is one App installation with its OWN allow-list of
@@ -194,17 +188,13 @@ def _slack_workspaces(secrets: SecretStore) -> list[dict[str, Any]]:
             "allow_all": bool(profile.get("allow_all")),
             # Relay approvals are installer-only. Keep the list-shaped API aligned
             # with Manual mode without creating a second editable relay role.
-            "approval_owner_ids": (
-                [profile["slack_user_id"]] if profile.get("slack_user_id") else []
-            ),
+            "approval_owner_ids": ([profile["slack_user_id"]] if profile.get("slack_user_id") else []),
             # Who installed (authed_user) — the GUI marks their chip "you" and
             # keys the post-connect card's "your mentions get through" line.
             "installer_user_id": profile.get("slack_user_id") or "",
             "installer_name": profile.get("sender_name") or "",
         }
-        for team_id, profile in sorted(
-            _slack_team_profiles(secrets), key=lambda t: t[0]
-        )
+        for team_id, profile in sorted(_slack_team_profiles(secrets), key=lambda t: t[0])
     ]
 
 
@@ -241,9 +231,7 @@ def _gmail_account_list(secrets: SecretStore) -> list[dict[str, Any]]:
                 "managed": bool(profile.get("managed")),
                 "scopes": profile.get("scope") or "",
                 # Expired with no way to renew silently → the GUI offers Reauthorize.
-                "needs_reauth": bool(
-                    expires and expires < time() and not profile.get("refresh_token")
-                ),
+                "needs_reauth": bool(expires and expires < time() and not profile.get("refresh_token")),
             }
         )
     return out
@@ -265,9 +253,7 @@ def _gcal_account_list(secrets: SecretStore) -> list[dict[str, Any]]:
                 "managed": bool(profile.get("managed")),
                 "scopes": profile.get("scope") or "",
                 # Expired with no way to renew silently → the GUI offers Reauthorize.
-                "needs_reauth": bool(
-                    expires and expires < time() and not profile.get("refresh_token")
-                ),
+                "needs_reauth": bool(expires and expires < time() and not profile.get("refresh_token")),
             }
         )
     return out
@@ -295,9 +281,7 @@ def _hubspot_portal_list(secrets: SecretStore) -> list[dict[str, Any]]:
     return out
 
 
-def update_connector_tools(
-    secrets: SecretStore, name: str, enabled: dict[str, Any]
-) -> dict[str, Any]:
+def update_connector_tools(secrets: SecretStore, name: str, enabled: dict[str, Any]) -> dict[str, Any]:
     if get_descriptor(name) is None:
         return {"ok": False, "error": "unknown connector"}
     return patch_tool_settings(secrets, name, enabled)
@@ -343,13 +327,9 @@ def connect_connector(
     if missing:
         return {"ok": False, "error": "missing: " + ", ".join(missing)}
 
-    allowed = sorted(
-        {u.strip() for u in raw.get("allowed_users", "").split(",") if u.strip()}
-    )
+    allowed = sorted({u.strip() for u in raw.get("allowed_users", "").split(",") if u.strip()})
     if not allowed and existing.get("allowed_users"):
-        allowed = list(
-            existing["allowed_users"]
-        )  # don't wipe the live allow-list on reconnect
+        allowed = list(existing["allowed_users"])  # don't wipe the live allow-list on reconnect
     token_creds = {k: v for k, v in raw.items() if k != "allowed_users" and v}
 
     identity = None
@@ -359,9 +339,7 @@ def connect_connector(
             return {"ok": False, "error": result.error or "validation failed"}
         identity = result.identity
 
-    profile_type = (
-        "oauth" if d.auth == "oauth" else "none" if d.auth == "none" else "token"
-    )
+    profile_type = "oauth" if d.auth == "oauth" else "none" if d.auth == "none" else "token"
     profile: dict[str, Any] = {"type": profile_type, "enabled": True, **token_creds}
     if any(f.key == "allowed_users" for f in d.fields):
         profile["allowed_users"] = allowed
@@ -385,9 +363,7 @@ def connect_connector(
     return {"ok": True, "account": identity}
 
 
-def managed_connect_connector(
-    secrets: SecretStore, name: str, profile: dict[str, Any]
-) -> dict[str, Any]:
+def managed_connect_connector(secrets: SecretStore, name: str, profile: dict[str, Any]) -> dict[str, Any]:
     """Store a profile produced by managed OAuth (cloud.managed_profile_from_callback).
 
     Field-compatible with a manual connect for the same connector, so tools and
@@ -530,9 +506,7 @@ def store_managed_grant_bundle(
     return out
 
 
-def managed_connect_slack_install(
-    secrets: SecretStore, form: dict[str, Any]
-) -> dict[str, Any]:
+def managed_connect_slack_install(secrets: SecretStore, form: dict[str, Any]) -> dict[str, Any]:
     """Store a managed Slack install (relay mode) from the broker's form-POST.
 
     Slack managed install is multi-workspace and inbound-via-relay, so unlike a
@@ -590,40 +564,29 @@ def disconnect_connector(secrets: SecretStore, name: str) -> dict[str, Any]:
 
     if _accounts.is_account_connector(name):
         for account_id, _profile in _accounts.list_accounts(secrets, name):
-            dropped_accounts = (
-                secrets.delete(_accounts.prefix(name) + account_id) or dropped_accounts
-            )
+            dropped_accounts = secrets.delete(_accounts.prefix(name) + account_id) or dropped_accounts
     if name == "gmail":
         # Whole-connector disconnect drops every mailbox (per-account removal
         # lives on the Gmail page); filters go too — an explicit full reset.
         from coworker.connectors import gmail_accounts
 
         for email, _profile in gmail_accounts.list_accounts(secrets):
-            dropped_accounts = (
-                secrets.delete(gmail_accounts.PREFIX + email) or dropped_accounts
-            )
+            dropped_accounts = secrets.delete(gmail_accounts.PREFIX + email) or dropped_accounts
     if name == "google_calendar":
         from coworker.connectors import gcal_accounts
 
         for email, _profile in gcal_accounts.list_accounts(secrets):
-            dropped_accounts = (
-                secrets.delete(gcal_accounts.PREFIX + email) or dropped_accounts
-            )
+            dropped_accounts = secrets.delete(gcal_accounts.PREFIX + email) or dropped_accounts
     if name == "hubspot":
         from coworker.connectors import hubspot_portals
 
         for hub_id, _profile in hubspot_portals.list_portals(secrets):
-            dropped_accounts = (
-                secrets.delete(hubspot_portals.PREFIX + hub_id) or dropped_accounts
-            )
+            dropped_accounts = secrets.delete(hubspot_portals.PREFIX + hub_id) or dropped_accounts
     if name == "github":
         from coworker.connectors import github_installs
 
         for installation_id, _profile in github_installs.list_installs(secrets):
-            dropped_accounts = (
-                secrets.delete(github_installs.PREFIX + installation_id)
-                or dropped_accounts
-            )
+            dropped_accounts = secrets.delete(github_installs.PREFIX + installation_id) or dropped_accounts
     profile = secrets.get(f"{name}:default") or {}
     if profile.get("mode") == "mcp":
         # MCP-backed connect: forget the OAuth tokens + DCR registration and remove
@@ -643,45 +606,29 @@ def connector_profile_keys(secrets: SecretStore, name: str) -> list[str]:
     from coworker.connectors import accounts as _accounts
 
     if _accounts.is_account_connector(name):
-        keys += [
-            _accounts.prefix(name) + account_id
-            for account_id, _profile in _accounts.list_accounts(secrets, name)
-        ]
+        keys += [_accounts.prefix(name) + account_id for account_id, _profile in _accounts.list_accounts(secrets, name)]
     if name == "gmail":
         from coworker.connectors import gmail_accounts
 
-        keys += [
-            gmail_accounts.PREFIX + email
-            for email, _profile in gmail_accounts.list_accounts(secrets)
-        ]
+        keys += [gmail_accounts.PREFIX + email for email, _profile in gmail_accounts.list_accounts(secrets)]
     if name == "google_calendar":
         from coworker.connectors import gcal_accounts
 
-        keys += [
-            gcal_accounts.PREFIX + email
-            for email, _profile in gcal_accounts.list_accounts(secrets)
-        ]
+        keys += [gcal_accounts.PREFIX + email for email, _profile in gcal_accounts.list_accounts(secrets)]
     if name == "hubspot":
         from coworker.connectors import hubspot_portals
 
-        keys += [
-            hubspot_portals.PREFIX + hub_id
-            for hub_id, _profile in hubspot_portals.list_portals(secrets)
-        ]
+        keys += [hubspot_portals.PREFIX + hub_id for hub_id, _profile in hubspot_portals.list_portals(secrets)]
     if name == "slack":
         # Managed relay: one bot-token profile per workspace.
         keys += sorted(
-            row["profile"]
-            for row in secrets.status()
-            if str(row.get("profile", "")).startswith("slack:team:")
+            row["profile"] for row in secrets.status() if str(row.get("profile", "")).startswith("slack:team:")
         )
     if name == "github":
         # Managed App relay: one metadata profile per installation — routing
         # only, no secrets (tokens mint on demand).
         keys += sorted(
-            row["profile"]
-            for row in secrets.status()
-            if str(row.get("profile", "")).startswith("github:install:")
+            row["profile"] for row in secrets.status() if str(row.get("profile", "")).startswith("github:install:")
         )
     if secrets.get(f"{name}:default") is not None:
         keys.append(f"{name}:default")
@@ -717,8 +664,7 @@ def connector_handoff_info(secrets: SecretStore, name: str) -> dict[str, Any]:
     managed = [
         k
         for k in keys
-        if (secrets.get(k) or {}).get("managed")
-        and not (name in ("slack", "github") and k == f"{name}:default")
+        if (secrets.get(k) or {}).get("managed") and not (name in ("slack", "github") and k == f"{name}:default")
     ]
     if any(not (secrets.get(k) or {}).get("connection_id") for k in managed):
         return {"ok": True, "portable": False, "reason": "refresh_binding", "profiles": []}

@@ -57,11 +57,7 @@ async def _run_until_pending(mgr, sid, engine):
 
 def _final_assistant_texts(mgr, sid):
     rec = mgr.session_store.load(sid)
-    return [
-        m.get("content")
-        for m in rec.messages
-        if m.get("role") == "assistant" and m.get("content")
-    ]
+    return [m.get("content") for m in rec.messages if m.get("role") == "assistant" and m.get("content")]
 
 
 def test_durable_resume_question(tmp_path):
@@ -113,12 +109,8 @@ def test_durable_resume_approval_executes_tool(tmp_path):
         item = await _run_until_pending(mgr, sid, engine)
         assert item.kind == "approval" and item.tool_call_id == "call_w"
         assert not target.exists()  # not executed before approval
-        await mgr.resolve_inbox(
-            item.id, "allow"
-        )  # restart-style resume → re-execute the tool
+        await mgr.resolve_inbox(item.id, "allow")  # restart-style resume → re-execute the tool
 
     asyncio.run(scenario())
-    assert (
-        target.exists() and target.read_text() == "ok"
-    )  # the approved write actually ran
+    assert target.exists() and target.read_text() == "ok"  # the approved write actually ran
     assert any("Done" in (t or "") for t in _final_assistant_texts(mgr, sid))

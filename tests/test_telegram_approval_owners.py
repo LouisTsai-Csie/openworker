@@ -77,12 +77,11 @@ def _reply(text: str, *, user_id: str, chat_id: str) -> MessageEvent:
 
 
 def _approve(manager, item, *, user_id, chat_id) -> bool:
-    return manager._resolve_inbox_reply(
-        _reply(f"approve [ow:{item.id}]", user_id=user_id, chat_id=chat_id)
-    )
+    return manager._resolve_inbox_reply(_reply(f"approve [ow:{item.id}]", user_id=user_id, chat_id=chat_id))
 
 
 # -- no owners configured, bound to the owner's private chat ------------------------------
+
 
 def test_bound_dm_user_approves_without_configuring_owners(tmp_path):
     manager = _manager(tmp_path)
@@ -109,6 +108,7 @@ def test_owner_replying_from_another_chat_is_refused(tmp_path):
 
 
 # -- owners configured -------------------------------------------------------------------
+
 
 def test_configured_owner_approves_and_allowed_non_owner_is_refused(tmp_path):
     manager = _manager(tmp_path, owners=[OWNER])
@@ -146,13 +146,12 @@ def test_in_app_only_inbox_is_not_resolvable_from_telegram(tmp_path):
 def test_questions_stay_answerable_by_any_allowed_member(tmp_path):
     manager = _manager(tmp_path)
     question = manager.inbox.add_question("s1", "Which region?", options=["A", "B"])
-    assert manager._resolve_inbox_reply(
-        _reply(f"A [ow:{question.id}]", user_id=OTHER, chat_id=OTHER)
-    ) is True
+    assert manager._resolve_inbox_reply(_reply(f"A [ow:{question.id}]", user_id=OTHER, chat_id=OTHER)) is True
     assert manager.inbox.get(question.id).resolution == "A"
 
 
 # -- owner list editing -------------------------------------------------------------------
+
 
 def test_adding_an_owner_implies_allowed_and_removal_keeps_allowed(tmp_path):
     manager = _manager(tmp_path, allowed=())
@@ -173,6 +172,7 @@ def test_owner_edit_requires_a_connected_telegram(tmp_path):
 
 
 # -- refusal feedback ---------------------------------------------------------------------
+
 
 def test_refused_text_reply_gets_a_one_line_answer(tmp_path):
     manager = _manager(tmp_path)

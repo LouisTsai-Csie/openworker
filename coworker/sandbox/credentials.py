@@ -96,7 +96,12 @@ DEFAULT_ENTRIES: list[dict[str, Any]] = [
         "name": "docker",
         "title": "Docker registries",
         "path": "~/.docker/config.json",
-        "hosts": ["registry-1.docker.io:443", "auth.docker.io:443", "production.cloudflare.docker.com:443", "ghcr.io:443"],
+        "hosts": [
+            "registry-1.docker.io:443",
+            "auth.docker.io:443",
+            "production.cloudflare.docker.com:443",
+            "ghcr.io:443",
+        ],
         "does": "push and pull images with the logins saved in this file",
         "label": CREDENTIAL,
         "env": {"DOCKER_CONFIG": "{dir}"},
@@ -181,7 +186,10 @@ def entries(configured: Sequence[dict[str, Any]] | None) -> list[dict[str, Any]]
         if not isinstance(raw, dict) or not str(raw.get("name") or "").strip():
             continue
         name = str(raw["name"]).strip()
-        base = by_name.get(name, {"name": name, "title": name, "path": "", "hosts": [], "does": "", "label": CREDENTIAL, "enabled": False})
+        base = by_name.get(
+            name,
+            {"name": name, "title": name, "path": "", "hosts": [], "does": "", "label": CREDENTIAL, "enabled": False},
+        )
         merged = {**base, **{k: v for k, v in raw.items() if v is not None}}
         merged["hosts"] = [str(h) for h in (merged.get("hosts") or [])]
         merged["enabled"] = bool(merged.get("enabled"))
@@ -191,7 +199,7 @@ def entries(configured: Sequence[dict[str, Any]] | None) -> list[dict[str, Any]]
 
 
 def kind_of(path: str, *, home: str | None = None) -> str:
-    """"file", "folder", or "" when the path does not exist on this machine."""
+    """ "file", "folder", or "" when the path does not exist on this machine."""
     if not path:
         return ""
     real = _real(str(path), home or os.path.expanduser("~"))
@@ -243,7 +251,7 @@ def _kubeconfig_hosts(kube_path: str) -> list[str]:
     from urllib.parse import urlsplit
 
     hosts: list[str] = []
-    for path in ([os.path.join(kube_path, "config")] if os.path.isdir(kube_path) else [kube_path]):
+    for path in [os.path.join(kube_path, "config")] if os.path.isdir(kube_path) else [kube_path]:
         try:
             text = Path(path).read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -333,13 +341,17 @@ def copy_in(
             env["KUBECONFIG"] = os.path.join(inside, "config") if g.kind == "folder" else inside
         for variable, template in g.env.items():
             env[variable] = template.replace("{path}", inside).replace("{dir}", os.path.dirname(inside))
-    return CopiedCredentials(home=sandbox_home, env=env, hosts=sorted(set(hosts)), grants=list(grants), path_dirs=path_dirs)
+    return CopiedCredentials(
+        home=sandbox_home, env=env, hosts=sorted(set(hosts)), grants=list(grants), path_dirs=path_dirs
+    )
 
 
 _WINDOWS_SSH = r"C:\Windows\System32\OpenSSH\ssh.exe"
 
 
-def _prepare_ssh(ssh_dir: str, bin_dir: str, proxy_command: str | None, *, inside_dir: str | None = None, windows: bool = False) -> dict[str, str]:
+def _prepare_ssh(
+    ssh_dir: str, bin_dir: str, proxy_command: str | None, *, inside_dir: str | None = None, windows: bool = False
+) -> dict[str, str]:
     """Make the copied `.ssh` usable from inside the sandbox.
 
     ssh reads its config and expands `~` from the ACCOUNT's home folder, not from `$HOME`,
@@ -354,7 +366,9 @@ def _prepare_ssh(ssh_dir: str, bin_dir: str, proxy_command: str | None, *, insid
     config = os.path.join(ssh_dir, "config")
     existing = Path(config).read_text(encoding="utf-8", errors="replace") if os.path.exists(config) else ""
     keys = sorted(
-        name for name in os.listdir(ssh_dir) if os.path.isfile(os.path.join(ssh_dir, name + ".pub")) and os.path.isfile(os.path.join(ssh_dir, name))
+        name
+        for name in os.listdir(ssh_dir)
+        if os.path.isfile(os.path.join(ssh_dir, name + ".pub")) and os.path.isfile(os.path.join(ssh_dir, name))
     )
     lines = ["# Added by OpenWorker: this is a copy of your .ssh inside the sandbox", "Host *"]
     if proxy_command:

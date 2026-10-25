@@ -72,12 +72,8 @@ def test_question_item_fields_plain_strings_pass_through():
 
 
 def test_question_item_fields_rich_options_canonicalized():
-    fields = question_item_fields(
-        {"question": "Env?", "options": [{"label": "staging", "recommended": True}]}
-    )
-    assert fields["options"] == [
-        {"label": "staging", "description": "", "recommended": True, "preview": ""}
-    ]
+    fields = question_item_fields({"question": "Env?", "options": [{"label": "staging", "recommended": True}]})
+    assert fields["options"] == [{"label": "staging", "description": "", "recommended": True, "preview": ""}]
 
 
 def test_question_item_fields_grouped_surfaces_first_question():
@@ -184,9 +180,7 @@ def test_inbox_round_trips_grouped_questions(tmp_path):
 
 def test_old_persisted_items_still_load():
     # Items written before OPE-51 carry no header/questions keys and string options.
-    old = InboxItem(
-        id="x", session_id="s", kind="question", title="Env?", options=["staging"]
-    )
+    old = InboxItem(id="x", session_id="s", kind="question", title="Env?", options=["staging"])
     assert old.header == "" and old.questions == []
 
 
@@ -227,9 +221,7 @@ def test_questions_without_options_get_no_buttons(tmp_path):
 
 def test_grouped_questions_get_no_buttons(tmp_path):
     store = InboxStore(tmp_path / "inbox.json")
-    fields = question_item_fields(
-        {"questions": [{"question": "A?", "options": ["x"]}, {"question": "B?"}]}
-    )
+    fields = question_item_fields({"questions": [{"question": "A?", "options": ["x"]}, {"question": "B?"}]})
     item = store.add_question("s1", **fields)
     assert buttons_for(item) == []  # one button row can't answer 2+ questions
 
@@ -270,9 +262,7 @@ def test_grouped_ask_round_trip_through_manager(tmp_path):
         item = await _run_until_pending(mgr, sid, engine)
         assert item.kind == "question" and item.tool_call_id == "call_g"
         assert item.title == "Chart style?" and len(item.questions) == 2
-        await mgr.resolve_inbox(
-            item.id, json.dumps({"Chart": "Bar", "Distribution": "Stacked"})
-        )
+        await mgr.resolve_inbox(item.id, json.dumps({"Chart": "Bar", "Distribution": "Stacked"}))
 
     asyncio.run(scenario())
     # The tool result the model saw carries the parsed answers map.

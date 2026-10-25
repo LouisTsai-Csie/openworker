@@ -33,10 +33,7 @@ class SQLiteMemoryStore(MemoryStore):
             """)
         # Databases created before the summary column existed: rows without one fall
         # back to a truncated first line of content at render time (no data migration).
-        cols = {
-            row["name"]
-            for row in self._conn.execute("PRAGMA table_info(memories)").fetchall()
-        }
+        cols = {row["name"] for row in self._conn.execute("PRAGMA table_info(memories)").fetchall()}
         if "summary" not in cols:
             self._conn.execute("ALTER TABLE memories ADD COLUMN summary TEXT")
         self._conn.commit()
@@ -54,8 +51,7 @@ class SQLiteMemoryStore(MemoryStore):
         scope = Scope(scope)
         with self._lock:
             cursor = self._conn.execute(
-                "INSERT INTO memories (scope, key, content, summary, workspace, session_id) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO memories (scope, key, content, summary, workspace, session_id) VALUES (?, ?, ?, ?, ?, ?)",
                 (scope.value, key, content, summary, workspace, session_id),
             )
             self._conn.commit()
@@ -65,9 +61,7 @@ class SQLiteMemoryStore(MemoryStore):
 
     def get(self, item_id: int) -> MemoryItem | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM memories WHERE id = ?", (item_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM memories WHERE id = ?", (item_id,)).fetchone()
         return _row_to_item(row) if row else None
 
     def list(
@@ -93,9 +87,7 @@ class SQLiteMemoryStore(MemoryStore):
             rows = self._conn.execute(query, params).fetchall()
         return [_row_to_item(row) for row in rows]
 
-    def update(
-        self, item_id: int, content: str, *, summary: str | None = None
-    ) -> MemoryItem | None:
+    def update(self, item_id: int, content: str, *, summary: str | None = None) -> MemoryItem | None:
         with self._lock:
             if summary is not None:
                 self._conn.execute(
@@ -103,9 +95,7 @@ class SQLiteMemoryStore(MemoryStore):
                     (content, summary, item_id),
                 )
             else:
-                self._conn.execute(
-                    "UPDATE memories SET content = ? WHERE id = ?", (content, item_id)
-                )
+                self._conn.execute("UPDATE memories SET content = ? WHERE id = ?", (content, item_id))
             self._conn.commit()
         return self.get(item_id)
 
@@ -118,12 +108,11 @@ class SQLiteMemoryStore(MemoryStore):
     def delete_all(self, *, scope: Scope | None = None) -> int:
         """Delete every memory (optionally one scope). Returns the number removed."""
         with self._lock:
-            if scope is not None:
-                cursor = self._conn.execute(
-                    "DELETE FROM memories WHERE scope = ?", (Scope(scope).value,)
-                )
-            else:
-                cursor = self._conn.execute("DELETE FROM memories")
+            cursor = (
+                self._conn.execute("DELETE FROM memories WHERE scope = ?", (Scope(scope).value,))
+                if scope is not None
+                else self._conn.execute("DELETE FROM memories")
+            )
             self._conn.commit()
         return cursor.rowcount
 

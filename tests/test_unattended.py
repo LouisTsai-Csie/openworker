@@ -39,9 +39,7 @@ def test_unattended_session_routes_to_inbox(tmp_path):
                     return
                 await asyncio.sleep(0.001)
 
-        outcome, _ = await asyncio.gather(
-            approver(PermissionRequest("write_file", {}, None, "")), answer()
-        )
+        outcome, _ = await asyncio.gather(approver(PermissionRequest("write_file", {}, None, "")), answer())
         assert outcome is ApprovalOutcome.ONCE
         assert len(inbox.list(session_id="s1")) == 1
 

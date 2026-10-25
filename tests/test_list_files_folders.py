@@ -43,9 +43,7 @@ def test_recursive_listing_shows_folders_and_files(tmp_path):
 def test_pattern_and_subpath_apply(tmp_path):
     _site(tmp_path)
     tool = _list_files(tmp_path)
-    assert tool(path="personal-site", pattern="*.html", recursive=False) == [
-        "personal-site/index.html"
-    ]
+    assert tool(path="personal-site", pattern="*.html", recursive=False) == ["personal-site/index.html"]
     assert tool(path="personal-site", recursive=False) == [
         "personal-site/_includes/",
         "personal-site/index.html",

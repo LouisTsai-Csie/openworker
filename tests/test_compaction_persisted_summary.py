@@ -50,9 +50,7 @@ def test_compacted_notice_carries_the_summary_and_state(tmp_path):
 
 
 def test_trim_fallback_notice_says_so_without_a_summary(tmp_path):
-    provider = CompactingProvider(
-        [AssistantTurn(text="done", finish_reason="stop")], summary_fails=2
-    )
+    provider = CompactingProvider([AssistantTurn(text="done", finish_reason="stop")], summary_fails=2)
     engine = make_engine(tmp_path, provider, messages=long_history(), cap=400)
     events = collect(engine)
 

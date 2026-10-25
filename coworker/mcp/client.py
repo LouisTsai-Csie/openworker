@@ -75,9 +75,7 @@ class MCPManager:
             if existing is not None:
                 return existing
             ready: asyncio.Future = asyncio.get_running_loop().create_future()
-            self._tasks[server.name] = asyncio.create_task(
-                self._serve(server, ready, interactive=interactive)
-            )
+            self._tasks[server.name] = asyncio.create_task(self._serve(server, ready, interactive=interactive))
             conn = await ready  # propagates connection errors
             self._conns[server.name] = conn
             return conn
@@ -112,9 +110,7 @@ class MCPManager:
         """Stderr tail from the most recent failed startup of `name`, if any."""
         return self._stderr_tails.get(name)
 
-    async def call(
-        self, name: str, tool: str, arguments: dict[str, Any] | None
-    ) -> Any:
+    async def call(self, name: str, tool: str, arguments: dict[str, Any] | None) -> Any:
         conn = self._conns.get(name)
         if conn is None:
             raise RuntimeError(f"MCP server not connected: {name}")
@@ -127,23 +123,19 @@ class MCPManager:
         for task in list(self._tasks.values()):
             try:
                 await asyncio.wait_for(asyncio.shield(task), timeout=5)
-            except (asyncio.TimeoutError, Exception):
+            except (TimeoutError, Exception):
                 task.cancel()
         self._conns.clear()
         self._tasks.clear()
 
     # -- per-server lifecycle (one task owns enter+exit) ------------------------
-    async def _serve(
-        self, server: MCPServerDef, ready: asyncio.Future, *, interactive: bool = False
-    ) -> None:
+    async def _serve(self, server: MCPServerDef, ready: asyncio.Future, *, interactive: bool = False) -> None:
         errfile = None
         try:
             async with AsyncExitStack() as stack:
                 if server.transport == "http":
                     if not server.url:
-                        raise ValueError(
-                            f"MCP server '{server.name}' is http but has no url"
-                        )
+                        raise ValueError(f"MCP server '{server.name}' is http but has no url")
                     auth = None
                     if server.auth == "oauth":
                         from coworker.secrets import SecretStore
@@ -158,15 +150,11 @@ class MCPManager:
                             interactive=interactive,
                         )
                     read, write, *_ = await stack.enter_async_context(
-                        streamablehttp_client(
-                            server.url, headers=server.headers or None, auth=auth
-                        )
+                        streamablehttp_client(server.url, headers=server.headers or None, auth=auth)
                     )
                 else:
                     if not server.command:
-                        raise ValueError(
-                            f"MCP server '{server.name}' is stdio but has no command"
-                        )
+                        raise ValueError(f"MCP server '{server.name}' is stdio but has no command")
                     params = StdioServerParameters(
                         command=server.command,
                         args=server.args,
@@ -175,12 +163,8 @@ class MCPManager:
                     )
                     # Capture the child's stderr so a startup crash leaves evidence
                     # the UI can show (the SDK needs a real file descriptor here).
-                    errfile = tempfile.TemporaryFile(
-                        mode="w+", encoding="utf-8", errors="replace"
-                    )
-                    read, write = await stack.enter_async_context(
-                        stdio_client(params, errlog=errfile)
-                    )
+                    errfile = tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace")
+                    read, write = await stack.enter_async_context(stdio_client(params, errlog=errfile))
                 session = await stack.enter_async_context(ClientSession(read, write))
                 await session.initialize()
                 listed = await session.list_tools()

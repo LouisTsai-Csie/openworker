@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from collections.abc import Awaitable, Callable
+from datetime import UTC
 
 _OCSF_VERSION = "1.1.0"
 _CLASS_API_ACTIVITY = 6003  # OCSF Application Activity › API Activity
@@ -107,28 +108,24 @@ def save_policy(state: Path, policy: dict[str, Any]) -> None:
 # -- OCSF -----------------------------------------------------------------------
 
 
-def to_ocsf(
-    row: dict[str, Any], *, machine_id: str = "", machine_name: str = "", org_id: str = ""
-) -> dict[str, Any]:
+def to_ocsf(row: dict[str, Any], *, machine_id: str = "", machine_name: str = "", org_id: str = "") -> dict[str, Any]:
     """One local audit row → one OCSF API Activity event. Content columns are
     dropped here, structurally, not by a filter someone could forget."""
     status = str(row.get("status") or "")
-    status_id = 1 if status in ("ok", "ran", "success", "allow") else 2 if status in (
-        "error", "denied", "deny", "failed", "blocked"
-    ) else 99
-    tokens = {
-        k: int(row.get(k) or 0)
-        for k in ("tokens_in", "tokens_out", "cache_read", "cache_write")
-    }
+    status_id = (
+        1
+        if status in ("ok", "ran", "success", "allow")
+        else 2
+        if status in ("error", "denied", "deny", "failed", "blocked")
+        else 99
+    )
+    tokens = {k: int(row.get(k) or 0) for k in ("tokens_in", "tokens_out", "cache_read", "cache_write")}
     try:
         ts = row.get("timestamp") or ""
         # SQLite CURRENT_TIMESTAMP is UTC "YYYY-MM-DD HH:MM:SS".
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        t_ms = int(
-            datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
-            * 1000
-        )
+        t_ms = int(datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp() * 1000)
     except (TypeError, ValueError):
         t_ms = int(time.time() * 1000)
     workspace = str(row.get("workspace") or "")
@@ -283,7 +280,7 @@ class AuditExporter:
             try:
                 await send_frame({"type": "audit", "id": frame_id, "events": events})
                 return await asyncio.wait_for(fut, timeout=30.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return False
             finally:
                 self._pending_acks.pop(frame_id, None)
@@ -356,7 +353,7 @@ class AuditExporter:
                 backoff = self._backoff_start
                 try:
                     await asyncio.wait_for(self._wake.wait(), timeout=self.policy.flush_seconds)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
             except ConnectionError:
                 await asyncio.sleep(backoff)

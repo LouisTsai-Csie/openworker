@@ -291,11 +291,7 @@ class ReasoningStreamProvider(ProviderClient):
         yield StreamChunk(reasoning_delta="hmm, ")
         yield StreamChunk(reasoning_delta="let me think")
         yield StreamChunk(text_delta="the answer")
-        yield StreamChunk(
-            turn=AssistantTurn(
-                text="the answer", finish_reason="stop", reasoning="hmm, let me think"
-            )
-        )
+        yield StreamChunk(turn=AssistantTurn(text="the answer", finish_reason="stop", reasoning="hmm, let me think"))
 
 
 def test_reasoning_streams_persists_and_never_reaches_providers(tmp_path):

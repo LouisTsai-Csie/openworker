@@ -32,9 +32,7 @@ async def exchange_key(code: str, verifier: str) -> str:
         if not isinstance(key, str) or not key.startswith("sk-or-"):
             raise ValueError("Invalid key response")
         # /models is public and cannot establish that a credential is valid.
-        check = await client.get(
-            f"{BASE_URL}/auth/key", headers={"Authorization": f"Bearer {key}"}
-        )
+        check = await client.get(f"{BASE_URL}/auth/key", headers={"Authorization": f"Bearer {key}"})
         check.raise_for_status()
         return key
 
@@ -83,11 +81,7 @@ class OpenRouterAuth:
         self.attempt_id = secrets.token_urlsafe(24)
         attempt = self.attempt_id
         self.verifier = secrets.token_urlsafe(64)
-        challenge = (
-            base64.urlsafe_b64encode(hashlib.sha256(self.verifier.encode()).digest())
-            .rstrip(b"=")
-            .decode()
-        )
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(self.verifier.encode()).digest()).rstrip(b"=").decode()
         params = {"code_challenge": challenge, "code_challenge_method": "S256"}
         try:
             if manual:
@@ -95,9 +89,7 @@ class OpenRouterAuth:
             else:
                 path = f"/callback/{attempt}"
                 server = await asyncio.start_server(
-                    lambda reader, writer: self._callback(
-                        reader, writer, attempt, path
-                    ),
+                    lambda reader, writer: self._callback(reader, writer, attempt, path),
                     "127.0.0.1",
                     0,
                 )
@@ -136,11 +128,9 @@ class OpenRouterAuth:
                     message = "Return to OpenWorker to see your connection status."
                 elif query.get("error"):
                     self.cancel()
-                    self.error = (
-                        "OpenRouter authorization was declined. Please try again."
-                    )
+                    self.error = "OpenRouter authorization was declined. Please try again."
                     message = "Authorization declined. Return to OpenWorker."
-        except (ValueError, UnicodeError, asyncio.TimeoutError):
+        except (TimeoutError, ValueError, UnicodeError):
             pass
         finally:
             body = message.encode()
@@ -155,12 +145,7 @@ class OpenRouterAuth:
             writer.close()
 
     async def complete(self, code: Any, attempt_id: Any) -> dict[str, Any]:
-        if (
-            not attempt_id
-            or attempt_id != self.attempt_id
-            or self.exchanging
-            or not self.verifier
-        ):
+        if not attempt_id or attempt_id != self.attempt_id or self.exchanging or not self.verifier:
             return {
                 **self.status(),
                 "error": "This sign-in attempt is no longer available.",

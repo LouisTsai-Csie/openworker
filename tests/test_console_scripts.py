@@ -3,13 +3,8 @@ tool, the acceptor and the team board are run as modules while they are not prod
 
 from __future__ import annotations
 
-import sys
+import tomllib
 from pathlib import Path
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:  # pragma: no cover
-    import tomli as tomllib
 
 
 def test_only_openworker_is_a_console_script() -> None:

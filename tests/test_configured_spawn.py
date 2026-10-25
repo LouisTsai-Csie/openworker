@@ -14,16 +14,43 @@ from coworker.server.manager import SessionManager, configured_opening
 from tests.test_subscriptions import ScriptedProvider
 
 
-def _github_event(*, kind="pr_open", number="42", configuration=None, reply_only=None, known_names=(), name="", sender="octocat", repo="acme/site"):
+def _github_event(
+    *,
+    kind="pr_open",
+    number="42",
+    configuration=None,
+    reply_only=None,
+    known_names=(),
+    name="",
+    sender="octocat",
+    repo="acme/site",
+):
     frame = {
-        "provider": "github", "installation_id": "101", "owner_repo": repo, "number": number,
-        "kind": kind, "name": name, "event": "pull_request", "sender": sender,
-        "title": "Add retry loop", "body": "Retries the worker fetch.",
-        "url": f"https://github.com/{repo}/pull/{number}", "head_ref": "feat/retry", "base_ref": "main",
+        "provider": "github",
+        "installation_id": "101",
+        "owner_repo": repo,
+        "number": number,
+        "kind": kind,
+        "name": name,
+        "event": "pull_request",
+        "sender": sender,
+        "title": "Add retry loop",
+        "body": "Retries the worker fetch.",
+        "url": f"https://github.com/{repo}/pull/{number}",
+        "head_ref": "feat/retry",
+        "base_ref": "main",
     }
     ev = MessageEvent(
         text=f"[PR opened in {repo}#{number}: Add retry loop] Retries the worker fetch.",
-        source=SessionSource(platform="github", chat_id=f"{repo}#{number}", user_id=sender, user_name=sender, chat_name=f"{repo}#{number}", chat_type="channel", team_id="101"),
+        source=SessionSource(
+            platform="github",
+            chat_id=f"{repo}#{number}",
+            user_id=sender,
+            user_name=sender,
+            chat_name=f"{repo}#{number}",
+            chat_type="channel",
+            team_id="101",
+        ),
         raw=frame,
         mentions_me=True,
         configuration=configuration,
@@ -87,9 +114,19 @@ def test_spawn_starts_a_session_from_the_spec(tmp_path, monkeypatch):
 
     monkeypatch.setattr(mgr, "deliver_to_session", fake_deliver)
     cfg = {
-        "config_id": "cfg1", "event": "pr_open", "name": "",
-        "spawn": {"kind": "new", "machine_id": "m-a", "persona": "cowork", "models": ["ollama:qwen3-coder:30b"],
-                  "base_dir": "", "worktree": True, "skills": ["semgrep-review"], "instructions": "Correctness first, then security."},
+        "config_id": "cfg1",
+        "event": "pr_open",
+        "name": "",
+        "spawn": {
+            "kind": "new",
+            "machine_id": "m-a",
+            "persona": "cowork",
+            "models": ["ollama:qwen3-coder:30b"],
+            "base_dir": "",
+            "worktree": True,
+            "skills": ["semgrep-review"],
+            "instructions": "Correctness first, then security.",
+        },
     }
     asyncio.run(mgr._dispatch_inbound(_github_event(configuration=cfg)))
     assert len(delivered) == 1
@@ -97,7 +134,10 @@ def test_spawn_starts_a_session_from_the_spec(tmp_path, monkeypatch):
     assert "A pull request was opened on GitHub in acme/site#42: Add retry loop (by octocat)." in opening
     # The origin block names the exact reply call (spec §11.3); the opaque handle is gone.
     assert "From GitHub · acme/site · pull request #42" in opening
-    assert 'github_reply(owner="acme", repo="site", number=42, body=…) — pre-approved for this thread; github_review(owner="acme", repo="site", pull_number=42' in opening
+    assert (
+        'github_reply(owner="acme", repo="site", number=42, body=…) — pre-approved for this thread; github_review(owner="acme", repo="site", pull_number=42'
+        in opening
+    )
     assert "github:acme/site#42" not in opening and "data to review" in opening
     row = next(r for r in mgr.list_sessions() if r["session_id"] == sid)
     assert row["agent"] == "cowork" and row["origin"] == "github" and row["title"].startswith("PR #42")
@@ -164,11 +204,16 @@ def test_spawn_provisions_only_a_directory_and_preserves_it(tmp_path, monkeypatc
         delivered.append((sid, message))
 
     monkeypatch.setattr(mgr, "deliver_to_session", deliver)
-    monkeypatch.setattr("coworker.connectors.integration_tools._run_git",
-                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("harness must not run git")))
+    monkeypatch.setattr(
+        "coworker.connectors.integration_tools._run_git",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("harness must not run git")),
+    )
     base = tmp_path / "work"
-    cfg = {"config_id": "cfg2", "event": "pr_open",
-           "spawn": {"kind": "new", "persona": "swe-lead", "base_dir": str(base), "worktree": True}}
+    cfg = {
+        "config_id": "cfg2",
+        "event": "pr_open",
+        "spawn": {"kind": "new", "persona": "swe-lead", "base_dir": str(base), "worktree": True},
+    }
     asyncio.run(mgr._dispatch_inbound(_github_event(configuration=cfg)))
     sid, opening = delivered[0]
     rec = mgr.session_store.load(sid)
@@ -226,7 +271,11 @@ def test_titles_are_unique_per_machine_and_rows_flag_leads(tmp_path, monkeypatch
     assert mgr.rename_session("a", "Reviewer")["ok"] is True  # renaming to its own title is fine
     rows = {r["session_id"]: r for r in mgr.list_sessions()}
     assert rows["a"]["lead"] is False
-    mgr.session_store.save(type(mgr.session_store.load("a"))(session_id="lead", workspace=str(tmp_path), model="m", mode="interactive", agent="swe-lead"))
+    mgr.session_store.save(
+        type(mgr.session_store.load("a"))(
+            session_id="lead", workspace=str(tmp_path), model="m", mode="interactive", agent="swe-lead"
+        )
+    )
     assert {r["session_id"]: r for r in mgr.list_sessions()}["lead"]["lead"] is True
 
 
@@ -248,7 +297,12 @@ def test_named_mention_on_a_pr_describes_the_ref_without_cloning(tmp_path, monke
 
     monkeypatch.setattr(mgr, "deliver_to_session", fake_deliver)
     base = tmp_path / "work"
-    cfg = {"config_id": "cfg5", "event": "named_mention", "name": "reviewer", "spawn": {"kind": "new", "persona": "cowork", "base_dir": str(base), "worktree": True}}
+    cfg = {
+        "config_id": "cfg5",
+        "event": "named_mention",
+        "name": "reviewer",
+        "spawn": {"kind": "new", "persona": "cowork", "base_dir": str(base), "worktree": True},
+    }
     ev = _github_event(kind="mention", name="reviewer", configuration=cfg)
     ev.raw["is_pr"] = True
     asyncio.run(mgr._dispatch_inbound(ev))
@@ -282,7 +336,9 @@ def test_swe_lead_is_reachable_on_github_and_slack():
 
     from coworker.personas.manifest import parse_manifest
 
-    m = parse_manifest((Path(__file__).resolve().parents[1] / "coworker/personas/builtin/swe-lead/manifest.md").read_text())
+    m = parse_manifest(
+        (Path(__file__).resolve().parents[1] / "coworker/personas/builtin/swe-lead/manifest.md").read_text()
+    )
     assert set(m.connectors) == {"github", "slack"}
 
 
@@ -290,8 +346,10 @@ def test_missing_target_is_parked_without_a_replacement_lead(tmp_path, monkeypat
     mgr = _mgr(tmp_path, monkeypatch)
     parked = []
     monkeypatch.setattr(mgr.unrouted, "record", lambda *a, **k: parked.append(k))
+
     async def no_spawn(*args):
         raise AssertionError("targeted events must not fall through to mention spawning")
+
     monkeypatch.setattr(mgr, "_route_mention", no_spawn)
     ev = _github_event(configuration={"config_id": "cfg", "event": "issue_open"})
     ev.target_session_id = "missing-lead"
@@ -328,14 +386,30 @@ def test_spawn_applies_the_configured_approval_mode_and_inbox_dial(tmp_path, mon
         pass
 
     monkeypatch.setattr(mgr, "deliver_to_session", fake_deliver)
-    cfg = {"config_id": "cfg9", "event": "pr_open", "name": "", "spawn": {"kind": "new", "persona": "cowork", "models": [], "approval_mode": "interactive", "unattended": False}}
+    cfg = {
+        "config_id": "cfg9",
+        "event": "pr_open",
+        "name": "",
+        "spawn": {
+            "kind": "new",
+            "persona": "cowork",
+            "models": [],
+            "approval_mode": "interactive",
+            "unattended": False,
+        },
+    }
     asyncio.run(mgr._dispatch_inbound(_github_event(configuration=cfg)))
     sid = next(r["session_id"] for r in mgr.list_sessions() if r["title"].startswith("PR #42"))
     rec = mgr.session_store.load(sid)
     assert rec.mode == "interactive" and mgr.unattended.is_unattended(sid) is False
     assert mgr.reviewer_opted(sid) is False and mgr.get_engine(sid).is_attended is None
     # Bypass is the user's call (owner ruling): stored and applied as given; legacy "auto" too.
-    cfg = {"config_id": "cfg10", "event": "pr_open", "name": "", "spawn": {"kind": "new", "persona": "cowork", "models": [], "approval_mode": "auto"}}
+    cfg = {
+        "config_id": "cfg10",
+        "event": "pr_open",
+        "name": "",
+        "spawn": {"kind": "new", "persona": "cowork", "models": [], "approval_mode": "auto"},
+    }
     asyncio.run(mgr._dispatch_inbound(_github_event(number="43", configuration=cfg)))
     sid = next(r["session_id"] for r in mgr.list_sessions() if r["title"].startswith("PR #43"))
     assert mgr.session_store.load(sid).mode == "bypass-approvals"

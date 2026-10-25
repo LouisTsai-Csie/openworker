@@ -68,12 +68,8 @@ def resolve_servers(profile: dict[str, Any]) -> tuple[EmailServers | None, str]:
         except ValueError:
             return fallback
 
-    imap_host = str(profile.get("imap_host") or "").strip() or (
-        preset.imap_host if preset else ""
-    )
-    smtp_host = str(profile.get("smtp_host") or "").strip() or (
-        preset.smtp_host if preset else ""
-    )
+    imap_host = str(profile.get("imap_host") or "").strip() or (preset.imap_host if preset else "")
+    smtp_host = str(profile.get("smtp_host") or "").strip() or (preset.smtp_host if preset else "")
     if not imap_host or not smtp_host:
         return None, (
             f"no server preset for '{domain or address}' — fill in the IMAP and SMTP "
@@ -110,9 +106,7 @@ def _default_imap_factory(host: str, port: int) -> imaplib.IMAP4_SSL:
 
 def _default_smtp_factory(host: str, port: int) -> smtplib.SMTP:
     if port == 465:
-        return smtplib.SMTP_SSL(
-            host, port, timeout=_TIMEOUT, context=ssl.create_default_context()
-        )
+        return smtplib.SMTP_SSL(host, port, timeout=_TIMEOUT, context=ssl.create_default_context())
     smtp = smtplib.SMTP(host, port, timeout=_TIMEOUT)
     smtp.starttls(context=ssl.create_default_context())
     return smtp
@@ -148,9 +142,7 @@ def decode_mime_header(raw: Any) -> str:
 
 def _strip_html(html: str) -> str:
     text = re.sub(r"<(br|/p|/div|/tr)\s*/?>", "\n", html, flags=re.IGNORECASE)
-    text = re.sub(
-        r"<(script|style)[^>]*>.*?</\1>", "", text, flags=re.IGNORECASE | re.DOTALL
-    )
+    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r"<[^>]+>", "", text)
     for entity, char in (
         ("&nbsp;", " "),
@@ -202,9 +194,7 @@ def list_attachment_parts(
     for part in msg.walk():
         disposition = str(part.get("Content-Disposition", ""))
         filename = part.get_filename()
-        if "attachment" not in disposition and not (
-            filename and "inline" in disposition
-        ):
+        if "attachment" not in disposition and not (filename and "inline" in disposition):
             continue
         if filename:
             out.append((decode_mime_header(filename), part))
@@ -290,9 +280,7 @@ def _select_readonly(imap: imaplib.IMAP4, folder: str) -> str | None:
     return None
 
 
-def _fetch_message(
-    imap: imaplib.IMAP4, uid: str
-) -> email_lib.message.Message | None:
+def _fetch_message(imap: imaplib.IMAP4, uid: str) -> email_lib.message.Message | None:
     status, data = imap.uid("FETCH", uid, "(BODY.PEEK[])")
     if status != "OK" or not data or not isinstance(data[0], tuple):
         return None
@@ -316,9 +304,7 @@ def _meta(name: str, *, approval: bool, capabilities: list[str]):
     )
 
 
-def _schema(
-    name: str, description: str, properties: dict[str, Any], required: list[str]
-) -> dict[str, Any]:
+def _schema(name: str, description: str, properties: dict[str, Any], required: list[str]) -> dict[str, Any]:
     return {
         "type": "function",
         "function": {
@@ -530,14 +516,10 @@ def make_email_tools(
         finally:
             _logout(imap)
 
-    def email_download_attachment(
-        uid: str, filename: str, folder: str = "INBOX"
-    ) -> dict[str, Any]:
+    def email_download_attachment(uid: str, filename: str, folder: str = "INBOX") -> dict[str, Any]:
         scratch = roots[0] if roots else None
         if scratch is None or not scratch.writable:
-            return {
-                "error": "no writable session directory to save the attachment into"
-            }
+            return {"error": "no writable session directory to save the attachment into"}
         imap, _, _, err = _connect_imap()
         if err:
             return err
@@ -562,9 +544,7 @@ def make_email_tools(
                     target.write_bytes(payload)
                     return {"ok": True, "path": str(target), "size": len(payload)}
             available = [n for n, _ in list_attachment_parts(msg)]
-            return {
-                "error": f"no attachment named {filename!r}; message has {available}"
-            }
+            return {"error": f"no attachment named {filename!r}; message has {available}"}
         except Exception as exc:
             return {"error": str(exc)}
         finally:
@@ -589,9 +569,7 @@ def make_email_tools(
 
         msg = EmailMessage()
         display = str(profile.get("display_name") or "").strip()
-        msg["From"] = (
-            formataddr((display, profile["address"])) if display else profile["address"]
-        )
+        msg["From"] = formataddr((display, profile["address"])) if display else profile["address"]
         msg["To"] = to
         if cc:
             msg["Cc"] = cc
@@ -615,9 +593,7 @@ def make_email_tools(
                     "(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID REFERENCES SUBJECT)])",
                 )
                 if status != "OK" or not data or not isinstance(data[0], tuple):
-                    return {
-                        "error": f"reply target {reply_to_uid} not found in {reply_to_folder}"
-                    }
+                    return {"error": f"reply target {reply_to_uid} not found in {reply_to_folder}"}
                 orig = email_lib.message_from_bytes(data[0][1])
                 orig_id = str(orig.get("Message-ID", "")).strip()
                 if orig_id:
@@ -626,11 +602,7 @@ def make_email_tools(
                     msg["References"] = f"{refs} {orig_id}".strip()
                 if not subject:
                     orig_subject = decode_mime_header(orig.get("Subject", ""))
-                    final_subject = (
-                        orig_subject
-                        if orig_subject.lower().startswith("re:")
-                        else f"Re: {orig_subject}"
-                    )
+                    final_subject = orig_subject if orig_subject.lower().startswith("re:") else f"Re: {orig_subject}"
             except Exception as exc:
                 return {"error": str(exc)}
             finally:
@@ -642,9 +614,7 @@ def make_email_tools(
         for raw_path in attachments or []:
             path = Path(str(raw_path)).expanduser().resolve()
             if not any(path.is_relative_to(root) for root in allowed_roots):
-                return {
-                    "error": f"attachment {raw_path} is outside the session's directories"
-                }
+                return {"error": f"attachment {raw_path} is outside the session's directories"}
             if not path.is_file():
                 return {"error": f"attachment not found: {raw_path}"}
             import mimetypes

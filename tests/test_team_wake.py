@@ -29,6 +29,7 @@ Prompt body.
 
 # ------------------------------------------------------------------- team trait
 
+
 def test_team_trait_parses_and_gates_capabilities():
     lead = parse_manifest(manifest("team: lead"))
     worker = parse_manifest(manifest("team: worker"))
@@ -47,6 +48,7 @@ def test_invalid_team_trait_fails_loudly():
 
 
 # ------------------------------------------------------- delivery cursors/queue
+
 
 @pytest.fixture
 def store(tmp_path):
@@ -96,6 +98,7 @@ def test_lead_subscriptions_are_an_allowlist(store):
 
 # --------------------------------------------------------------- registry/budget
 
+
 def test_registry_roundtrip_and_budget_cap(tmp_path):
     path = tmp_path / "teams.json"
     reg = TeamRegistry(path)
@@ -116,6 +119,7 @@ def test_registry_roundtrip_and_budget_cap(tmp_path):
 
 
 # -------------------------------------------------------- manager: spawn/digest
+
 
 @pytest.fixture
 def manager(tmp_path, monkeypatch):
@@ -139,9 +143,7 @@ def test_create_team_fails_closed_on_solo_personas(manager, tmp_path):
             agent="cowork",
         )
     )
-    result = manager.create_team(
-        "lead-sid", [{"persona": "cowork"}]
-    )  # cowork is a solo builtin
+    result = manager.create_team("lead-sid", [{"persona": "cowork"}])  # cowork is a solo builtin
     assert result["approved"] is False
     assert "team-capable" in result["error"] or "team: worker" in result["error"]
     assert manager.teams.all() == []  # nothing half-created
@@ -151,12 +153,8 @@ def test_create_team_prespawns_worker_sessions(manager, monkeypatch):
     from coworker.agents.base import Agent
     from coworker.sessions import SessionRecord
 
-    worker_agent = Agent(
-        name="swe-worker", title="SWE", system_prompt="p", team="worker"
-    )
-    monkeypatch.setattr(
-        "coworker.server.manager.get_agent", lambda name: worker_agent
-    )
+    worker_agent = Agent(name="swe-worker", title="SWE", system_prompt="p", team="worker")
+    monkeypatch.setattr("coworker.server.manager.get_agent", lambda name: worker_agent)
     manager.session_store.save(
         SessionRecord(
             session_id="lead-sid",
@@ -186,9 +184,7 @@ def test_create_team_prespawns_worker_sessions(manager, monkeypatch):
     assert lead.team["role"] == "lead"
     assert manager.teams.for_lead_session("lead-sid") is not None
     # second team on the same session refuses
-    assert manager.create_team("lead-sid", [{"persona": "swe-worker"}])[
-        "approved"
-    ] is False
+    assert manager.create_team("lead-sid", [{"persona": "swe-worker"}])["approved"] is False
 
 
 def test_staleness_digest_is_role_scoped(manager, monkeypatch):
@@ -275,6 +271,7 @@ def test_turn_saves_never_detach_a_worker_from_its_team(manager, monkeypatch):
 
 # ------------------------------------------------------------------- chat (OPE-99)
 
+
 def test_chat_groups_mentions_and_wake_reads(tmp_path):
     from coworker.teams.chat import ChatStore
 
@@ -352,17 +349,11 @@ def test_digest_clamps_long_comments_and_carries_structured_rows(manager):
     space = str(manager.default_workspace)
     lead = Actor(id="lead-1", role=Role.LEAD)
     worker = Actor(id="nia", role=Role.WORKER)
-    item = manager.team_store.create_item(
-        space, lead, title="Big item", criteria="c"
-    )
+    item = manager.team_store.create_item(space, lead, title="Big item", criteria="c")
     manager.team_store.assign(space, lead, item["id"], "nia")
     essay = "verified the endpoint thoroughly. " * 40  # ~1300 chars
-    manager.team_store.transition(
-        space, worker, item["id"], "in_progress"
-    )
-    manager.team_store.transition(
-        space, worker, item["id"], "review", comment=essay
-    )
+    manager.team_store.transition(space, worker, item["id"], "in_progress")
+    manager.team_store.transition(space, worker, item["id"], "review", comment=essay)
     team = Team(team_id="t1", space=space, lead_session="s", lead_actor="lead-1")
     subs = manager.team_store.subscribed_events(space, "lead-1")
     message, rows = manager._team_digest(team, [], subs, is_lead=True)
@@ -387,16 +378,18 @@ def test_item_detail_timeline_and_blocker_fact(manager):
     manager.team_store.assign(space, lead, item["id"], "nia")
     manager.team_store.transition(space, worker, item["id"], "in_progress")
     manager.team_store.comment(space, worker, item["id"], "halfway there")
-    manager.team_store.transition(
-        space, worker, item["id"], "blocked", comment="need the staging tfvars"
-    )
+    manager.team_store.transition(space, worker, item["id"], "blocked", comment="need the staging tfvars")
     # session with this workspace → the board space resolves
     from coworker.sessions import SessionRecord
 
     manager.session_store.save(
         SessionRecord(
-            session_id="sid", workspace=space, model="m",
-            mode="interactive", messages=[], agent="cowork",
+            session_id="sid",
+            workspace=space,
+            model="m",
+            mode="interactive",
+            messages=[],
+            agent="cowork",
         )
     )
     detail = manager.board_item_detail("sid", item["id"])
@@ -430,15 +423,9 @@ def test_session_attachment_read_is_scoped_to_its_board(manager):
             agent="cowork",
         )
     )
-    other = manager.team_store.create_item(
-        "other-space", LEAD, title="Other board", criteria="c"
-    )
-    ref = manager.attachment_store.put(
-        b"\x89PNG\r\n\x1a\nprivate", "private.png"
-    )
-    manager.team_store.attach_ref(
-        "other-space", LEAD, other["id"], "private", ref
-    )
+    other = manager.team_store.create_item("other-space", LEAD, title="Other board", criteria="c")
+    ref = manager.attachment_store.put(b"\x89PNG\r\n\x1a\nprivate", "private.png")
+    manager.team_store.attach_ref("other-space", LEAD, other["id"], "private", ref)
 
     with pytest.raises(BoardError, match="attachment not found"):
         manager.board_attachment("sid", stored_name(ref))
@@ -463,15 +450,9 @@ def test_session_attachment_route_uses_the_session_board(manager, monkeypatch):
             agent="cowork",
         )
     )
-    other = manager.team_store.create_item(
-        "other-space", LEAD, title="Other board", criteria="c"
-    )
-    ref = manager.attachment_store.put(
-        b"\x89PNG\r\n\x1a\nprivate", "private.png"
-    )
-    manager.team_store.attach_ref(
-        "other-space", LEAD, other["id"], "private", ref
-    )
+    other = manager.team_store.create_item("other-space", LEAD, title="Other board", criteria="c")
+    ref = manager.attachment_store.put(b"\x89PNG\r\n\x1a\nprivate", "private.png")
+    manager.team_store.attach_ref("other-space", LEAD, other["id"], "private", ref)
     client = TestClient(create_app(manager))
 
     response = client.get(
@@ -481,12 +462,8 @@ def test_session_attachment_route_uses_the_session_board(manager, monkeypatch):
     assert response.status_code == 404
     assert response.json() == {"error": "attachment not found"}
 
-    item = manager.team_store.create_item(
-        space, LEAD, title="This board", criteria="c"
-    )
-    visible = manager.attachment_store.put(
-        b"\x89PNG\r\n\x1a\nvisible", "visible.png"
-    )
+    item = manager.team_store.create_item(space, LEAD, title="This board", criteria="c")
+    visible = manager.attachment_store.put(b"\x89PNG\r\n\x1a\nvisible", "visible.png")
     manager.team_store.attach_ref(space, LEAD, item["id"], "visible", visible)
     allowed = client.get(
         "/v1/sessions/sid/board/attachment",
@@ -593,7 +570,5 @@ def test_lead_backstop_fires_only_for_forgotten_timers(manager, monkeypatch):
     assert manager._lead_backstop_due(team) is True
 
     # A pending self-wake timer means the lead owns its cadence → never backstop.
-    manager.wakes.add_timer("lead-sid", __import__("datetime").datetime.now(
-        __import__("datetime").timezone.utc
-    ))
+    manager.wakes.add_timer("lead-sid", __import__("datetime").datetime.now(__import__("datetime").timezone.utc))
     assert manager._lead_backstop_due(team) is False

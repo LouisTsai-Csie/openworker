@@ -31,7 +31,9 @@ def _availability(name: str) -> tuple[bool, str, str]:
         except seatbelt.SeatbeltUnavailable as exc:
             return False, str(exc), "unavailable"
     if name == OPENSHELL:
-        if sys.platform == "win32":  # its Windows driver is a preview; the setup command here sets up the Windows sandbox
+        if (
+            sys.platform == "win32"
+        ):  # its Windows driver is a preview; the setup command here sets up the Windows sandbox
             return False, "OpenShell is not available on Windows yet.", "unavailable"
         from coworker.sandbox.providers.openshell import is_image_problem
         from coworker.sandbox.selection import openshell_problem
@@ -81,8 +83,12 @@ def snapshot(cfg: app_config.Config | None = None) -> dict[str, Any]:
         "network_profile": _profile_for_display(cfg.sandbox_network_profile),
         # The choices the page offers. OpenShell cannot allow every site (its policy has
         # to name each one), so with OpenShell there is only the allow list.
-        "network_profiles": [{"name": name} for name in network_profiles.PROFILES if _offered(name, cfg.sandbox_provider or effective)],
-        "network_sites": [{"group": group, "hosts": [f"{h}:443" for h in hosts]} for group, hosts in network_profiles.SITES.items()],
+        "network_profiles": [
+            {"name": name} for name in network_profiles.PROFILES if _offered(name, cfg.sandbox_provider or effective)
+        ],
+        "network_sites": [
+            {"group": group, "hosts": [f"{h}:443" for h in hosts]} for group, hosts in network_profiles.SITES.items()
+        ],
         "network_hosts": network_profiles.clean_hosts(cfg.sandbox_network_hosts),
         "credentials": _for_display(credentials.listed(cfg.sandbox_credentials)),
         "credential_presets": _presets(cfg.sandbox_credentials),
@@ -169,13 +175,18 @@ def run_windows_setup() -> dict[str, Any]:
         return {"ok": False, "error": said or "setup did not finish", "said": said, **snapshot()}
     checked, detail = _throwaway_check()
     if not checked:
-        return {"ok": False, "error": f"setup ran, but a throwaway sandbox failed its check: {detail}", "said": said, **snapshot()}
+        return {
+            "ok": False,
+            "error": f"setup ran, but a throwaway sandbox failed its check: {detail}",
+            "said": said,
+            **snapshot(),
+        }
     app_config.set_global_value("sandbox_provider", WINDOWS)
     return {"ok": True, "said": said, "checked": detail, **snapshot()}
 
 
 def run_windows_remove() -> dict[str, Any]:
-    """"Remove setup": undo what setup made and put the machine back on No sandbox."""
+    """ "Remove setup": undo what setup made and put the machine back on No sandbox."""
     if sys.platform != "win32":
         return {"ok": False, "error": "the Windows sandbox exists only on Windows", **snapshot()}
     from coworker.sandbox.providers import windows_setup
@@ -201,7 +212,13 @@ def _throwaway_check() -> tuple[bool, str]:
         # The strict profile takes the closed account, so the loopback filters are proved
         # too. open_workspace runs the provider's verify(); it raises when the wall is down.
         ws = open_workspace(
-            cwd=folder, provider=WINDOWS, session_id="setup-check", agent="setup", credentials=[], network_profile=network_profiles.DEFAULT_PROFILE, toolchains=[]
+            cwd=folder,
+            provider=WINDOWS,
+            session_id="setup-check",
+            agent="setup",
+            credentials=[],
+            network_profile=network_profiles.DEFAULT_PROFILE,
+            toolchains=[],
         )
         ws.close()
         return True, "your profile is not readable from inside; no local port but the proxy's is reachable"
@@ -366,12 +383,19 @@ def session_sandbox(engine: Any) -> dict[str, Any]:
             "network": profile,
             "sites": [str(x) for x in sites] if profile == "allowlist" else [],
             # Allowed by the person for this session only (a card, or the session's list).
-            "session_sites": [str(x) for x in (getattr(getattr(engine, "permissions", None), "session_sites", None) or [])] if profile == "allowlist" else [],
+            "session_sites": [
+                str(x) for x in (getattr(getattr(engine, "permissions", None), "session_sites", None) or [])
+            ]
+            if profile == "allowlist"
+            else [],
             "folders": [
                 {"path": str(r.get("path", "")), "writable": bool(r.get("writable"))}
                 for r in (getattr(provider, "roots", None) or [])
             ],
-            "logins": [str(getattr(g, "title", "") or getattr(g, "name", "")) for g in (getattr(provider, "grants", None) or [])],
+            "logins": [
+                str(getattr(g, "title", "") or getattr(g, "name", ""))
+                for g in (getattr(provider, "grants", None) or [])
+            ],
             "started": bool(getattr(workspace, "started", False)),
         }
     try:

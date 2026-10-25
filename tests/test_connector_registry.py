@@ -39,9 +39,7 @@ _RECOMMENDED = ("github", "datadog", "salesforce", "hubspot", "pagerduty")
 def test_descriptor_brand_logo(tmp_path):
     # Every descriptor exposes a hex brand_color and a (string) logo id.
     for d in list_descriptors():
-        assert _HEX.match(
-            d.brand_color
-        ), f"{d.name} brand_color not hex: {d.brand_color!r}"
+        assert _HEX.match(d.brand_color), f"{d.name} brand_color not hex: {d.brand_color!r}"
         assert isinstance(d.logo, str)
 
     # connector_list surfaces both fields per connector, with a valid hex color.

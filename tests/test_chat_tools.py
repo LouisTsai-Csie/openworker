@@ -33,14 +33,22 @@ def _tools(secrets, record):
 def test_chat_tools_are_catalog_entries_with_composite_targets():
     assert rule_eligible("slack_post_message") and rule_eligible("telegram_send_message")
     assert not rule_eligible("slack_upload_file")  # uploads are never covered by a thread grant
-    assert standing_target_for("slack_post_message", {"workspace": "T1", "channel": "C1", "thread_ts": "1.2"}) == "slack:T1/C1:1.2"
+    assert (
+        standing_target_for("slack_post_message", {"workspace": "T1", "channel": "C1", "thread_ts": "1.2"})
+        == "slack:T1/C1:1.2"
+    )
     assert standing_target_for("slack_post_message", {"workspace": "default", "channel": "C1"}) == "slack:C1"
     assert standing_target_for("slack_post_message", {"channel": "C1", "thread_ts": "1.2"}) == "slack:C1:1.2"
     assert standing_target_for("slack_post_message", {"workspace": "T1"}) is None
     assert standing_target_for("telegram_send_message", {"chat_id": "123"}) == "telegram:123"
     assert standing_target_for("telegram_send_message", {"chat_id": "123", "thread_id": "7"}) == "telegram:123:7"
     meta = _Meta()
-    assert standing_rule_candidate("slack_post_message", {"workspace": "T1", "channel": "C1", "thread_ts": "1.2", "text": "x"}, meta) == "slack:T1/C1:1.2"
+    assert (
+        standing_rule_candidate(
+            "slack_post_message", {"workspace": "T1", "channel": "C1", "thread_ts": "1.2", "text": "x"}, meta
+        )
+        == "slack:T1/C1:1.2"
+    )
 
 
 def test_thread_grant_matches_the_platform_tool_on_that_thread_only(tmp_path):
@@ -57,7 +65,9 @@ def test_thread_grant_matches_the_platform_tool_on_that_thread_only(tmp_path):
         d = e.evaluate("slack_post_message", args, meta)
         assert not d.allowed and d.needs_user, args
     # Uploads never ride the text grant.
-    up = e.evaluate("slack_upload_file", {"workspace": "T1", "channel": "C1", "thread_ts": "1.2", "path": "a.pdf"}, meta)
+    up = e.evaluate(
+        "slack_upload_file", {"workspace": "T1", "channel": "C1", "thread_ts": "1.2", "path": "a.pdf"}, meta
+    )
     assert not up.allowed
 
 
@@ -94,7 +104,10 @@ def test_slack_post_message_refuses_to_guess_between_workspaces(tmp_path):
     out = tools["slack_post_message"](workspace="default", channel="C1", text="x")
     assert out["ok"] and record[-1] == {"token": "xoxb-manual", "chat_id": "C1", "text": "x", "thread_id": None}
     assert "not connected" in tools["slack_post_message"](workspace="T9", channel="C1", text="x")["error"]
-    assert "no Slack workspace" in _tools(SecretStore(tmp_path / "empty.json"), [])["slack_post_message"](channel="C1", text="x")["error"]
+    assert (
+        "no Slack workspace"
+        in _tools(SecretStore(tmp_path / "empty.json"), [])["slack_post_message"](channel="C1", text="x")["error"]
+    )
 
 
 def test_slack_channel_name_resolves_within_the_workspace(tmp_path, monkeypatch):
@@ -104,7 +117,13 @@ def test_slack_channel_name_resolves_within_the_workspace(tmp_path, monkeypatch)
 
     def fake_list(secrets_, team_id, query="", limit=25, **_kw):
         seen.append((team_id, query))
-        return {"ok": True, "channels": [{"id": "C77", "name": "general", "is_member": True}, {"id": "C78", "name": "generalities", "is_member": False}]}
+        return {
+            "ok": True,
+            "channels": [
+                {"id": "C77", "name": "general", "is_member": True},
+                {"id": "C78", "name": "generalities", "is_member": False},
+            ],
+        }
 
     monkeypatch.setattr("coworker.connectors.slack_directory.list_channels", fake_list)
     record: list = []
@@ -184,7 +203,15 @@ def test_manifest_can_chat_is_derived_from_connectors():
 
 
 def test_origin_block_slack_thread():
-    src = SessionSource(platform="slack", chat_id="T07/C0B", user_id="U1", user_name="Rohit", chat_name="team", chat_type="channel", team_id="T07")
+    src = SessionSource(
+        platform="slack",
+        chat_id="T07/C0B",
+        user_id="U1",
+        user_name="Rohit",
+        chat_name="team",
+        chat_type="channel",
+        team_id="T07",
+    )
     block = origin_block(src, thread="1788.5")
     assert block.splitlines() == [
         "From Slack · workspace T07 · #team (C0B) · thread 1788.5",
@@ -198,13 +225,27 @@ def test_origin_block_slack_thread():
 
 
 def test_origin_block_telegram_and_github():
-    tg = SessionSource(platform="telegram", chat_id="123", user_id="7", user_name="Ann", chat_name="Ann", chat_type="dm")
+    tg = SessionSource(
+        platform="telegram", chat_id="123", user_id="7", user_name="Ann", chat_name="Ann", chat_type="dm"
+    )
     assert reply_call(tg) == 'telegram_send_message(chat_id="123", text=…)'
     assert where_line(tg, "1") == "From Telegram · chat 123 (Ann)"  # the General topic is not a topic
-    gh = SessionSource(platform="github", chat_id="acme/site#42", user_id="octocat", user_name="octocat", chat_name="acme/site#42", chat_type="channel")
-    assert where_line(gh, frame={"kind": "pr_open", "title": "Add retry"}) == 'From GitHub · acme/site · pull request #42 "Add retry"'
+    gh = SessionSource(
+        platform="github",
+        chat_id="acme/site#42",
+        user_id="octocat",
+        user_name="octocat",
+        chat_name="acme/site#42",
+        chat_type="channel",
+    )
+    assert (
+        where_line(gh, frame={"kind": "pr_open", "title": "Add retry"})
+        == 'From GitHub · acme/site · pull request #42 "Add retry"'
+    )
     assert where_line(gh, frame={"kind": "issue_open"}) == "From GitHub · acme/site · issue #42"
     assert reply_call(gh) == 'github_reply(owner="acme", repo="site", number=42, body=…)'
     block = origin_block(gh, frame={"is_pr": True})
-    assert block.endswith('body=…) — pre-approved for this thread; github_review(owner="acme", repo="site", pull_number=42, event=…, body=…) likewise.')
+    assert block.endswith(
+        'body=…) — pre-approved for this thread; github_review(owner="acme", repo="site", pull_number=42, event=…, body=…) likewise.'
+    )
     assert "github_review" not in origin_block(gh, frame={"kind": "issue_open"})

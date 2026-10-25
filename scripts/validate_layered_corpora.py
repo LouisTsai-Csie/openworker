@@ -3,6 +3,7 @@
 Checks syntax, schema, IDs, labels, holdout splits, coverage tags, and tool-name parity with
 the production connector catalog. Exits non-zero on any defect.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,13 +24,31 @@ REVIEW_LABELS = {"allow", "ask", "deny"}
 MODES = {"discuss", "plan", "interactive", "custom", "auto-approve", "bypass-approvals"}
 STALE_ALIASES = {"send_email", "calendar_list_events", "gmail_delete", "gmail_forward"}
 CORE_TOOLS = {
-    "read_file", "read_file_lines", "grep", "list_files",
-    "write_file", "replace_in_file", "apply_patch", "apply_unified_diff",
-    "run_shell", "shell_task_output", "shell_task_kill",
-    "web_fetch", "web_search", "send_message", "send_file",
-    "save_skill", "load_skill", "request_directory", "ask_user", "propose_plan",
-    "create_scheduled_task", "list_scheduled_tasks", "update_scheduled_task",
-    "delete_scheduled_task", "todo_write",
+    "read_file",
+    "read_file_lines",
+    "grep",
+    "list_files",
+    "write_file",
+    "replace_in_file",
+    "apply_patch",
+    "apply_unified_diff",
+    "run_shell",
+    "shell_task_output",
+    "shell_task_kill",
+    "web_fetch",
+    "web_search",
+    "send_message",
+    "send_file",
+    "save_skill",
+    "load_skill",
+    "request_directory",
+    "ask_user",
+    "propose_plan",
+    "create_scheduled_task",
+    "list_scheduled_tasks",
+    "update_scheduled_task",
+    "delete_scheduled_task",
+    "todo_write",
 }
 
 
@@ -105,9 +124,10 @@ def validate_rows(name: str, rows: list[dict[str, Any]], tools: set[str]) -> Non
             for field in ("expected_current", "expected_secure"):
                 if row[field] not in GATE_LABELS:
                     raise ValidationError(f"{where}: invalid {field} {row[field]!r}")
-            if row["expected_current"] != row["expected_secure"]:
-                if row.get("known_gap") is not True or not row.get("failure_point"):
-                    raise ValidationError(f"{where}: differing expectations require known_gap and failure_point")
+            if row["expected_current"] != row["expected_secure"] and (
+                row.get("known_gap") is not True or not row.get("failure_point")
+            ):
+                raise ValidationError(f"{where}: differing expectations require known_gap and failure_point")
             labels.update([row["expected_current"], row["expected_secure"]])
         elif expected_layer == "reviewer_action":
             require(row, {"action", "provenance", "correct", "why", "recommended_gate"}, where)
@@ -134,13 +154,44 @@ def validate_rows(name: str, rows: list[dict[str, Any]], tools: set[str]) -> Non
 
     if expected_layer == "permission_gate":
         missing_labels = GATE_LABELS - set(labels)
-        required_tags = {"exec", "outside-root", "credentials", "environment", "self-protection", "egress", "persistence", "privilege", "browser", "mcp", "connector", "persistent-authority"}
+        required_tags = {
+            "exec",
+            "outside-root",
+            "credentials",
+            "environment",
+            "self-protection",
+            "egress",
+            "persistence",
+            "privilege",
+            "browser",
+            "mcp",
+            "connector",
+            "persistent-authority",
+        }
     elif expected_layer == "reviewer_action":
         missing_labels = REVIEW_LABELS - set(labels)
-        required_tags = {"exec", "egress", "connector", "browser", "transformed-injection", "explicit-danger", "wrong-destination", "production-tool", "persistent-authority"}
+        required_tags = {
+            "exec",
+            "egress",
+            "connector",
+            "browser",
+            "transformed-injection",
+            "explicit-danger",
+            "wrong-destination",
+            "production-tool",
+            "persistent-authority",
+        }
     else:
         missing_labels = REVIEW_LABELS - set(labels)
-        required_tags = {"injection", "cross-connector", "benign-control", "persistence", "browser", "exfiltration", "automation"}
+        required_tags = {
+            "injection",
+            "cross-connector",
+            "benign-control",
+            "persistence",
+            "browser",
+            "exfiltration",
+            "automation",
+        }
     if missing_labels:
         raise ValidationError(f"{name}: missing labels {sorted(missing_labels)}")
     missing_tags = required_tags - set(tags)

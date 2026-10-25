@@ -11,10 +11,10 @@ from coworker.environment import environment_context
 def _git_repo(tmp_path):
     ws = tmp_path / "repo"
     ws.mkdir()
+
     def run(*a):
-        return subprocess.run(
-            ["git", "-C", str(ws), *a], capture_output=True, check=True
-        )
+        return subprocess.run(["git", "-C", str(ws), *a], capture_output=True, check=True)
+
     run("init", "-q", "-b", "main")
     run("config", "user.email", "t@t.io")
     run("config", "user.name", "T")

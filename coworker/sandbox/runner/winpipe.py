@@ -149,7 +149,12 @@ class _SecurityAttributes:
         sddl = "D:P" + "".join(f"(A;;GA;;;{sid})" for sid in sids)
         advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
         convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
-        convert.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(wintypes.ULONG)]
+        convert.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            ctypes.POINTER(ctypes.c_void_p),
+            ctypes.POINTER(wintypes.ULONG),
+        ]
         descriptor = ctypes.c_void_p()
         size = wintypes.ULONG()
         ok = convert(sddl, 1, ctypes.byref(descriptor), ctypes.byref(size))  # 1 = SDDL_REVISION_1
@@ -158,7 +163,11 @@ class _SecurityAttributes:
         self._descriptor = descriptor  # LocalAlloc'd; lives as long as this object
 
         class SECURITY_ATTRIBUTES(ctypes.Structure):
-            _fields_ = [("nLength", wintypes.DWORD), ("lpSecurityDescriptor", ctypes.c_void_p), ("bInheritHandle", wintypes.BOOL)]
+            _fields_ = [
+                ("nLength", wintypes.DWORD),
+                ("lpSecurityDescriptor", ctypes.c_void_p),
+                ("bInheritHandle", wintypes.BOOL),
+            ]
 
         self._attributes = SECURITY_ATTRIBUTES(ctypes.sizeof(SECURITY_ATTRIBUTES), descriptor, False)
         self.pointer = ctypes.addressof(self._attributes)

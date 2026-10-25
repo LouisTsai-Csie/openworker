@@ -49,6 +49,7 @@ def _usage_from(usage: Any) -> TokenUsage | None:
         cache_write=int(getattr(usage, "cache_creation_input_tokens", 0) or 0),
     )
 
+
 # Required by the Messages API; a ceiling, not a spend target. Sized for file
 # generation, not just chat: a coworker writing a self-contained HTML report ships the
 # whole file inside one tool call's arguments, and 16k proved too small in the field
@@ -119,9 +120,7 @@ def _outbound_fingerprints(kwargs: dict[str, Any]) -> dict[str, Any]:
     import hashlib
 
     def h(obj: Any) -> str:
-        return hashlib.sha1(
-            json.dumps(obj, sort_keys=True, default=str).encode("utf-8")
-        ).hexdigest()[:12]
+        return hashlib.sha1(json.dumps(obj, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:12]
 
     return {
         "system": h(kwargs.get("system")),
@@ -147,10 +146,9 @@ def _raise_on_refusal(stop_reason: Any, raw: Any) -> None:
     category = getattr(details, "category", None)
     suffix = f" (category: {category})" if category else ""
     raise RuntimeError(
-        "Claude's safety filter declined this request"
-        + suffix
-        + " — try rephrasing, or switch model and press Retry."
+        "Claude's safety filter declined this request" + suffix + " — try rephrasing, or switch model and press Retry."
     )
+
 
 # Anthropic stop_reason → the engine's OpenAI-shaped finish_reason vocabulary.
 _STOP_REASON_MAP = {
@@ -176,13 +174,9 @@ _SETTINGS_WHITELIST = {
 # Sampling knobs the API rejects alongside extended thinking (temperature must stay 1).
 _THINKING_INCOMPATIBLE = ("temperature", "top_p", "top_k")
 
-_DATA_URL_RE = re.compile(
-    r"^data:(image/[a-z0-9.+-]+);base64,(.+)$", re.IGNORECASE | re.DOTALL
-)
+_DATA_URL_RE = re.compile(r"^data:(image/[a-z0-9.+-]+);base64,(.+)$", re.IGNORECASE | re.DOTALL)
 
-_PDF_DATA_URL_RE = re.compile(
-    r"^data:application/pdf;base64,(.+)$", re.IGNORECASE | re.DOTALL
-)
+_PDF_DATA_URL_RE = re.compile(r"^data:application/pdf;base64,(.+)$", re.IGNORECASE | re.DOTALL)
 
 
 def resolve_api_key(secrets: Any = None) -> str | None:
@@ -266,18 +260,10 @@ def _user_blocks(content: Any) -> list[dict[str, Any]]:
         elif kind == "image_url":
             url = (part.get("image_url") or {}).get("url") or ""
             block = _image_block(url)
-            blocks.append(
-                block
-                if block
-                else {"type": "text", "text": "[unsupported image attachment]"}
-            )
+            blocks.append(block if block else {"type": "text", "text": "[unsupported image attachment]"})
         elif kind == "file":
             block = _document_block(part)
-            blocks.append(
-                block
-                if block
-                else {"type": "text", "text": "[unsupported file attachment]"}
-            )
+            blocks.append(block if block else {"type": "text", "text": "[unsupported file attachment]"})
     return blocks
 
 
@@ -308,9 +294,7 @@ def convert_messages(
                 converted.append(
                     {
                         "role": "user",
-                        "content": [
-                            {"type": "text", "text": f"<system>\n{text}\n</system>"}
-                        ],
+                        "content": [{"type": "text", "text": f"<system>\n{text}\n</system>"}],
                     }
                 )
         elif role == "user":
@@ -361,9 +345,7 @@ def convert_messages(
     if not folded:
         raise ValueError("no convertible messages for the Anthropic Messages API")
     if folded[0]["role"] != "user":
-        folded.insert(
-            0, {"role": "user", "content": [{"type": "text", "text": "(continued)"}]}
-        )
+        folded.insert(0, {"role": "user", "content": [{"type": "text", "text": "(continued)"}]})
 
     return ("\n\n".join(system_parts) or None), folded
 
@@ -414,9 +396,7 @@ def _add_cache_breakpoints(kwargs: dict[str, Any]) -> None:
 
 def _reasoning_text(thinking_blocks: list[dict[str, Any]]) -> str | None:
     """Display text for the GUI's disclosure — thinking text only (redacted stays opaque)."""
-    text = "".join(
-        b.get("thinking", "") for b in thinking_blocks if b.get("type") == "thinking"
-    )
+    text = "".join(b.get("thinking", "") for b in thinking_blocks if b.get("type") == "thinking")
     return text or None
 
 
@@ -534,8 +514,7 @@ class AnthropicProvider(ProviderClient):
                     # budget would be rejected by the API; say so rather than silently
                     # sending a different ceiling than the one configured.
                     logger.warning(
-                        "max_output_tokens=%d is not above the thinking budget (%d); "
-                        "sending max_tokens=%d instead",
+                        "max_output_tokens=%d is not above the thinking budget (%d); sending max_tokens=%d instead",
                         requested,
                         budget,
                         floor,
@@ -563,12 +542,11 @@ class AnthropicProvider(ProviderClient):
         **settings: Any,
     ) -> AssistantTurn:
         plan = self._effort_plan(model, settings)
-        kwargs = self._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings, effort=plan
-        )
+        kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings, effort=plan)
         if int(kwargs.get("max_tokens") or 0) > NONSTREAMING_TOKEN_CEILING:
             kwargs.setdefault("timeout", LONG_REQUEST_TIMEOUT)
         client = self._ensure_client()
+
         # Stream-and-accumulate, not a plain create: the SDK REFUSES non-streaming
         # requests whose max_tokens could exceed ~10 minutes (ValueError before any
         # network I/O). With DEFAULT_MAX_TOKENS=32000 that killed every consumer of
@@ -587,9 +565,7 @@ class AnthropicProvider(ProviderClient):
             with client.messages.stream(**kw) as stream:
                 return stream.get_final_message()
 
-        response, kwargs, fallback_note = self._call_with_effort_fallback(
-            model, kwargs, _final
-        )
+        response, kwargs, fallback_note = self._call_with_effort_fallback(model, kwargs, _final)
 
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
@@ -679,9 +655,7 @@ class AnthropicProvider(ProviderClient):
         **settings: Any,
     ):
         plan = self._effort_plan(model, settings)
-        kwargs = self._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings, effort=plan
-        )
+        kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings, effort=plan)
         kwargs["stream"] = True
         client = self._ensure_client()
         diagnosing = _cache_diagnostics_on()
@@ -693,9 +667,7 @@ class AnthropicProvider(ProviderClient):
                 betas = [_FALLBACK_BETA]
                 if diagnosing:
                     betas.append(_CACHE_DIAGNOSTICS_BETA)
-                    extra["diagnostics"] = {
-                        "previous_message_id": self._last_message_id
-                    }
+                    extra["diagnostics"] = {"previous_message_id": self._last_message_id}
                 return client.beta.messages.create(
                     **kw,
                     betas=betas,
@@ -733,9 +705,7 @@ class AnthropicProvider(ProviderClient):
                     diag = getattr(started, "diagnostics", None)
                     if diag is not None:
                         try:
-                            cache_diagnostics = (
-                                diag if isinstance(diag, dict) else diag.model_dump()
-                            )
+                            cache_diagnostics = diag if isinstance(diag, dict) else diag.model_dump()
                         except Exception:
                             cache_diagnostics = {"raw": str(diag)}
             elif kind == "content_block_start":
@@ -780,18 +750,14 @@ class AnthropicProvider(ProviderClient):
                 elif delta_kind == "signature_delta":
                     acc = thinking_accum.get(getattr(event, "index", 0))
                     if acc is not None:
-                        acc["signature"] = (acc.get("signature") or "") + (
-                            getattr(delta, "signature", "") or ""
-                        )
+                        acc["signature"] = (acc.get("signature") or "") + (getattr(delta, "signature", "") or "")
             elif kind == "message_delta":
                 last_message_delta = getattr(event, "delta", None)
                 reason = getattr(last_message_delta, "stop_reason", None)
                 if reason:
                     stop_reason = reason
                 # Final (cumulative) output-token count rides message_delta.usage.
-                out = int(
-                    getattr(getattr(event, "usage", None), "output_tokens", 0) or 0
-                )
+                out = int(getattr(getattr(event, "usage", None), "output_tokens", 0) or 0)
                 if out:
                     usage = usage or TokenUsage()
                     usage.output = out
@@ -800,11 +766,7 @@ class AnthropicProvider(ProviderClient):
         tool_calls = []
         for index in sorted(tool_accum):
             acc = tool_accum[index]
-            tool_calls.append(
-                ToolCall(
-                    id=acc["id"], name=acc["name"], arguments=_parse_args(acc["json"])
-                )
-            )
+            tool_calls.append(ToolCall(id=acc["id"], name=acc["name"], arguments=_parse_args(acc["json"])))
         thinking_blocks = [thinking_accum[i] for i in sorted(thinking_accum)]
 
         yield StreamChunk(

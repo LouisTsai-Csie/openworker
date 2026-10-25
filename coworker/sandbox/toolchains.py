@@ -97,13 +97,19 @@ def granted(
     return out
 
 
-def for_display(configured: Sequence[dict[str, Any]] | None, *, home: str | None = None, platform: str = sys.platform) -> list[dict[str, Any]]:
+def for_display(
+    configured: Sequence[dict[str, Any]] | None, *, home: str | None = None, platform: str = sys.platform
+) -> list[dict[str, Any]]:
     """The entries with `exists` (on this machine) and `shipped` (in the default list). A
     shipped folder this machine does not have is left out: there is nothing to show."""
     home = os.path.realpath(home or os.path.expanduser("~"))
     shipped = {e["name"] for e in defaults(platform)}
     rows = [
-        {**e, "exists": bool(e.get("path")) and os.path.exists(_real(str(e["path"]), home)), "shipped": e["name"] in shipped}
+        {
+            **e,
+            "exists": bool(e.get("path")) and os.path.exists(_real(str(e["path"]), home)),
+            "shipped": e["name"] in shipped,
+        }
         for e in entries(configured, platform)
     ]
     return [r for r in rows if r["exists"] or not r["shipped"]]

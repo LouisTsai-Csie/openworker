@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class Scope(str, Enum):
+class Scope(StrEnum):
     GLOBAL = "global"
     WORKSPACE = "workspace"
     SESSION = "session"
@@ -56,9 +56,7 @@ class MemoryStore(ABC):
     ) -> list[MemoryItem]: ...
 
     @abstractmethod
-    def update(
-        self, item_id: int, content: str, *, summary: str | None = None
-    ) -> MemoryItem | None: ...
+    def update(self, item_id: int, content: str, *, summary: str | None = None) -> MemoryItem | None: ...
 
     @abstractmethod
     def delete(self, item_id: int) -> bool: ...
@@ -103,28 +101,17 @@ def format_memories(items: list[MemoryItem]) -> str:
     return "Known memories (from earlier sessions):\n" + "\n".join(lines)
 
 
-def format_memory_index(
-    items: list[MemoryItem], *, full_newest: int = INDEX_FULL_NEWEST
-) -> str:
+def format_memory_index(items: list[MemoryItem], *, full_newest: int = INDEX_FULL_NEWEST) -> str:
     """Index rendering: newest `full_newest` in full, one-line summaries for the rest,
     plus the fetch-before-acting note for memory_read."""
     if not items:
         return ""
     newest = {item.id for item in sorted(items, key=lambda i: i.id)[-full_newest:]}
-    lines = [
-        f"- [#{item.id}] {item.content}" if item.id in newest else _index_line(item)
-        for item in items
-    ]
-    return (
-        "Known memories (from earlier sessions):\n"
-        + "\n".join(lines)
-        + f"\n{_INDEX_NOTE}"
-    )
+    lines = [f"- [#{item.id}] {item.content}" if item.id in newest else _index_line(item) for item in items]
+    return "Known memories (from earlier sessions):\n" + "\n".join(lines) + f"\n{_INDEX_NOTE}"
 
 
-def render_memory_block(
-    items: list[MemoryItem], *, threshold_chars: int = INDEX_THRESHOLD_CHARS
-) -> str:
+def render_memory_block(items: list[MemoryItem], *, threshold_chars: int = INDEX_THRESHOLD_CHARS) -> str:
     """The injected memories block. Full mode while it's affordable; automatically and
     invisibly flips to index mode when the full rendering exceeds the threshold
     (MEMORY-SPEC §7). Evaluated once per engine build — a session is always in exactly

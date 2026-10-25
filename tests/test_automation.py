@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import pytest
 
@@ -63,11 +63,9 @@ def test_task_gets_own_thread_id():
 
 def test_compute_next_run_cron_explicit_utc():
     t = _task(schedule=Schedule(kind="cron", cron="10 19 * * *", timezone="UTC"))
-    after = datetime(2026, 6, 5, 18, 0, tzinfo=timezone.utc).timestamp()
+    after = datetime(2026, 6, 5, 18, 0, tzinfo=UTC).timestamp()
     nxt = compute_next_run(t, after=after)
-    assert datetime.fromtimestamp(nxt, tz=timezone.utc) == datetime(
-        2026, 6, 5, 19, 10, tzinfo=timezone.utc
-    )
+    assert datetime.fromtimestamp(nxt, tz=UTC) == datetime(2026, 6, 5, 19, 10, tzinfo=UTC)
 
 
 def test_compute_next_run_defaults_to_local_time():
@@ -109,9 +107,7 @@ def test_compute_next_run_once_local_is_dst_aware(monkeypatch):
 # -- store ---------------------------------------------------------------------
 def test_store_crud_and_due(tmp_path):
     store = TaskStore(tmp_path / "auto.db")
-    t = _task(
-        schedule=Schedule(kind="cron", cron="* * * * *")
-    )  # every minute → due soon
+    t = _task(schedule=Schedule(kind="cron", cron="* * * * *"))  # every minute → due soon
     store.save(t)
     assert store.get(t.id).title == "Daily brief"
     assert [x.id for x in store.list()] == [t.id]
@@ -167,9 +163,7 @@ async def test_scheduler_runs_due_task_and_advances(tmp_path):
     assert ran == [t.id]
     advanced = store.get(t.id)
     assert advanced.run_count == 1 and advanced.last_status == "ok"
-    assert (
-        advanced.next_run is not None and advanced.next_run > 1.0
-    )  # moved to the future
+    assert advanced.next_run is not None and advanced.next_run > 1.0  # moved to the future
 
 
 async def test_scheduler_skips_overlapping_run(tmp_path):
@@ -203,26 +197,15 @@ def test_create_and_list_tools(tmp_path):
         "workspace": "/tmp/ws",
         "agent": "cowork",
     }
-    tools = {
-        t.__name__: t
-        for t in scheduling_tools(store, origin=origin, default_workspace="/tmp/ws")
-    }
+    tools = {t.__name__: t for t in scheduling_tools(store, origin=origin, default_workspace="/tmp/ws")}
 
-    out = tools["create_scheduled_task"](
-        title="Brief", instructions="brief me", cron="10 19 * * *"
-    )
+    out = tools["create_scheduled_task"](title="Brief", instructions="brief me", cron="10 19 * * *")
     assert out["ok"] and out["schedule"] == "Every day at ~7:10 PM"
     # create surfaces a confirm card → gated
-    assert (
-        tools["create_scheduled_task"].__aisuite_tool_metadata__.requires_approval
-        is True
-    )
+    assert tools["create_scheduled_task"].__aisuite_tool_metadata__.requires_approval is True
 
     listed = tools["list_scheduled_tasks"]()["tasks"]
-    assert (
-        len(listed) == 1
-        and listed[0]["origin_session_id" if False else "title"] == "Brief"
-    )
+    assert len(listed) == 1 and listed[0]["origin_session_id" if False else "title"] == "Brief"
     saved = store.list()[0]
     assert saved.origin_session_id == "s1" and saved.workspace == "/tmp/ws"
 
@@ -235,18 +218,10 @@ def test_create_and_list_tools(tmp_path):
 def test_update_and_delete_tools(tmp_path):
     store = TaskStore(tmp_path / "auto.db")
     tools = {
-        t.__name__: t
-        for t in scheduling_tools(
-            store, origin={"workspace": "/tmp/ws"}, default_workspace="/tmp/ws"
-        )
+        t.__name__: t for t in scheduling_tools(store, origin={"workspace": "/tmp/ws"}, default_workspace="/tmp/ws")
     }
-    tid = tools["create_scheduled_task"](
-        title="X", instructions="do", cron="0 9 * * *"
-    )["id"]
-    assert (
-        tools["update_scheduled_task"](id=tid, enabled=False)["task"]["enabled"]
-        is False
-    )
+    tid = tools["create_scheduled_task"](title="X", instructions="do", cron="0 9 * * *")["id"]
+    assert tools["update_scheduled_task"](id=tid, enabled=False)["task"]["enabled"] is False
     assert store.get(tid).next_run is None  # disabled → no next run
     assert tools["delete_scheduled_task"](id=tid)["ok"] is True
     assert tools["update_scheduled_task"](id=tid)["error"]
@@ -350,9 +325,7 @@ async def test_manual_run_prepare_and_finalize(tmp_path, monkeypatch):
     ws.mkdir()
     manager = SessionManager(
         data_dir=tmp_path / "data",
-        provider=ScriptedProvider(
-            [AssistantTurn(text="Done — briefing ready.", finish_reason="stop")]
-        ),
+        provider=ScriptedProvider([AssistantTurn(text="Done — briefing ready.", finish_reason="stop")]),
     )
     task = _task(workspace=str(ws), agent="cowork")
     manager.task_store.save(task)
@@ -394,16 +367,8 @@ def test_automations_rest(tmp_path, monkeypatch):
     client = TestClient(create_app(manager))
 
     tasks = client.get("/v1/automations").json()["tasks"]
-    assert (
-        tasks[0]["title"] == "Daily brief"
-        and tasks[0]["schedule"] == "Every day at ~7:10 PM"
-    )
-    assert (
-        client.patch(f"/v1/automations/{t.id}", json={"enabled": False}).json()["task"][
-            "enabled"
-        ]
-        is False
-    )
+    assert tasks[0]["title"] == "Daily brief" and tasks[0]["schedule"] == "Every day at ~7:10 PM"
+    assert client.patch(f"/v1/automations/{t.id}", json={"enabled": False}).json()["task"]["enabled"] is False
     assert client.get(f"/v1/automations/{t.id}").json()["task"]["id"] == t.id
     assert client.delete(f"/v1/automations/{t.id}").json()["ok"] is True
 

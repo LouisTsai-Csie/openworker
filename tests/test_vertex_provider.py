@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -48,9 +49,7 @@ def test_family_dispatch():
     p.complete(model="gemini/gemini-3.6-flash", messages=msgs)
     p.complete(model="claude/claude-sonnet-4-6", messages=msgs)
     # Openweight ids keep their publisher segment — only the FIRST slash splits.
-    p.complete(
-        model="openweight/meta/llama-4-maverick-17b-128e-instruct-maas", messages=msgs
-    )
+    p.complete(model="openweight/meta/llama-4-maverick-17b-128e-instruct-maas", messages=msgs)
     assert gemini.seen == ["gemini-3.6-flash"]
     assert claude.seen == ["claude-sonnet-4-6"]
     assert openweight.seen == ["meta/llama-4-maverick-17b-128e-instruct-maas"]
@@ -91,8 +90,7 @@ def test_openweight_builds_maas_endpoint_and_refreshes_bearer():
     assert creds.refreshes == 1
     assert client._api_key == "tok-2"
     assert client._base_url == (
-        "https://us-east5-aiplatform.googleapis.com/v1/projects/proj"
-        "/locations/us-east5/endpoints/openapi"
+        "https://us-east5-aiplatform.googleapis.com/v1/projects/proj/locations/us-east5/endpoints/openapi"
     )
     # Token still valid → the same sub-client is reused, no extra refresh.
     assert p._openweight_client() is client
@@ -109,10 +107,7 @@ def test_openweight_global_location_has_no_region_host():
     creds = _FakeCreds()
     p = VertexProvider(project="proj", location="global", credentials=creds)
     client = p._openweight_client()
-    assert client._base_url == (
-        "https://aiplatform.googleapis.com/v1/projects/proj"
-        "/locations/global/endpoints/openapi"
-    )
+    assert client._base_url == ("https://aiplatform.googleapis.com/v1/projects/proj/locations/global/endpoints/openapi")
 
 
 # -- credentials ------------------------------------------------------------------------
@@ -124,7 +119,7 @@ def test_load_credentials_blank_means_adc():
 
 
 def test_load_credentials_bad_json_raises():
-    with pytest.raises(Exception):
+    with pytest.raises(json.JSONDecodeError):
         load_credentials('{"type": "service_account"')  # malformed JSON
 
 
@@ -134,9 +129,7 @@ def test_load_credentials_bad_json_raises():
 def test_vertex_capabilities_from_matrix_and_fallback():
     assert capabilities_for("vertex:gemini/gemini-3.6-flash").vision
     assert capabilities_for("vertex:claude/claude-sonnet-4-6").pdf
-    curated_ow = capabilities_for(
-        "vertex:openweight/meta/llama-4-maverick-17b-128e-instruct-maas"
-    )
+    curated_ow = capabilities_for("vertex:openweight/meta/llama-4-maverick-17b-128e-instruct-maas")
     assert curated_ow.tools
     # Custom ids fall back on the family segment.
     assert capabilities_for("vertex:gemini/gemini-4.0-preview").vision
@@ -176,9 +169,7 @@ def test_vertex_descriptor_and_builder():
 
     assert d.recommended_model in models_for_provider("vertex")
 
-    p = build_provider_client(
-        "vertex", {"project": "proj", "location": "europe-west1"}, None
-    )
+    p = build_provider_client("vertex", {"project": "proj", "location": "europe-west1"}, None)
     assert isinstance(p, VertexProvider)
     assert p._project == "proj" and p._location == "europe-west1"
 
@@ -205,9 +196,7 @@ def test_auth_method_narrows_out_other_methods_fields():
 
 
 def test_api_key_method_is_gemini_only():
-    p = VertexProvider(
-        project="proj", location="us-east5", auth_method="api_key", api_key="AQ.k"
-    )
+    p = VertexProvider(project="proj", location="us-east5", auth_method="api_key", api_key="AQ.k")
     msgs = [{"role": "user", "content": "x"}]
     with pytest.raises(RuntimeError, match="Gemini models only"):
         p.complete(model="claude/claude-sonnet-4-6", messages=msgs)
@@ -227,9 +216,7 @@ def test_api_key_method_builds_express_gemini_client(monkeypatch):
             captured.update(kwargs)
 
     monkeypatch.setattr(genai, "Client", _FakeClient)
-    p = VertexProvider(
-        project="proj", location="us-east5", auth_method="api_key", api_key="AQ.k"
-    )
+    p = VertexProvider(project="proj", location="us-east5", auth_method="api_key", api_key="AQ.k")
     sub = p._family_client("gemini")
     from coworker.providers import GeminiProvider
 
@@ -273,8 +260,7 @@ def test_verify_vertex_api_key_method(monkeypatch):
     assert captured["headers"]["x-goog-api-key"] == "AQ.k"
     # Express mode is global — no region host, no project in the path.
     assert captured["url"] == (
-        "https://aiplatform.googleapis.com/v1/publishers/google/models/"
-        "gemini-2.5-flash:countTokens"
+        "https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash:countTokens"
     )
 
 
@@ -303,9 +289,7 @@ def test_router_routes_vertex_ids():
     router = ProviderRouter.__new__(ProviderRouter)
     model = "vertex:openweight/meta/llama-4-maverick-17b-128e-instruct-maas"
     assert router._provider_name(model) == "vertex"
-    assert ProviderRouter._bare(model) == (
-        "openweight/meta/llama-4-maverick-17b-128e-instruct-maas"
-    )
+    assert ProviderRouter._bare(model) == ("openweight/meta/llama-4-maverick-17b-128e-instruct-maas")
 
 
 # -- verify ---------------------------------------------------------------------------------

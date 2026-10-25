@@ -5,6 +5,7 @@ engine's root scoping — which only runs for WRITE_LOCAL — never sees them. B
 the only thing between `~/.ssh/id_rsa` and a web form was someone reading the approval
 card. The checks live inside the tools; these pin them.
 """
+
 from __future__ import annotations
 
 

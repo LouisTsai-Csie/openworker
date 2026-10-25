@@ -60,6 +60,7 @@ def _usage_from(usage: Any) -> TokenUsage | None:
         cache_write=int(usage.get("cacheWriteInputTokens") or 0),
     )
 
+
 # Converse has no required max token param but per-model defaults vary wildly (Meta's is
 # 512 — an agent turn gets truncated mid-tool-call); 4096 fits every family's ceiling.
 DEFAULT_MAX_TOKENS = 4096
@@ -78,12 +79,8 @@ _STOP_REASON_MAP = {
     "content_filtered": "stop",
 }
 
-_DATA_URL_RE = re.compile(
-    r"^data:image/([a-z0-9.+-]+);base64,(.+)$", re.IGNORECASE | re.DOTALL
-)
-_PDF_DATA_URL_RE = re.compile(
-    r"^data:application/pdf;base64,(.+)$", re.IGNORECASE | re.DOTALL
-)
+_DATA_URL_RE = re.compile(r"^data:image/([a-z0-9.+-]+);base64,(.+)$", re.IGNORECASE | re.DOTALL)
+_PDF_DATA_URL_RE = re.compile(r"^data:application/pdf;base64,(.+)$", re.IGNORECASE | re.DOTALL)
 
 # Bedrock document names: alphanumeric, whitespace, hyphens, parens, brackets only.
 _DOC_NAME_RE = re.compile(r"[^A-Za-z0-9\s\-\(\)\[\]]+")
@@ -189,9 +186,7 @@ def convert_messages(
         if role == "system":
             text = message.get("content") or ""
             if text:
-                converted.append(
-                    {"role": "user", "content": [{"text": f"<system>\n{text}\n</system>"}]}
-                )
+                converted.append({"role": "user", "content": [{"text": f"<system>\n{text}\n</system>"}]})
         elif role == "user":
             blocks = _user_blocks(message.get("content"))
             if blocks:
@@ -222,9 +217,7 @@ def convert_messages(
                         {
                             "toolResult": {
                                 "toolUseId": message.get("tool_call_id") or "",
-                                "content": [
-                                    {"text": str(message.get("content") or "")}
-                                ],
+                                "content": [{"text": str(message.get("content") or "")}],
                             }
                         }
                     ],
@@ -268,9 +261,7 @@ def convert_tools(tools: list[dict[str, Any]] | None) -> dict[str, Any] | None:
 
 def _inference_config(settings: dict[str, Any]) -> dict[str, Any]:
     """Whitelisted engine settings → Converse `inferenceConfig` (camelCase)."""
-    config: dict[str, Any] = {
-        "maxTokens": int(settings.get("max_tokens") or DEFAULT_MAX_TOKENS)
-    }
+    config: dict[str, Any] = {"maxTokens": int(settings.get("max_tokens") or DEFAULT_MAX_TOKENS)}
     if settings.get("temperature") is not None:
         config["temperature"] = settings["temperature"]
     if settings.get("top_p") is not None:
@@ -298,9 +289,7 @@ class _BedrockConverseClient(ProviderClient):
         self._client = client  # tests inject a dict-returning fake
         self._region = region
         self._bedrock_api_key = bedrock_api_key
-        self._session_kwargs = _session_kwargs(
-            profile_name, access_key_id, secret_access_key, session_token
-        )
+        self._session_kwargs = _session_kwargs(profile_name, access_key_id, secret_access_key, session_token)
 
     def _ensure_client(self) -> Any:
         if self._client is None:
@@ -308,8 +297,7 @@ class _BedrockConverseClient(ProviderClient):
                 import boto3
             except ImportError as exc:
                 raise RuntimeError(
-                    "AWS Bedrock support needs the boto3 package — "
-                    "install with `pip install 'openworker[bedrock]'`."
+                    "AWS Bedrock support needs the boto3 package — install with `pip install 'openworker[bedrock]'`."
                 ) from exc
             # boto3 has no per-client bearer parameter — it only reads the env var, and
             # prefers bearer auth for Bedrock whenever it's set. The sidecar process is
@@ -362,17 +350,13 @@ class _BedrockConverseClient(ProviderClient):
         tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ) -> AssistantTurn:
-        kwargs = self._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings
-        )
+        kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings)
         response = self._call(self._ensure_client(), "converse", kwargs)
 
         text_parts: list[str] = []
         reasoning_parts: list[str] = []
         tool_calls: list[ToolCall] = []
-        content = ((response.get("output") or {}).get("message") or {}).get(
-            "content"
-        ) or []
+        content = ((response.get("output") or {}).get("message") or {}).get("content") or []
         for block in content:
             if "text" in block:
                 text_parts.append(block["text"] or "")
@@ -386,9 +370,7 @@ class _BedrockConverseClient(ProviderClient):
                     )
                 )
             elif "reasoningContent" in block:
-                text = (block["reasoningContent"].get("reasoningText") or {}).get(
-                    "text"
-                ) or ""
+                text = (block["reasoningContent"].get("reasoningText") or {}).get("text") or ""
                 if text:
                     reasoning_parts.append(text)
         stop_reason = response.get("stopReason")
@@ -409,9 +391,7 @@ class _BedrockConverseClient(ProviderClient):
         tools: list[dict[str, Any]] | None = None,
         **settings: Any,
     ):
-        kwargs = self._request_kwargs(
-            model=model, messages=messages, tools=tools, settings=settings
-        )
+        kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings)
         response = self._call(self._ensure_client(), "converse_stream", kwargs)
 
         text_parts: list[str] = []
@@ -526,9 +506,7 @@ class BedrockProvider(ProviderClient):
 
                 # A Bedrock API key (field or ambient env) takes the bearer path and
                 # EXCLUDES the SigV4 params — AnthropicBedrock raises on a mix.
-                bearer = self._bedrock_api_key or os.environ.get(
-                    "AWS_BEARER_TOKEN_BEDROCK"
-                )
+                bearer = self._bedrock_api_key or os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
                 if bearer:
                     sdk = AnthropicBedrock(api_key=bearer, aws_region=self._region)
                 else:
@@ -561,9 +539,7 @@ class BedrockProvider(ProviderClient):
         **settings: Any,
     ) -> AssistantTurn:
         family, rest = self._split(model)
-        return self._family_client(family).complete(
-            model=rest, messages=messages, tools=tools, **settings
-        )
+        return self._family_client(family).complete(model=rest, messages=messages, tools=tools, **settings)
 
     def stream(
         self,
@@ -574,9 +550,7 @@ class BedrockProvider(ProviderClient):
         **settings: Any,
     ):
         family, rest = self._split(model)
-        return self._family_client(family).stream(
-            model=rest, messages=messages, tools=tools, **settings
-        )
+        return self._family_client(family).stream(model=rest, messages=messages, tools=tools, **settings)
 
     def capabilities(self, model: str) -> ModelCapabilities:
         qualified = model if model.startswith("bedrock:") else f"bedrock:{model}"

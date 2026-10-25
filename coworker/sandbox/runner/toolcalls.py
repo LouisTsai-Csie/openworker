@@ -74,9 +74,7 @@ def call(
             return getattr(kit, GIT_TOOLKIT_TOOLS[name])(**args)
         if name in FILE_TOOLKIT_TOOLS:
             scope = {"roots": roots} if roots else {"root": workspace, "allow_write": True}
-            kit = FileToolkit(
-                max_read_bytes=_MAX_READ_BYTES, max_search_bytes=_MAX_SEARCH_BYTES, ignore=None, **scope
-            )
+            kit = FileToolkit(max_read_bytes=_MAX_READ_BYTES, max_search_bytes=_MAX_SEARCH_BYTES, ignore=None, **scope)
             return getattr(kit, name)(**args)
     except Exception as exc:
         raise ToolRaised(exc) from exc

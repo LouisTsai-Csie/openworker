@@ -17,7 +17,7 @@ import hashlib
 import json
 import secrets
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ class BoardTokens:
                 "role": role,
                 "label": label,
                 "prefix": token[:12],
-                "created_ts": datetime.now(timezone.utc).isoformat(),
+                "created_ts": datetime.now(UTC).isoformat(),
             }
             self._save(entries)
         return token
@@ -70,11 +70,7 @@ class BoardTokens:
             return 0
         with self._lock:
             entries = self._load()
-            keep = {
-                key: entry
-                for key, entry in entries.items()
-                if not entry["prefix"].startswith(prefix)
-            }
+            keep = {key: entry for key, entry in entries.items() if not entry["prefix"].startswith(prefix)}
             removed = len(entries) - len(keep)
             if removed:
                 self._save(keep)

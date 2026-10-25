@@ -68,7 +68,7 @@ def run(socket_path: str, silence_seconds: float = RELAY_SILENCE_SECONDS) -> int
                     break
                 view = memoryview(data)
                 while view:
-                    view = view[os.write(out_fd, view):]
+                    view = view[os.write(out_fd, view) :]
         except OSError:
             pass
         done.set()

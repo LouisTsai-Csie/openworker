@@ -41,9 +41,7 @@ _SCHEMA = {
 }
 
 
-def provider_name(
-    secrets: SecretStore | None = None, *, default: str = "duckduckgo"
-) -> str:
+def provider_name(secrets: SecretStore | None = None, *, default: str = "duckduckgo") -> str:
     """The configured provider's NAME, without building (or validating) the provider.
     Same resolution order as `resolve_provider`. Used by the web_search approval card,
     which names the live destination (§1.9: "currently: ‹name›", never "default:")."""
@@ -66,9 +64,7 @@ def provider_host(secrets: SecretStore | None = None) -> str:
     return PROVIDER_HOSTS.get(provider_name(secrets), "")
 
 
-def resolve_provider(
-    secrets: SecretStore | None = None, *, default: str = "duckduckgo"
-) -> WebSearchProvider:
+def resolve_provider(secrets: SecretStore | None = None, *, default: str = "duckduckgo") -> WebSearchProvider:
     secrets = secrets or SecretStore()
     profile = secrets.get("web_search:default") or {}
     name = profile.get("provider") or _config_provider() or default

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 from types import SimpleNamespace
 
@@ -39,9 +41,7 @@ def test_complete_returns_text():
     client = _FakeClient(_response(content="hello there"))
     provider = OpenAIProvider(client=client)
 
-    turn = provider.complete(
-        model="gpt-5.5", messages=[{"role": "user", "content": "hi"}]
-    )
+    turn = provider.complete(model="gpt-5.5", messages=[{"role": "user", "content": "hi"}])
 
     assert isinstance(turn, AssistantTurn)
     assert turn.text == "hello there"
@@ -53,9 +53,7 @@ def test_complete_returns_text():
 def test_complete_parses_tool_calls():
     tc = SimpleNamespace(
         id="call_1",
-        function=SimpleNamespace(
-            name="read_file", arguments=json.dumps({"path": "a.py"})
-        ),
+        function=SimpleNamespace(name="read_file", arguments=json.dumps({"path": "a.py"})),
     )
     client = _FakeClient(_response(tool_calls=[tc], finish_reason="tool_calls"))
     provider = OpenAIProvider(client=client)
@@ -67,17 +65,13 @@ def test_complete_parses_tool_calls():
     )
 
     assert turn.has_tool_calls
-    assert turn.tool_calls[0] == ToolCall(
-        id="call_1", name="read_file", arguments={"path": "a.py"}
-    )
+    assert turn.tool_calls[0] == ToolCall(id="call_1", name="read_file", arguments={"path": "a.py"})
     # tools forwarded to the API
     assert "tools" in client.chat.completions.calls[0]
 
 
 def test_complete_tolerates_bad_tool_args():
-    tc = SimpleNamespace(
-        id="call_2", function=SimpleNamespace(name="x", arguments="{not json")
-    )
+    tc = SimpleNamespace(id="call_2", function=SimpleNamespace(name="x", arguments="{not json"))
     client = _FakeClient(_response(tool_calls=[tc]))
     provider = OpenAIProvider(client=client)
 
@@ -143,9 +137,7 @@ def test_gpt56_tools_pin_reasoning_effort_none():
     assert [c["reasoning_effort"] for c in calls] == ["none"] * 3
 
     # an explicit caller choice is respected on the first attempt
-    provider.complete(
-        model="gpt-5.6-sol", messages=[], tools=_TOOLS, reasoning_effort="low"
-    )
+    provider.complete(model="gpt-5.6-sol", messages=[], tools=_TOOLS, reasoning_effort="low")
     assert calls[3]["reasoning_effort"] == "low"
 
     # no tools, or another model → the request is untouched
@@ -218,7 +210,7 @@ def test_max_tokens_rejection_retries_as_max_completion_tokens():
 
 def test_unrelated_400s_are_not_retried():
     class _AlwaysRejects:
-        calls: list = []
+        calls: ClassVar[list] = []
 
         def create(self, **kwargs):
             self.calls.append(kwargs)
@@ -239,17 +231,13 @@ def test_unrelated_400s_are_not_retried():
 
 
 def _chunk(content=None, tool_call=None, finish=None):
-    delta = SimpleNamespace(
-        content=content, tool_calls=[tool_call] if tool_call else None
-    )
+    delta = SimpleNamespace(content=content, tool_calls=[tool_call] if tool_call else None)
     return SimpleNamespace(choices=[SimpleNamespace(delta=delta, finish_reason=finish)])
 
 
 class _StreamClient:
     def __init__(self, chunks):
-        self.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=lambda **kwargs: iter(chunks))
-        )
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: iter(chunks)))
 
 
 def test_stream_text_deltas():
@@ -267,15 +255,11 @@ def test_stream_accumulates_tool_calls():
         id="call_1",
         function=SimpleNamespace(name="read_file", arguments='{"pa'),
     )
-    tc2 = SimpleNamespace(
-        index=0, id=None, function=SimpleNamespace(name=None, arguments='th": "a.py"}')
-    )
+    tc2 = SimpleNamespace(index=0, id=None, function=SimpleNamespace(name=None, arguments='th": "a.py"}'))
     chunks = [_chunk(tool_call=tc1), _chunk(tool_call=tc2), _chunk(finish="tool_calls")]
     provider = OpenAIProvider(client=_StreamClient(chunks))
     turn = list(provider.stream(model="gpt-5.5", messages=[]))[-1].turn
-    assert turn.tool_calls[0] == ToolCall(
-        id="call_1", name="read_file", arguments={"path": "a.py"}
-    )
+    assert turn.tool_calls[0] == ToolCall(id="call_1", name="read_file", arguments={"path": "a.py"})
 
 
 # -- OpenAI-compatible vendor providers (Z AI, DeepSeek, Kimi, MiniMax, Qwen, xAI, Mistral) ------
@@ -387,9 +371,7 @@ def test_ark_responses_builder_capabilities_PathsUnchanged(monkeypatch):
         ARK_RESPONSES_VENDORS["ark-agent-plan-cn"]["base_url"],
     )
     assert bp._reasoning_summary is ARK_RESPONSES_VENDORS["ark"]["reasoning_summary"]
-    assert plan._reasoning_summary is ARK_RESPONSES_VENDORS["ark-agent-plan-cn"][
-        "reasoning_summary"
-    ]
+    assert plan._reasoning_summary is ARK_RESPONSES_VENDORS["ark-agent-plan-cn"]["reasoning_summary"]
 
 
 def test_ark_responses_never_leak_the_openai_key(monkeypatch):
@@ -456,9 +438,7 @@ def test_ark_recommended_models_are_curated():
 def test_compat_models_route_and_get_tool_capabilities():
     from coworker.providers.router import ProviderRouter
 
-    router = ProviderRouter.__new__(
-        ProviderRouter
-    )  # only using _provider_name (stateless)
+    router = ProviderRouter.__new__(ProviderRouter)  # only using _provider_name (stateless)
     for model in (
         "zai:glm-5.2",
         "deepseek:deepseek-v4-flash",
@@ -590,6 +570,7 @@ def test_foreign_sidecars_stripped_from_outbound_messages():
 def test_stream_reasoning_content_deltas():
     """DeepSeek-style thinking: reasoning_content deltas surface as reasoning chunks and
     land on the final turn — never mixed into the answer text."""
+
     def rchunk(text):
         delta = SimpleNamespace(content=None, tool_calls=None, reasoning_content=text)
         return SimpleNamespace(choices=[SimpleNamespace(delta=delta, finish_reason=None)])
@@ -639,9 +620,7 @@ def test_over_limit_max_tokens_is_dropped_and_retried():
         def create(self, **kwargs):
             self.calls.append(kwargs)
             if "max_tokens" in kwargs:
-                raise RuntimeError(
-                    "Error code: 400 - max_tokens must be at most 8193 for this model"
-                )
+                raise RuntimeError("Error code: 400 - max_tokens must be at most 8193 for this model")
             return self._response
 
     client = _FakeClient(_response(content="ok"))

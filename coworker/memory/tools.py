@@ -60,6 +60,7 @@ def memory_tools(
             on_saved(item, previous)
         except Exception:
             pass
+
     def remember(content: str, summary: str = "", scope: str = "workspace") -> dict:
         """Save a durable memory (a fact or preference) to recall in future sessions.
         Check the known-memories list first: if one already covers this, use
@@ -98,9 +99,7 @@ def memory_tools(
             if item is None:
                 missing.append(int(mid))
             else:
-                found.append(
-                    {"id": item.id, "scope": item.scope.value, "content": item.content}
-                )
+                found.append({"id": item.id, "scope": item.scope.value, "content": item.content})
         result: dict = {"memories": found}
         if missing:
             result["missing"] = missing
@@ -138,6 +137,5 @@ def memory_tools(
         return {"deleted": False, "error": f"no memory with id {memory_id}"}
 
     return [
-        ai.tool(fn, metadata=ai.ToolMetadata(**_META))
-        for fn in (remember, memory_read, memory_update, memory_forget)
+        ai.tool(fn, metadata=ai.ToolMetadata(**_META)) for fn in (remember, memory_read, memory_update, memory_forget)
     ]

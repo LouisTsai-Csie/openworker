@@ -13,7 +13,7 @@ import json
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 
 
@@ -37,9 +37,7 @@ class Team:
     chat_enabled: bool = False
     chat_group: str = ""  # ChatStore group_id when chat is enabled
     paused: bool = False  # budget/user pause: the wake gate skips a paused team
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     # Rolling budget gate: automatic wakes this hour (reset when the hour rolls).
     wake_hour: str = ""
     wakes_this_hour: int = 0
@@ -51,9 +49,7 @@ class TeamRegistry:
         self._lock = threading.Lock()
         self._teams: dict[str, Team] = {}
         if self.path and self.path.is_file():
-            for raw in json.loads(self.path.read_text(encoding="utf-8")).get(
-                "teams", []
-            ):
+            for raw in json.loads(self.path.read_text(encoding="utf-8")).get("teams", []):
                 workers = [TeamWorker(**w) for w in raw.pop("workers", [])]
                 team = Team(**{**raw, "workers": []})
                 team.workers = workers
@@ -64,9 +60,7 @@ class TeamRegistry:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(
-            json.dumps(
-                {"teams": [asdict(t) for t in self._teams.values()]}, indent=2
-            ),
+            json.dumps({"teams": [asdict(t) for t in self._teams.values()]}, indent=2),
             encoding="utf-8",
         )
 
@@ -125,7 +119,7 @@ class TeamRegistry:
         team's rolling hour; False = over cap (the caller skips the wake and the
         team reads as paused-for-budget until the hour rolls). A runaway loop
         stops BETWEEN turns, never mid-flight."""
-        hour = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
+        hour = datetime.now(UTC).strftime("%Y-%m-%dT%H")
         with self._lock:
             team = self._teams.get(team_id)
             if team is None:

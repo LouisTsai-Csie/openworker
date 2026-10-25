@@ -100,9 +100,7 @@ def test_build_engine_passes_config_value_as_max_tokens(tmp_path):
 
 
 def test_build_engine_explicit_model_settings_win_over_config(tmp_path):
-    engine = _engine_with_config(
-        tmp_path, "max_output_tokens = 64000\n", model_settings={"max_tokens": 1000}
-    )
+    engine = _engine_with_config(tmp_path, "max_output_tokens = 64000\n", model_settings={"max_tokens": 1000})
     try:
         assert engine.model_settings["max_tokens"] == 1000
     finally:
@@ -140,9 +138,7 @@ class _FakeAnthropic:
 
 
 def _anthropic_response(stop_reason="end_turn"):
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text="hi")], stop_reason=stop_reason
-    )
+    return SimpleNamespace(content=[SimpleNamespace(type="text", text="hi")], stop_reason=stop_reason)
 
 
 def _anthropic_events():
@@ -164,26 +160,18 @@ def _anthropic_events():
 def test_anthropic_complete_and_stream_send_configured_limit():
     fake = _FakeAnthropic(response=_anthropic_response(), events=_anthropic_events())
     provider = AnthropicProvider(client=fake)
-    turn = provider.complete(
-        model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000
-    )
+    turn = provider.complete(model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000)
     assert fake.kwargs["max_tokens"] == 64000
     assert turn.output_limit == 64000
 
-    chunks = list(
-        provider.stream(
-            model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000
-        )
-    )
+    chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000))
     assert fake.kwargs["max_tokens"] == 64000
     assert chunks[-1].turn.output_limit == 64000
 
 
 def test_anthropic_default_path_unchanged():
     fake = _FakeAnthropic(response=_anthropic_response())
-    turn = AnthropicProvider(client=fake).complete(
-        model="m", messages=[{"role": "user", "content": "x"}]
-    )
+    turn = AnthropicProvider(client=fake).complete(model="m", messages=[{"role": "user", "content": "x"}])
     assert fake.kwargs["max_tokens"] == ANTHROPIC_DEFAULT
     assert turn.output_limit == ANTHROPIC_DEFAULT
 
@@ -228,9 +216,7 @@ class _FakeOpenAI:
             self.calls.append(kwargs)
             if self._reject and "max_tokens" in kwargs:
                 self._reject = False
-                raise RuntimeError(
-                    "Unsupported parameter: " + _MAX_TOKENS_ERROR + " with this model."
-                )
+                raise RuntimeError("Unsupported parameter: " + _MAX_TOKENS_ERROR + " with this model.")
             return stream_chunks if kwargs.get("stream") else response
 
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
@@ -252,11 +238,7 @@ def _openai_chunks():
 
 def _openai_response():
     return SimpleNamespace(
-        choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="hi", tool_calls=None), finish_reason="stop"
-            )
-        ],
+        choices=[SimpleNamespace(message=SimpleNamespace(content="hi", tool_calls=None), finish_reason="stop")],
         usage=None,
     )
 
@@ -264,26 +246,18 @@ def _openai_response():
 def test_openai_stream_and_complete_send_configured_limit():
     fake = _FakeOpenAI(stream_chunks=_openai_chunks(), response=_openai_response())
     provider = OpenAIProvider(client=fake)
-    chunks = list(
-        provider.stream(
-            model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000
-        )
-    )
+    chunks = list(provider.stream(model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000))
     assert fake.calls[-1]["max_tokens"] == 64000
     assert chunks[-1].turn.output_limit == 64000
 
-    turn = provider.complete(
-        model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000
-    )
+    turn = provider.complete(model="m", messages=[{"role": "user", "content": "x"}], max_tokens=64000)
     assert fake.calls[-1]["max_tokens"] == 64000
     assert turn.output_limit == 64000
 
 
 def test_openai_default_path_unchanged():
     fake = _FakeOpenAI(response=_openai_response())
-    turn = OpenAIProvider(client=fake).complete(
-        model="m", messages=[{"role": "user", "content": "x"}]
-    )
+    turn = OpenAIProvider(client=fake).complete(model="m", messages=[{"role": "user", "content": "x"}])
     assert fake.calls[-1]["max_tokens"] == OPENAI_DEFAULT
     assert turn.output_limit == OPENAI_DEFAULT
 

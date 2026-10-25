@@ -60,9 +60,7 @@ def test_bundle_skills_stay_with_their_persona(tmp_path, monkeypatch):
     mgr = SessionManager(workspace=tmp_path, provider=ScriptedProvider())
     for i, (pid, expected) in enumerate(BUNDLES.items()):
         sid = f"s{i}"
-        mgr.session_store.save(
-            SessionRecord(session_id=sid, workspace="", model="m", mode="interactive", agent=pid)
-        )
+        mgr.session_store.save(SessionRecord(session_id=sid, workspace="", model="m", mode="interactive", agent=pid))
         names = mgr.effective_skill_names(sid)
         assert expected <= names
         # No leakage from the sibling bundles.

@@ -25,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def _python(code: str, *args: str) -> subprocess.Popen:
     env = dict(os.environ)
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
-    return subprocess.Popen([sys.executable, "-c", textwrap.dedent(code), *args], env=env, stdout=subprocess.PIPE, text=True)
+    return subprocess.Popen(
+        [sys.executable, "-c", textwrap.dedent(code), *args], env=env, stdout=subprocess.PIPE, text=True
+    )
 
 
 def test_writes_from_several_processes_are_all_kept(tmp_path: Path) -> None:
@@ -111,7 +113,14 @@ def test_two_callers_renew_a_connector_sign_in_once(tmp_path: Path, monkeypatch:
     SecretStore(path).put(cloud.CLOUD_AUTH_PROFILE, {"access_token": "session", "expires": time.time() + 3600})
     SecretStore(path).put(
         "gmail:default",
-        {"managed": True, "provider": "google", "access_token": "old", "refresh_token": "r1", "connection_id": "c1", "expires": time.time() - 10},
+        {
+            "managed": True,
+            "provider": "google",
+            "access_token": "old",
+            "refresh_token": "r1",
+            "connection_id": "c1",
+            "expires": time.time() - 10,
+        },
     )
     calls: list[str] = []
 
@@ -140,7 +149,9 @@ def test_two_callers_renew_a_connector_sign_in_once(tmp_path: Path, monkeypatch:
 
 def test_two_callers_renew_the_cloud_session_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "secrets.json"
-    SecretStore(path).put(cloud.CLOUD_AUTH_PROFILE, {"access_token": "old", "refresh_token": "r1", "expires": time.time() - 10})
+    SecretStore(path).put(
+        cloud.CLOUD_AUTH_PROFILE, {"access_token": "old", "refresh_token": "r1", "expires": time.time() - 10}
+    )
     calls: list[str] = []
 
     def post(url, data=None, timeout=None, **_):
@@ -150,7 +161,10 @@ def test_two_callers_renew_the_cloud_session_once(tmp_path: Path, monkeypatch: p
 
     monkeypatch.setattr(cloud.httpx, "post", post)
     results: list = []
-    threads = [threading.Thread(target=lambda: results.append(cloud.fresh_access_token(SecretStore(path), Config()))) for _ in range(2)]
+    threads = [
+        threading.Thread(target=lambda: results.append(cloud.fresh_access_token(SecretStore(path), Config())))
+        for _ in range(2)
+    ]
     for t in threads:
         t.start()
     for t in threads:
@@ -160,8 +174,12 @@ def test_two_callers_renew_the_cloud_session_once(tmp_path: Path, monkeypatch: p
 
 def test_two_callers_renew_the_model_sign_in_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "secrets.json"
-    SecretStore(path).put(codex_auth.PROFILE, {"tokens": {"access_token": "old", "refresh_token": "r1"}, "account_id": "acct"})
-    monkeypatch.setattr(codex_auth, "_jwt_claims", lambda token: {"exp": time.time() + (3600 if token == "new" else -10)})
+    SecretStore(path).put(
+        codex_auth.PROFILE, {"tokens": {"access_token": "old", "refresh_token": "r1"}, "account_id": "acct"}
+    )
+    monkeypatch.setattr(
+        codex_auth, "_jwt_claims", lambda token: {"exp": time.time() + (3600 if token == "new" else -10)}
+    )
     calls: list[str] = []
 
     def token_post(form):
@@ -172,7 +190,8 @@ def test_two_callers_renew_the_model_sign_in_once(tmp_path: Path, monkeypatch: p
     monkeypatch.setattr(codex_auth, "_token_post", token_post)
     results: list = []
     threads = [
-        threading.Thread(target=lambda: results.append(codex_auth.CodexTokenStore(SecretStore(path)).access_token())) for _ in range(2)
+        threading.Thread(target=lambda: results.append(codex_auth.CodexTokenStore(SecretStore(path)).access_token()))
+        for _ in range(2)
     ]
     for t in threads:
         t.start()

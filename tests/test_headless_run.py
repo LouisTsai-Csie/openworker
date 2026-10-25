@@ -19,7 +19,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 SCRIPT = [
-    {"text": "I will create the file.", "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}]},
+    {
+        "text": "I will create the file.",
+        "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}],
+    },
     {"text": "Now reading it back.", "tool_calls": [{"name": "read_file", "arguments": {"path": "hello.txt"}}]},
     {"text": "The file says: hello. Done.", "usage": {"input": 300, "output": 40, "cache_read": 100}},
 ]
@@ -59,12 +62,26 @@ def _run(
     path = tmp_path / "script.json"
     path.write_text(json.dumps(script if script is not None else SCRIPT), encoding="utf-8")
     cmd = [
-        sys.executable, "-m", "coworker.cli", "run",
-        "--prompt", prompt,
-        "--workspace", str(ws), "--model", model,
-        "--approval-mode", mode, "--out", str(out),
-        "--trajectory-atif", str(tmp_path / "logs" / "trajectory.json"),
-        "--scripted", str(path), "--timeout-seconds", "120",
+        sys.executable,
+        "-m",
+        "coworker.cli",
+        "run",
+        "--prompt",
+        prompt,
+        "--workspace",
+        str(ws),
+        "--model",
+        model,
+        "--approval-mode",
+        mode,
+        "--out",
+        str(out),
+        "--trajectory-atif",
+        str(tmp_path / "logs" / "trajectory.json"),
+        "--scripted",
+        str(path),
+        "--timeout-seconds",
+        "120",
         *(["--isolated"] if isolated else []),
         *(extra or []),
     ]
@@ -82,9 +99,7 @@ def _messages(out: Path) -> list[dict]:
 
 def _events(out: Path) -> list[dict]:
     return [
-        json.loads(line)
-        for line in (out / "events.jsonl").read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in (out / "events.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
@@ -158,7 +173,10 @@ def test_ask_refuses_the_card_nobody_can_answer_and_records_it(tmp_path: Path) -
 
 def test_dangerous_mode_warns_and_clears_the_downloaded_file_floor(tmp_path: Path) -> None:
     script = [
-        {"text": "fetching", "tool_calls": [{"name": "run_shell", "arguments": {"command": "echo 'echo hi' > setup.sh"}}]},
+        {
+            "text": "fetching",
+            "tool_calls": [{"name": "run_shell", "arguments": {"command": "echo 'echo hi' > setup.sh"}}],
+        },
         {"text": "running", "tool_calls": [{"name": "run_shell", "arguments": {"command": "sh setup.sh"}}]},
         {"text": "Done."},
     ]
@@ -197,7 +215,10 @@ def test_finish_reason_is_persisted_on_messages_events_and_the_call_log(tmp_path
 
 def test_a_cut_off_reply_is_continued_and_repeated_cut_offs_end_as_truncated(tmp_path: Path) -> None:
     cut = {"text": None, "finish_reason": "length"}
-    write = {"text": "ok", "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}]}
+    write = {
+        "text": "ok",
+        "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}],
+    }
     proc, ws, out = _run(tmp_path, "bypass-approvals", [cut, write, {"text": "Done."}], prompt="Do something hard.")
     assert proc.returncode == 0, proc.stdout + proc.stderr
     summary = _summary(out)
@@ -270,8 +291,9 @@ def test_a_models_saved_settings_reach_the_run_unless_isolated(tmp_path: Path) -
     calls = [json.loads(line) for line in (out / "model_calls.jsonl").read_text().splitlines()]
     assert calls[-1]["max_output_tokens"] == 777
     # A flag on the run wins over the saved setting.
-    proc, _ws, out = _run(tmp_path, "bypass-approvals", [{"text": "Done."}], env=env, isolated=False,
-                          extra=["--max-output-tokens", "555"])
+    proc, _ws, out = _run(
+        tmp_path, "bypass-approvals", [{"text": "Done."}], env=env, isolated=False, extra=["--max-output-tokens", "555"]
+    )
     calls = [json.loads(line) for line in (out / "model_calls.jsonl").read_text().splitlines()]
     assert calls[-1]["max_output_tokens"] == 555
     # An isolated run reads nothing from the computer.
@@ -284,8 +306,11 @@ def test_a_finished_answer_with_a_stray_tool_tag_is_kept(tmp_path: Path) -> None
     # Seen live: the answer was complete, ended in `<tool_call>`, and was retried as a
     # failed call; the second answer was worse. The tag goes, the answer stays.
     proc, _ws, out = _run(
-        tmp_path, "bypass-approvals", [{"text": "The output is 100.<tool_call>"}],
-        prompt="Square ten.", env={"OPENWORKER_RUN_RETRY_DELAYS": "0"},
+        tmp_path,
+        "bypass-approvals",
+        [{"text": "The output is 100.<tool_call>"}],
+        prompt="Square ten.",
+        env={"OPENWORKER_RUN_RETRY_DELAYS": "0"},
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert proc.stdout.strip() == "The output is 100."
@@ -295,10 +320,16 @@ def test_a_finished_answer_with_a_stray_tool_tag_is_kept(tmp_path: Path) -> None
 
 def test_transient_provider_error_is_waited_out_and_the_run_completes(tmp_path: Path) -> None:
     fail = {"error": "Service unavailable", "error_type": "APIError"}
-    write = {"text": "ok", "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}]}
+    write = {
+        "text": "ok",
+        "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}],
+    }
     proc, ws, out = _run(
-        tmp_path, "bypass-approvals", [fail, write, {"text": "Done."}],
-        prompt="Do something hard.", env={"OPENWORKER_RUN_RETRY_DELAYS": "0,0"},
+        tmp_path,
+        "bypass-approvals",
+        [fail, write, {"text": "Done."}],
+        prompt="Do something hard.",
+        env={"OPENWORKER_RUN_RETRY_DELAYS": "0,0"},
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     summary = _summary(out)
@@ -312,10 +343,16 @@ def test_transient_provider_error_is_waited_out_and_the_run_completes(tmp_path: 
 
 def test_empty_reply_is_nudged_and_a_permanent_error_is_not_retried(tmp_path: Path) -> None:
     empty = {"text": None}
-    write = {"text": "ok", "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}]}
+    write = {
+        "text": "ok",
+        "tool_calls": [{"name": "write_file", "arguments": {"path": "hello.txt", "content": "hello"}}],
+    }
     proc, ws, out = _run(
-        tmp_path, "bypass-approvals", [empty, write, {"text": "Done."}],
-        prompt="Do something hard.", env={"OPENWORKER_RUN_RETRY_DELAYS": "0,0"},
+        tmp_path,
+        "bypass-approvals",
+        [empty, write, {"text": "Done."}],
+        prompt="Do something hard.",
+        env={"OPENWORKER_RUN_RETRY_DELAYS": "0,0"},
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert _summary(out)["provider_retries"] == 1 and (ws / "hello.txt").exists()
@@ -326,8 +363,11 @@ def test_empty_reply_is_nudged_and_a_permanent_error_is_not_retried(tmp_path: Pa
     second.mkdir()
     fail = {"error": "Invalid API key provided", "error_type": "AuthenticationError"}
     proc, _ws, out = _run(
-        second, "bypass-approvals", [fail, {"text": "never reached"}],
-        prompt="Do something hard.", env={"OPENWORKER_RUN_RETRY_DELAYS": "0,0"},
+        second,
+        "bypass-approvals",
+        [fail, {"text": "never reached"}],
+        prompt="Do something hard.",
+        env={"OPENWORKER_RUN_RETRY_DELAYS": "0,0"},
     )
     assert proc.returncode == 3, proc.stdout + proc.stderr  # a model error is a recorded outcome, not a finished task
     summary = _summary(out)
@@ -371,7 +411,10 @@ def test_large_tool_result_is_bounded_and_spilled(tmp_path: Path) -> None:
 
 def _patch_script(target: Path) -> list[dict]:
     return [
-        {"text": "Writing the patch.", "tool_calls": [{"name": "write_file", "arguments": {"path": str(target), "content": "--- a/x\n+++ b/x\n"}}]},
+        {
+            "text": "Writing the patch.",
+            "tool_calls": [{"name": "write_file", "arguments": {"path": str(target), "content": "--- a/x\n+++ b/x\n"}}],
+        },
         {"text": "Done.", "usage": {"input": 10, "output": 5}},
     ]
 
@@ -381,9 +424,7 @@ def test_add_dir_lets_the_file_tools_write_outside_the_workspace(tmp_path: Path)
     outdir = tmp_path / "output"
     outdir.mkdir()
     target = outdir / "fix.patch"
-    proc, _ws, out = _run(
-        tmp_path, "bypass-approvals", _patch_script(target), extra=["--add-dir", str(outdir)]
-    )
+    proc, _ws, out = _run(tmp_path, "bypass-approvals", _patch_script(target), extra=["--add-dir", str(outdir)])
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert target.read_text(encoding="utf-8").startswith("--- a/x")
     summary = _summary(out)
@@ -408,7 +449,10 @@ def test_without_add_dir_the_same_write_stays_inside_the_workspace(tmp_path: Pat
 def test_run_help_and_the_top_level_help_mention_the_command() -> None:
     proc = subprocess.run(
         [sys.executable, "-m", "coworker.cli", "run", "--help"],
-        env=_env(), capture_output=True, text=True, timeout=120,
+        env=_env(),
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     assert proc.returncode == 0 and "usage: openworker run" in proc.stdout
     assert "--auto-answer" in proc.stdout and "--isolated" in proc.stdout
@@ -423,8 +467,11 @@ def test_run_help_and_the_top_level_help_mention_the_command() -> None:
 @pytest.mark.parametrize(
     "old",
     [
-        ["--mode", "bypass-approvals"], ["--persona", "code"], ["--attendance", "auto"],
-        ["--approval-mode", "interactive"], ["--prompt-text", "x"],
+        ["--mode", "bypass-approvals"],
+        ["--persona", "code"],
+        ["--attendance", "auto"],
+        ["--approval-mode", "interactive"],
+        ["--prompt-text", "x"],
     ],
 )
 def test_the_earlier_flag_names_are_gone(tmp_path: Path, old: list[str]) -> None:
@@ -448,9 +495,22 @@ def test_the_workspace_defaults_to_the_current_folder(tmp_path: Path) -> None:
     script.write_text(json.dumps(SCRIPT), encoding="utf-8")
     out = tmp_path / "out"
     cmd = [
-        sys.executable, "-m", "coworker.cli", "run", "--prompt", TASK,
-        "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals",
-        "--out", str(out), "--scripted", str(script), "--timeout-seconds", "120",
+        sys.executable,
+        "-m",
+        "coworker.cli",
+        "run",
+        "--prompt",
+        TASK,
+        "--model",
+        "anthropic/claude-sonnet-5",
+        "--approval-mode",
+        "bypass-approvals",
+        "--out",
+        str(out),
+        "--scripted",
+        str(script),
+        "--timeout-seconds",
+        "120",
     ]
     proc = subprocess.run(cmd, env=_env(None), cwd=here, capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stderr
@@ -468,9 +528,22 @@ def _run_piped(tmp_path: Path, stdin: str, extra: list[str] | None = None) -> tu
     script = tmp_path / "script.json"
     script.write_text(json.dumps(SCRIPT), encoding="utf-8")
     cmd = [
-        sys.executable, "-m", "coworker.cli", "run", "--workspace", str(ws),
-        "--model", "anthropic/claude-sonnet-5", "--approval-mode", "bypass-approvals",
-        "--out", str(out), "--scripted", str(script), "--timeout-seconds", "120",
+        sys.executable,
+        "-m",
+        "coworker.cli",
+        "run",
+        "--workspace",
+        str(ws),
+        "--model",
+        "anthropic/claude-sonnet-5",
+        "--approval-mode",
+        "bypass-approvals",
+        "--out",
+        str(out),
+        "--scripted",
+        str(script),
+        "--timeout-seconds",
+        "120",
         *(extra or []),
     ]
     proc = subprocess.run(cmd, env=_env(None), input=stdin, capture_output=True, text=True, timeout=300)

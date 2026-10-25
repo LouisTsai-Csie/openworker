@@ -54,9 +54,7 @@ def _guard_route(route: Any) -> None:
     route.continue_()
 
 
-def _meta(
-    name: str, *, approval: bool = False, capabilities: list[str] | None = None
-):
+def _meta(name: str, *, approval: bool = False, capabilities: list[str] | None = None):
     return ai.ToolMetadata(
         name=name,
         category="connector",
@@ -66,9 +64,7 @@ def _meta(
     )
 
 
-def _schema(
-    name: str, description: str, properties: dict[str, Any], required: list[str]
-) -> dict[str, Any]:
+def _schema(name: str, description: str, properties: dict[str, Any], required: list[str]) -> dict[str, Any]:
     return {
         "type": "function",
         "function": {
@@ -103,9 +99,7 @@ class _BrowserController:
         self._context = None
         self._page = None
         self._error: str | None = None
-        self._executor = ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix="coworker-browser"
-        )
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="coworker-browser")
         self._state: dict[str, Any] = {
             "open": False,
             "url": "",
@@ -159,16 +153,12 @@ class _BrowserController:
 
                 self._playwright = sync_playwright().start()
                 self._browser = self._playwright.chromium.launch(headless=False)
-                self._context = self._browser.new_context(
-                    viewport={"width": 1280, "height": 900}
-                )
+                self._context = self._browser.new_context(viewport={"width": 1280, "height": 900})
                 # Vet every navigation (redirect / JS / meta-refresh), not just the URL the
                 # model passed to browser_open_url, before its request goes out.
                 self._context.route("**/*", _guard_route)
                 self._page = self._context.new_page()
-                self._touch(
-                    open=True, status="open", last_action="open browser", last_error=""
-                )
+                self._touch(open=True, status="open", last_action="open browser", last_error="")
                 return self._page, None
             except Exception as exc:
                 self._touch(open=False, status="error", last_error=str(exc))
@@ -217,9 +207,7 @@ class _BrowserController:
                 return err
             try:
                 png = page.screenshot(full_page=False)
-                data_url = "data:image/png;base64," + base64.b64encode(png).decode(
-                    "ascii"
-                )
+                data_url = "data:image/png;base64," + base64.b64encode(png).decode("ascii")
                 self._touch(
                     screenshot_data_url=data_url,
                     last_action="screenshot",
@@ -229,9 +217,7 @@ class _BrowserController:
                 self._refresh_page_state()
                 return {"ok": True, **dict(self._state)}
             except Exception as exc:
-                self._touch(
-                    last_action="screenshot", last_result="error", last_error=str(exc)
-                )
+                self._touch(last_action="screenshot", last_result="error", last_error=str(exc))
                 return {"error": str(exc)}
 
     def call(self, action: str, fn: Callable[[Any], dict[str, Any]]) -> dict[str, Any]:
@@ -380,9 +366,7 @@ def redirect_refusal(requested: str, final: str) -> str | None:
     return check_url(final)
 
 
-def make_browser_automation_tools(
-    *, roots: list[Any] | None = None
-) -> list[Callable[..., Any]]:
+def make_browser_automation_tools(*, roots: list[Any] | None = None) -> list[Callable[..., Any]]:
     tools: list[Callable[..., Any]] = []
 
     def _readable_source(raw: str) -> tuple[Any, dict[str, Any] | None]:
@@ -409,14 +393,10 @@ def make_browser_automation_tools(
             return None, {"error": "no writable session directory for the screenshot"}
         path = Path(str(raw)).expanduser().resolve()
         if not any(path.is_relative_to(root) for root in writable):
-            return None, {
-                "error": f"{path} is outside the session's writable directories"
-            }
+            return None, {"error": f"{path} is outside the session's writable directories"}
         return path, None
 
-    def browser_open_url(
-        url: str, wait_until: str = "domcontentloaded"
-    ) -> dict[str, Any]:
+    def browser_open_url(url: str, wait_until: str = "domcontentloaded") -> dict[str, Any]:
         if not url.lower().startswith(("http://", "https://")):
             return {"error": "url must start with http:// or https://"}
         # Same address guard as web_fetch. This is approval gated, so it is defense in
@@ -556,9 +536,7 @@ def make_browser_automation_tools(
         return _BROWSER.call(
             "upload_file",
             lambda page: (
-                _target_locator(page, target).set_input_files(
-                    str(file_path), timeout=10000
-                ),
+                _target_locator(page, target).set_input_files(str(file_path), timeout=10000),
                 {"ok": True, "path": str(file_path)},
             )[1],
         )
@@ -580,9 +558,7 @@ def make_browser_automation_tools(
     def browser_wait(milliseconds: int = 1000, target: str = "") -> dict[str, Any]:
         def run(page):
             if target:
-                _target_locator(page, target).wait_for(
-                    timeout=max(1, int(milliseconds or 1000))
-                )
+                _target_locator(page, target).wait_for(timeout=max(1, int(milliseconds or 1000)))
             else:
                 page.wait_for_timeout(max(1, min(int(milliseconds or 1000), 30000)))
             return {"ok": True, "url": page.url}
@@ -610,13 +586,7 @@ def make_browser_automation_tools(
                 return target_err
 
         def run(page):
-            out = (
-                _target
-                if path
-                else (
-                    Path(tempfile.gettempdir()) / "coworker-browser-screenshot.png"
-                ).resolve()
-            )
+            out = _target if path else (Path(tempfile.gettempdir()) / "coworker-browser-screenshot.png").resolve()
             out.parent.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(out), full_page=True)
             return {"ok": True, "path": str(out), "url": page.url}

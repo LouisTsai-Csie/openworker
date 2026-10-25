@@ -27,14 +27,19 @@ def test_snapshot_reports_the_default_rule_and_the_shipped_entries(config_file):
     from coworker.sandbox import network_profiles
 
     assert snap["network_profile"] == network_profiles.default_profile()  # allowlist; `open` on Windows
-    assert [n["name"] for n in snap["network_profiles"]] == ["allowlist", "open"] and snap["network_hosts"] == []  # nothing ticked
+    assert [n["name"] for n in snap["network_profiles"]] == ["allowlist", "open"] and snap[
+        "network_hosts"
+    ] == []  # nothing ticked
     assert [g["group"] for g in snap["network_sites"]] == ["code-hosts", "package-registries", "search-apis"]
     assert "github.com:443" in snap["network_sites"][0]["hosts"]
     assert snap["credentials"] == []  # nothing is listed until added (UX-053 v5)
     from coworker.sandbox import credentials
 
     assert [e["name"] for e in snap["credential_presets"]] == [e["name"] for e in credentials.DEFAULT_ENTRIES]
-    assert all(e["shipped"] and "kind" in e and e["label"] in ("credential", "configuration") for e in snap["credential_presets"])
+    assert all(
+        e["shipped"] and "kind" in e and e["label"] in ("credential", "configuration")
+        for e in snap["credential_presets"]
+    )
     assert snap["config_path"] == str(config_file)
     assert (snap["windows_setup"] is None) == (sys.platform != "win32")
     from coworker.sandbox import toolchains
@@ -71,7 +76,13 @@ def test_update_writes_only_what_differs_from_the_shipped_entries(config_file):
                 {"name": "ssh", "enabled": True},
                 {"name": "gh", "enabled": False},
                 {"name": "aws", "enabled": True, "path": "~/.aws-work", "hosts": ["*.amazonaws.com:443"]},
-                {"name": "npm", "enabled": True, "path": "~/.npmrc", "hosts": ["registry.npmjs.org:443"], "title": "npm"},
+                {
+                    "name": "npm",
+                    "enabled": True,
+                    "path": "~/.npmrc",
+                    "hosts": ["registry.npmjs.org:443"],
+                    "title": "npm",
+                },
             ],
         }
     )
@@ -83,7 +94,9 @@ def test_update_writes_only_what_differs_from_the_shipped_entries(config_file):
     snap = settings.snapshot()
     by = {e["name"]: e for e in snap["credentials"]}
     assert [e["name"] for e in snap["credentials"]] == ["ssh", "gh", "aws", "npm"]
-    assert by["ssh"]["enabled"] and not by["gh"]["enabled"] and by["aws"]["path"] == "~/.aws-work" and by["npm"]["shipped"]
+    assert (
+        by["ssh"]["enabled"] and not by["gh"]["enabled"] and by["aws"]["path"] == "~/.aws-work" and by["npm"]["shipped"]
+    )
     assert {e["name"] for e in snap["credential_presets"]}.isdisjoint(by)  # an added one leaves the picker
     assert app_config.load_config().sandbox_credentials[0] == {"name": "ssh", "enabled": True}
     assert settings.update({"credentials": [{"name": "gh", "enabled": False}]})["credentials"][0]["name"] == "gh"
@@ -91,7 +104,9 @@ def test_update_writes_only_what_differs_from_the_shipped_entries(config_file):
 
 
 def test_network_choice_and_the_machines_ticked_sites(config_file):
-    out = settings.update({"network_profile": "allowlist", "network_hosts": ["GitHub.com", "registry.acme.dev:443", "github.com:443"]})
+    out = settings.update(
+        {"network_profile": "allowlist", "network_hosts": ["GitHub.com", "registry.acme.dev:443", "github.com:443"]}
+    )
     assert out["ok"], out
     assert out["network_profile"] == "allowlist" and out["network_hosts"] == ["github.com:443", "registry.acme.dev:443"]
     text = config_file.read_text()
@@ -103,21 +118,34 @@ def test_network_choice_and_the_machines_ticked_sites(config_file):
     assert settings.update({"network_hosts": []})["network_hosts"] == []
     assert "sandbox_network_hosts" not in config_file.read_text()
 
+
 def test_update_refuses_bad_input_without_writing(config_file):
     assert settings.update({"provider": "bwrap"})["ok"] is False
     assert settings.update({"network_profile": "wide-open"})["ok"] is False
     assert settings.update({"credentials": [{"name": "x", "enabled": True, "path": "etc"}]})["ok"] is False
     assert settings.update({"credentials": [{"name": "x", "enabled": True, "hosts": ["nohost"]}]})["ok"] is False
     assert settings.update({"credentials": [{"enabled": True}]})["ok"] is False
-    assert settings.update({"credentials": [{"name": "x", "enabled": True, "path": "~/x", "label": "secret"}]})["ok"] is False
+    assert (
+        settings.update({"credentials": [{"name": "x", "enabled": True, "path": "~/x", "label": "secret"}]})["ok"]
+        is False
+    )
     assert not config_file.exists()
 
 
 def test_a_label_is_written_and_read_back(config_file):
-    out = settings.update({"credentials": [{"name": "aws", "enabled": True, "path": "~/.aws", "label": "credential"}, {"name": "npmrc", "enabled": True, "path": "~/.npmrc", "label": "configuration"}]})
+    out = settings.update(
+        {
+            "credentials": [
+                {"name": "aws", "enabled": True, "path": "~/.aws", "label": "credential"},
+                {"name": "npmrc", "enabled": True, "path": "~/.npmrc", "label": "configuration"},
+            ]
+        }
+    )
     assert out["ok"], out
     by = {e["name"]: e for e in settings.snapshot()["credentials"]}
-    assert by["aws"]["label"] == "credential" and by["aws"]["path"] == "~/.aws" and by["npmrc"]["label"] == "configuration"
+    assert (
+        by["aws"]["label"] == "credential" and by["aws"]["path"] == "~/.aws" and by["npmrc"]["label"] == "configuration"
+    )
     assert "gh" not in by and not by["npmrc"]["shipped"] and by["aws"]["shipped"]
 
 
@@ -133,14 +161,33 @@ def test_windows_setup_runs_checks_and_only_then_chooses_the_sandbox(config_file
     # Off Windows the provider module cannot even import; the snapshot's two probes are stubbed.
     monkeypatch.setattr(settings, "_availability", lambda name: (True, "", "ready"))
     monkeypatch.setattr(selection, "select", lambda name=None: SimpleNamespace(provider=name or "direct"))
-    monkeypatch.setattr(windows_setup, "info", lambda: {"state": "ready", "set_up_at": "2026-09-28T10:00:00Z", "problem": "", "can_elevate": True, "command": "x"})
+    monkeypatch.setattr(
+        windows_setup,
+        "info",
+        lambda: {
+            "state": "ready",
+            "set_up_at": "2026-09-28T10:00:00Z",
+            "problem": "",
+            "can_elevate": True,
+            "command": "x",
+        },
+    )
     monkeypatch.setattr(windows_setup, "run_setup", lambda: (True, "ok S-1 S-2"))
     monkeypatch.setattr(settings, "_throwaway_check", lambda: (False, "the home folder can be listed from inside"))
     out = settings.run_windows_setup()
-    assert not out["ok"] and "throwaway sandbox failed" in out["error"] and "sandbox_provider" not in (config_file.read_text() if config_file.exists() else "")
+    assert (
+        not out["ok"]
+        and "throwaway sandbox failed" in out["error"]
+        and "sandbox_provider" not in (config_file.read_text() if config_file.exists() else "")
+    )
     monkeypatch.setattr(settings, "_throwaway_check", lambda: (True, "proved"))
     out = settings.run_windows_setup()
-    assert out["ok"] and out["checked"] == "proved" and out["provider"] == "windows" and out["windows_setup"]["state"] == "ready"
+    assert (
+        out["ok"]
+        and out["checked"] == "proved"
+        and out["provider"] == "windows"
+        and out["windows_setup"]["state"] == "ready"
+    )
     monkeypatch.setattr(windows_setup, "run_setup", lambda: (False, "The operation was canceled by the user."))
     out = settings.run_windows_setup()
     assert not out["ok"] and "canceled" in out["error"] and out["provider"] == "windows"  # the earlier choice stands
@@ -159,10 +206,19 @@ def test_windows_setup_info_states(monkeypatch):
     assert windows_setup.info()["state"] == "not_set_up"
     monkeypatch.setattr(windows_setup, "state", lambda: {"version": 1})
     assert windows_setup.info()["state"] == "older"
-    monkeypatch.setattr(windows_setup, "state", lambda: {"version": windows_setup.SETUP_VERSION, "set_up_at": "2026-09-28T10:00:00Z"})
-    monkeypatch.setattr(windows_setup, "problem", lambda: "the sandbox account for the open network mode is not usable by this user")
+    monkeypatch.setattr(
+        windows_setup, "state", lambda: {"version": windows_setup.SETUP_VERSION, "set_up_at": "2026-09-28T10:00:00Z"}
+    )
+    monkeypatch.setattr(
+        windows_setup, "problem", lambda: "the sandbox account for the open network mode is not usable by this user"
+    )
     info = windows_setup.info()
-    assert info["state"] == "broken" and info["set_up_at"] == "2026-09-28T10:00:00Z" and info["can_elevate"] and info["command"]
+    assert (
+        info["state"] == "broken"
+        and info["set_up_at"] == "2026-09-28T10:00:00Z"
+        and info["can_elevate"]
+        and info["command"]
+    )
     monkeypatch.setattr(windows_setup, "problem", lambda: None)
     assert windows_setup.info()["state"] == "ready"
 
@@ -220,7 +276,9 @@ def test_changing_the_provider_rebuilds_live_engines_built_under_the_old_rule(tm
     from coworker.server import create_app
     from tests.test_persona_connections import _mgr
 
-    monkeypatch.setattr(sandbox_settings, "openshell_problem", lambda fresh=False: "OpenShell is not installed", raising=False)
+    monkeypatch.setattr(
+        sandbox_settings, "openshell_problem", lambda fresh=False: "OpenShell is not installed", raising=False
+    )
     from coworker.sandbox import selection
 
     monkeypatch.setattr(selection, "openshell_problem", lambda fresh=False: "OpenShell is not installed")
@@ -278,4 +336,3 @@ def test_with_openshell_there_is_no_allow_everything(config_file, monkeypatch):
     refused = settings.update({"network_profile": "open"})
     assert refused["ok"] is False and "cannot allow every site" in refused["error"]
     assert 'sandbox_network_profile = "allowlist"' in config_file.read_text()
-

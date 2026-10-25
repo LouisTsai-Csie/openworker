@@ -48,7 +48,9 @@ def test_a_connect_that_needs_no_sandbox_is_unchanged(tmp_path, monkeypatch):
 
 def test_a_refused_sandbox_is_reported_on_the_socket_not_as_a_server_error(tmp_path, monkeypatch):
     mgr = _mgr(tmp_path, monkeypatch)
-    refusal = "The sandbox base image is not downloaded yet (about 5 GB, one time). Run `openworker machine sandbox setup`."
+    refusal = (
+        "The sandbox base image is not downloaded yet (about 5 GB, one time). Run `openworker machine sandbox setup`."
+    )
 
     def refuse(session_id, **kwargs):
         raise OpenShellUnavailable(refusal)
@@ -104,6 +106,7 @@ def test_the_first_turn_makes_the_sandbox_and_says_so(tmp_path, monkeypatch):
     assert [e.type.value for e in events] == ["sandbox_preparing", "error"]
     assert "bind mounts are off" in events[1].data["error"]
     assert engine.messages[-1]["kind"] == "error"
+
 
 def test_two_connects_to_one_session_build_one_engine(tmp_path, monkeypatch):
     mgr = _mgr(tmp_path, monkeypatch)

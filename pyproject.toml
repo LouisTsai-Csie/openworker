@@ -8,7 +8,7 @@ version = "0.3.4"
 description = "OpenWorker — an open-source AI coworker you govern. The headless runtime and CLI."
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "openai>=1.0",
     "anthropic>=0.40",  # native Claude Messages API provider
@@ -36,8 +36,6 @@ dependencies = [
     # IANA tz database for zoneinfo. Windows ships no system tz db, so without this every
     # named schedule timezone (UTC, Asia/Kolkata, …) silently falls back to local time.
     "tzdata; sys_platform == 'win32'",
-    # tomllib landed in the 3.11 stdlib; on the 3.10 floor config.py falls back to tomli.
-    "tomli>=2; python_version < '3.11'",
 ]
 
 [project.urls]
@@ -148,7 +146,12 @@ exclude_lines = [
 # Counts measured 2026-10-20 against 79k lines of coworker/ + 57k lines of tests/.
 # ---------------------------------------------------------------------------
 [tool.ruff]
-target-version = "py310"  # matches requires-python
+# 120, not the 88 default: measured against the tree, 88 leaves 7482 lines over and the
+# formatter can only reflow about half of them — the rest are string literals, URLs and
+# comments it will not touch. At 120 the formatter gets the residue down to 144, which is
+# small enough to clear by hand, so E501 can be a live gate instead of an exemption.
+line-length = 120
+target-version = "py312"  # matches requires-python
 # surfaces/ is the TypeScript + Rust GUI project; everything else Python is linted,
 # so a new top-level directory is covered the day it appears.
 extend-exclude = ["surfaces"]
@@ -169,35 +172,36 @@ select = [
 
 ignore = [
     # Every entry here is a rule the codebase still violates, with the count measured
-    # 2026-10-20. Rules that have been burned down are deleted from this list, not left
+    # 2026-10-24. Rules that have been burned down are deleted from this list, not left
     # behind: the list is the remaining debt, not a history of it.
 
-    # --- The formatter's job, not a manual sweep -------------------------------
-    "E501",    # 7396x line-too-long. `ruff format` reflows code; the residue is long
-               # string literals, URLs and comments. Adopt the formatter in its own PR.
-
     # --- Disagrees with a deliberate choice here -------------------------------
+    "SIM105",  # 129x try/except/pass -> contextlib.suppress. Measured on this 3.12 floor
+               # (2026-10-24): the bare form costs 38ns a pass, `suppress` 420ns — 11x, for
+               # a construct that buys nothing but the linter's approval. The spread is 105
+               # straight-line sites to 24 inside a loop, so this is NOT about hot paths; it
+               # is that the slower spelling is not an improvement anywhere.
+
     "BLE001",  # 258x blind `except Exception`. This is an agent runtime: one bad
                # connector must not take the server down. Most sites carry a trailing
                # comment naming what must survive. Narrowing each one needs a per-site
                # judgement about what the try block can raise — real work, not a sweep.
-    "SIM105",  # 129x try/except/pass -> contextlib.suppress: slower, and the explicit
-               # form reads better in the hot paths where most of these sit.
-    "E402",    #  33x import-not-at-top. Deliberate late imports break import cycles.
-               # Untangling those cycles is the real fix and is its own piece of work.
-    "A002",    #  14x a parameter named `id` / `type` / `input`. These are public tool
-               # and HTTP signatures; renaming them changes the wire API.
-    "RUF012",  #  13x mutable-class-default wants ClassVar on every dataclass default.
-    "SIM102",  #   9x collapsible if. Readability preference.
-    "SIM117",  #   7x nested with. Readability preference.
-    "E702",    #   5x semicolon. Style.
-    "E741",    #   4x `l` / `I` as a name. Style.
-    "B017",    #   4x assertRaises(Exception) in tests, where broad IS the assertion.
-    "B008",    #   2x function-call-in-default-argument: that IS FastAPI's Depends().
-    "SIM112",  #   1x uncapitalised environment variable.
-    "RUF001", "RUF002", "RUF003",  # 27x "ambiguous" unicode — the em dashes and arrows
-               # running through these comments and strings are intentional.
 ]
+
+# RUF001/2/3 stay ON; these fifteen characters are the ones this codebase means. Each was
+# read at every site (2026-10-24): math (− ∪ × ∗ ⨯ ⟋ α), numeric ranges (–), prose and UI
+# placeholders (‹ › ‘ ’), and a fullwidth comma inside a Chinese test fixture (，). Anything
+# NOT on this list — a Cyrillic `а`, a Greek `ο` — still fails CI, which is the point.
+allowed-confusables = ["−", "–", "×", "∗", "⨯", "⟋", "∪", "α", "‹", "›", "‘", "’", "，"]
+
+# E501 is live, but against 200 rather than the 120 the formatter wraps code at. The
+# formatter cannot reflow a string literal, and at 120 the residue was 144 lines that are
+# long because their CONTENT is long: tool descriptions and prompts the model reads, SQL,
+# embedded JavaScript, HTTP wire strings. Rewrapping those edits what the model is shown.
+# 200 catches the genuinely runaway line while leaving that text alone; the six that did
+# exceed it were split with implicit concatenation, byte-for-byte unchanged.
+[tool.ruff.lint.pycodestyle]
+max-line-length = 200
 
 [tool.ruff.lint.per-file-ignores]
 # DELIBERATE at these sites. Read and confirmed, not deferred. Anything that was
@@ -221,6 +225,27 @@ ignore = [
 # @abstractmethod would force every executor to implement a method most do not need.
 "coworker/sandbox/runner/executor.py" = ["B027"]
 
+# A002: `id` / `format` is a name on a wire, not a local choice. Renaming it changes the
+# tool schema the model is shown (automation/tools.py, integration_tools.py), the HTTP
+# query string (server/app.py), or the Slack payload the fake server mirrors. The four
+# sites where the name WAS local — a test helper, an argparse helper, a private registry
+# method and a keyword nobody passes — were renamed instead of listed here.
+"coworker/automation/tools.py" = ["A002"]
+"coworker/connectors/integration_tools.py" = ["A002"]
+"coworker/server/app.py" = ["A002"]
+"coworker/testing/fake_slack/server.py" = ["A002"]
+
+# B008: two lambda default arguments that bind the current `creds` value at definition
+# time — the standard late-binding guard, and the whole reason they are written there.
+# (This is NOT FastAPI's Depends(), which the repo-wide ignore used to claim it was.)
+"coworker/connectors/descriptors.py" = ["B008"]
+
+# E501 over 200, in the two places a line break would change the content itself: the
+# compaction summariser's prompt (a triple-quoted block, so not even splittable without
+# putting a real newline into what the model reads) and an embedded PowerShell one-liner.
+"coworker/compaction.py" = ["E501"]
+"coworker/sandbox/providers/windows_setup.py" = ["E501"]
+
 # Test fixtures open files and zip fixed-length literals; neither is a leak.
 "tests/test_toolchain.py" = ["SIM115"]
 "tests/test_sharing_v1.py" = ["SIM115"]
@@ -229,7 +254,7 @@ ignore = [
 # ---------------------------------------------------------------------------
 [tool.mypy]
 packages = ["coworker"]
-python_version = "3.10"
+python_version = "3.12"
 ignore_missing_imports = true      # aisuite, mcp, slack_bolt, … ship no stubs
 warn_unused_ignores = true
 warn_redundant_casts = true
@@ -317,13 +342,11 @@ module = [
     "coworker.web.tool",
 ]
 
-# Conditional-import shims (`try: import X / except ImportError: import Y as X`). Their
+# The aisuite-toolkits shim (`try: import X / except ImportError: import Y as X`). Its
 # `# type: ignore[no-redef]` reads as unused here only because ignore_missing_imports
 # resolves the fallback to Any — it is load-bearing wherever those stubs do exist.
 [[tool.mypy.overrides]]
 warn_unused_ignores = false
 module = [
-    "coworker.config",
     "coworker.sandbox.runner.toolcalls",
-    "coworker.sandbox.setup_cmd",
 ]

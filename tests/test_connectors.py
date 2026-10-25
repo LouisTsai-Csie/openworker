@@ -37,17 +37,13 @@ def test_target_invalid():
 
 
 def test_session_source_target_and_label():
-    s = SessionSource(
-        platform="telegram", chat_id="42", user_name="Alice", chat_type="dm"
-    )
+    s = SessionSource(platform="telegram", chat_id="42", user_name="Alice", chat_type="dm")
     assert s.target == "telegram:42"
     assert "Alice" in s.label() and "telegram" in s.label()
 
 
 def test_message_tagged_text_carries_reply_handle():
-    s = SessionSource(
-        platform="slack", chat_id="C9", user_name="Bob", chat_type="channel"
-    )
+    s = SessionSource(platform="slack", chat_id="C9", user_name="Bob", chat_type="channel")
     ev = MessageEvent(text="ship it", source=s)
     tag = ev.tagged_text()
     assert "reply→slack:C9" in tag and "ship it" in tag
@@ -56,9 +52,7 @@ def test_message_tagged_text_carries_reply_handle():
 # -- send_message tool ---------------------------------------------------------
 def _fake_senders(record):
     def sender(token, chat_id, text, thread_id=None):
-        record.append(
-            {"token": token, "chat_id": chat_id, "text": text, "thread_id": thread_id}
-        )
+        record.append({"token": token, "chat_id": chat_id, "text": text, "thread_id": thread_id})
         return SendResult(True, message_id="99")
 
     return {"telegram": sender, "slack": sender}
@@ -72,9 +66,7 @@ def test_send_message_success(tmp_path):
 
     out = tool(target="telegram:12345", text="hello")
     assert out == {"ok": True, "message_id": "99", "target": "telegram:12345"}
-    assert record == [
-        {"token": "T0K", "chat_id": "12345", "text": "hello", "thread_id": None}
-    ]
+    assert record == [{"token": "T0K", "chat_id": "12345", "text": "hello", "thread_id": None}]
     # tool carries gating metadata + an explicit schema
     assert tool.__aisuite_tool_metadata__.requires_approval is True
     assert tool.__coworker_schema__["function"]["name"] == "send_message"
@@ -87,16 +79,12 @@ def test_send_message_missing_token(tmp_path):
 
 
 def test_send_message_unknown_platform(tmp_path):
-    tool = make_send_message_tool(
-        SecretStore(tmp_path / "secrets.json"), senders=_fake_senders([])
-    )
+    tool = make_send_message_tool(SecretStore(tmp_path / "secrets.json"), senders=_fake_senders([]))
     assert "unknown platform" in tool(target="discord:1", text="x")["error"]
 
 
 def test_send_message_bad_target(tmp_path):
-    tool = make_send_message_tool(
-        SecretStore(tmp_path / "secrets.json"), senders=_fake_senders([])
-    )
+    tool = make_send_message_tool(SecretStore(tmp_path / "secrets.json"), senders=_fake_senders([]))
     assert "error" in tool(target="nonsense", text="x")
 
 
@@ -106,9 +94,7 @@ def test_is_authorized():
     assert is_authorized(s, SessionSource("telegram", "c", user_id="u1"))
     assert not is_authorized(s, SessionSource("telegram", "c", user_id="u2"))
     # empty allowlist = nobody
-    assert not is_authorized(
-        ConnectorSettings("telegram"), SessionSource("telegram", "c", user_id="u1")
-    )
+    assert not is_authorized(ConnectorSettings("telegram"), SessionSource("telegram", "c", user_id="u1"))
     # allow_all opens it
     assert is_authorized(
         ConnectorSettings("telegram", allow_all=True),
@@ -119,12 +105,8 @@ def test_is_authorized():
 def test_load_settings_from_secretstore(tmp_path, monkeypatch):
     monkeypatch.delenv("TELEGRAM_ALLOWED_USERS", raising=False)
     secrets = SecretStore(tmp_path / "secrets.json")
-    secrets.put(
-        "telegram:default", {"type": "token", "bot_token": "T", "allowed_users": ["u1"]}
-    )
-    settings = __import__(
-        "coworker.connectors.config", fromlist=["load_settings"]
-    ).load_settings(secrets)
+    secrets.put("telegram:default", {"type": "token", "bot_token": "T", "allowed_users": ["u1"]})
+    settings = __import__("coworker.connectors.config", fromlist=["load_settings"]).load_settings(secrets)
     assert settings["telegram"].enabled is True
     assert settings["telegram"].allowed_users == {"u1"}
     assert settings["slack"].enabled is False  # no token
@@ -134,9 +116,7 @@ def test_load_settings_env_allowlist(tmp_path, monkeypatch):
     monkeypatch.setenv("TELEGRAM_ALLOWED_USERS", "a, b ,c")
     secrets = SecretStore(tmp_path / "secrets.json")
     secrets.put("telegram:default", {"bot_token": "T"})
-    settings = __import__(
-        "coworker.connectors.config", fromlist=["load_settings"]
-    ).load_settings(secrets)
+    settings = __import__("coworker.connectors.config", fromlist=["load_settings"]).load_settings(secrets)
     assert settings["telegram"].allowed_users == {"a", "b", "c"}
 
 
@@ -165,9 +145,7 @@ async def test_gateway_dispatches_authorized():
 
 
 async def test_gateway_deliver_via_adapter():
-    gw = Gateway(
-        settings={"fake": ConnectorSettings("fake", enabled=True, allow_all=True)}
-    )
+    gw = Gateway(settings={"fake": ConnectorSettings("fake", enabled=True, allow_all=True)})
     fake = FakeAdapter()
     gw.register(fake)
     result = await gw.deliver("fake:c9", "pong")
@@ -177,9 +155,7 @@ async def test_gateway_deliver_via_adapter():
 
 async def test_gateway_full_echo_loop():
     """Inbound → handler replies via deliver → lands in the adapter outbox."""
-    gw = Gateway(
-        settings={"fake": ConnectorSettings("fake", enabled=True, allow_all=True)}
-    )
+    gw = Gateway(settings={"fake": ConnectorSettings("fake", enabled=True, allow_all=True)})
     fake = FakeAdapter()
 
     async def echo(ev: MessageEvent) -> None:
@@ -279,51 +255,25 @@ def test_engine_connector_tools_are_cowork_scoped(tmp_path):
     )
     assert "github_search" in cowork_with_github.registry.names()
     # §36: github_search is a registry READ — free; the write sibling still gates.
-    assert (
-        cowork_with_github.registry.get("github_search").metadata.requires_approval
-        is False
-    )
-    assert (
-        cowork_with_github.registry.get(
-            "github_create_issue"
-        ).metadata.requires_approval
-        is True
-    )
+    assert cowork_with_github.registry.get("github_search").metadata.requires_approval is False
+    assert cowork_with_github.registry.get("github_create_issue").metadata.requires_approval is True
 
 
 # -- connector setup (descriptors / connect / disconnect / list) ---------------
 def test_connector_list_descriptors(tmp_path):
     from coworker.connectors import connector_list
 
-    by_name = {
-        c["name"]: c for c in connector_list(SecretStore(tmp_path / "secrets.json"))
-    }
-    assert (
-        by_name["telegram"]["two_way"] is True
-        and by_name["telegram"]["connected"] is False
-    )
+    by_name = {c["name"]: c for c in connector_list(SecretStore(tmp_path / "secrets.json"))}
+    assert by_name["telegram"]["two_way"] is True and by_name["telegram"]["connected"] is False
     # channels (chat capability) is narrower than two_way: GitHub is two-way via the
     # relay (inbound mentions) but sessions can't subscribe to "GitHub channels".
     assert by_name["telegram"]["channels"] is True
     assert by_name["slack"]["channels"] is True
-    assert (
-        by_name["github"]["two_way"] is True and by_name["github"]["channels"] is False
-    )
-    assert (
-        by_name["gmail"]["available"] is True and by_name["gmail"]["connected"] is False
-    )
-    assert (
-        by_name["browser"]["available"] is True
-        and by_name["browser"]["connected"] is True
-    )
-    assert (
-        by_name["github"]["available"] is True
-        and by_name["github"]["connected"] is False
-    )
-    assert any(
-        t["name"] == "browser_open_url" and t["requires_approval"]
-        for t in by_name["browser"]["tools"]
-    )
+    assert by_name["github"]["two_way"] is True and by_name["github"]["channels"] is False
+    assert by_name["gmail"]["available"] is True and by_name["gmail"]["connected"] is False
+    assert by_name["browser"]["available"] is True and by_name["browser"]["connected"] is True
+    assert by_name["github"]["available"] is True and by_name["github"]["connected"] is False
+    assert any(t["name"] == "browser_open_url" and t["requires_approval"] for t in by_name["browser"]["tools"])
     # telegram exposes a bot_token field + setup instructions
     keys = {f["key"] for f in by_name["telegram"]["fields"]}
     assert "bot_token" in keys and by_name["telegram"]["instructions"]
@@ -339,16 +289,12 @@ def test_connector_list_pre_connect_copy(tmp_path):
 
     for c in connector_list(SecretStore(tmp_path / "secrets.json")):
         assert isinstance(c["about"], str)
-        assert c["access"] and all(
-            isinstance(line, str) and line for line in c["access"]
-        ), f"{c['name']} has no access copy"
+        assert c["access"] and all(isinstance(line, str) and line for line in c["access"]), (
+            f"{c['name']} has no access copy"
+        )
     # Curated (non-fallback) copy is required for every AVAILABLE connector —
     # the fallback line is only a net for experimental/placeholder entries.
-    missing = [
-        d.name
-        for d in list_descriptors()
-        if d.available and not d.experimental and d.name not in ACCESS
-    ]
+    missing = [d.name for d in list_descriptors() if d.available and not d.experimental and d.name not in ACCESS]
     assert not missing, f"connectors missing curated access copy: {missing}"
 
 
@@ -360,12 +306,7 @@ def test_connector_list_connected_for_required_profiles(tmp_path):
     )
 
     secrets = SecretStore(tmp_path / "secrets.json")
-    assert (
-        connect_connector(secrets, "github", {"token": "ghp_test"}, validate=False)[
-            "ok"
-        ]
-        is True
-    )
+    assert connect_connector(secrets, "github", {"token": "ghp_test"}, validate=False)["ok"] is True
     assert (
         connect_connector(
             secrets,
@@ -381,15 +322,10 @@ def test_connector_list_connected_for_required_profiles(tmp_path):
     )
 
     by_name = {c["name"]: c for c in connector_list(secrets)}
-    assert (
-        by_name["github"]["connected"] is True and by_name["github"]["enabled"] is True
-    )
+    assert by_name["github"]["connected"] is True and by_name["github"]["enabled"] is True
     assert by_name["jira"]["connected"] is True and by_name["jira"]["enabled"] is True
 
-    assert (
-        update_connector_tools(secrets, "github", {"github_search": False})["ok"]
-        is True
-    )
+    assert update_connector_tools(secrets, "github", {"github_search": False})["ok"] is True
     by_name = {c["name"]: c for c in connector_list(secrets)}
     gh_tools = {t["name"]: t for t in by_name["github"]["tools"]}
     assert gh_tools["github_search"]["enabled"] is False
@@ -416,11 +352,7 @@ def test_connect_disconnect_no_validate(tmp_path):
     assert profile["enabled"] is True
 
     listed = {c["name"]: c for c in connector_list(secrets)}["telegram"]
-    assert (
-        listed["connected"] is True
-        and listed["enabled"] is True
-        and listed["allowed_users"] == ["u1", "u2"]
-    )
+    assert listed["connected"] is True and listed["enabled"] is True and listed["allowed_users"] == ["u1", "u2"]
 
     assert disconnect_connector(secrets, "telegram")["ok"] is True
     assert secrets.get("telegram:default") is None
@@ -433,9 +365,7 @@ def test_reconnect_does_not_clobber_secret_or_allowlist(tmp_path):
     from coworker.connectors.descriptors import get_descriptor
 
     secrets = SecretStore(tmp_path / "secrets.json")
-    placeholder = next(
-        f.placeholder for f in get_descriptor("telegram").fields if f.key == "bot_token"
-    )
+    placeholder = next(f.placeholder for f in get_descriptor("telegram").fields if f.key == "bot_token")
     connect_connector(
         secrets,
         "telegram",
@@ -455,9 +385,7 @@ def test_reconnect_does_not_clobber_secret_or_allowlist(tmp_path):
     assert prof["allowed_users"] == ["u1", "u2"]  # not wiped
 
     # A genuinely new token still updates.
-    connect_connector(
-        secrets, "telegram", {"bot_token": "NEW-TOKEN-999"}, validate=False
-    )
+    connect_connector(secrets, "telegram", {"bot_token": "NEW-TOKEN-999"}, validate=False)
     assert secrets.get("telegram:default")["bot_token"] == "NEW-TOKEN-999"
     assert secrets.get("telegram:default")["allowed_users"] == [
         "u1",
@@ -469,9 +397,7 @@ def test_connect_missing_required_field(tmp_path):
     from coworker.connectors import connect_connector
 
     secrets = SecretStore(tmp_path / "secrets.json")
-    res = connect_connector(
-        secrets, "slack", {"bot_token": "xoxb"}, validate=False
-    )  # app_token missing
+    res = connect_connector(secrets, "slack", {"bot_token": "xoxb"}, validate=False)  # app_token missing
     assert res["ok"] is False and "missing" in res["error"]
 
 
@@ -509,9 +435,7 @@ def test_connect_validation_runs(tmp_path):
     orig = desc.validate
     desc.validate = lambda creds: ValidationResult(True, identity="@mybot")
     try:
-        res = connect_connector(
-            secrets, "telegram", {"bot_token": "T"}
-        )  # validate=True
+        res = connect_connector(secrets, "telegram", {"bot_token": "T"})  # validate=True
     finally:
         desc.validate = orig
     assert res == {"ok": True, "account": "@mybot"}
@@ -527,9 +451,7 @@ def test_connectors_rest(tmp_path, monkeypatch):
 
     monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
     desc = get_descriptor("telegram")
-    monkeypatch.setattr(
-        desc, "validate", lambda creds: ValidationResult(True, identity="@testbot")
-    )
+    monkeypatch.setattr(desc, "validate", lambda creds: ValidationResult(True, identity="@testbot"))
 
     client = TestClient(create_app(SessionManager(data_dir=tmp_path / "data")))
 
@@ -542,17 +464,13 @@ def test_connectors_rest(tmp_path, monkeypatch):
     )
     assert r.json() == {"ok": True, "account": "@testbot"}
 
-    tg = {c["name"]: c for c in client.get("/v1/connectors").json()["connectors"]}[
-        "telegram"
-    ]
+    tg = {c["name"]: c for c in client.get("/v1/connectors").json()["connectors"]}["telegram"]
     assert tg["connected"] is True and tg["account"] == "@testbot"
     # secrets never leak over REST
     assert "T0K" not in client.get("/v1/connectors").text
 
     assert client.post("/v1/connectors/telegram/disconnect").json()["ok"] is True
-    assert {c["name"]: c for c in client.get("/v1/connectors").json()["connectors"]}[
-        "telegram"
-    ]["connected"] is False
+    assert {c["name"]: c for c in client.get("/v1/connectors").json()["connectors"]}["telegram"]["connected"] is False
 
 
 # -- inbound: event mappers ----------------------------------------------------
@@ -572,12 +490,7 @@ def test_telegram_message_mapper():
     assert ev.text == "hello" and ev.source.target == "telegram:12345"
     assert ev.source.user_id == "99" and ev.source.chat_type == "dm"
     # non-text (e.g. a sticker) maps to None
-    assert (
-        telegram_message_to_event(
-            SimpleNamespace(text=None, chat=SimpleNamespace(id=1, type="private"))
-        )
-        is None
-    )
+    assert telegram_message_to_event(SimpleNamespace(text=None, chat=SimpleNamespace(id=1, type="private"))) is None
 
 
 def test_slack_event_mapper_and_loop_guard():
@@ -593,26 +506,18 @@ def test_slack_event_mapper_and_loop_guard():
         },
         "BOT",
     )
-    assert (
-        ev.text == "ship it"
-        and ev.source.target == "slack:C9"
-        and ev.source.chat_type == "channel"
-    )
+    assert ev.text == "ship it" and ev.source.target == "slack:C9" and ev.source.chat_type == "channel"
     # bot echo / edits / empty → dropped (reply-loop guard)
     assert slack_event_to_event({"text": "x", "user": "BOT"}, "BOT") is None
     assert slack_event_to_event({"text": "x", "bot_id": "B1"}, None) is None
-    assert (
-        slack_event_to_event({"subtype": "message_changed", "text": "x"}, None) is None
-    )
+    assert slack_event_to_event({"subtype": "message_changed", "text": "x"}, None) is None
 
 
 def test_make_adapter():
     from coworker.connectors import SlackAdapter, TelegramAdapter, make_adapter
 
     assert isinstance(make_adapter("telegram", {"bot_token": "T"}), TelegramAdapter)
-    assert isinstance(
-        make_adapter("slack", {"bot_token": "x", "app_token": "y"}), SlackAdapter
-    )
+    assert isinstance(make_adapter("slack", {"bot_token": "x", "app_token": "y"}), SlackAdapter)
     assert make_adapter("slack", {"bot_token": "x"}) is None  # app_token missing
     assert make_adapter("telegram", {}) is None
 
@@ -641,9 +546,7 @@ async def test_slack_resolves_and_caches_display_name():
             raise RuntimeError("nope")
 
     a._app.client = _BadClient()
-    assert (
-        await a._display_name("U2") is None
-    )  # failure → None (caller falls back to the id)
+    assert await a._display_name("U2") is None  # failure → None (caller falls back to the id)
     assert await a._display_name("") is None  # no id → no call
 
 
@@ -674,22 +577,16 @@ async def test_slack_resolve_channel_name():
             raise RuntimeError("nope")
 
     a._app.client = _BadClient()
-    assert (
-        await a._channel_name("C2") is None
-    )  # failure → None (caller falls back to the id)
+    assert await a._channel_name("C2") is None  # failure → None (caller falls back to the id)
     assert await a._channel_name("") is None  # no id → no call
 
 
 # -- chat-ID auto-capture + connector allow-list -------------------------------
 async def test_gateway_records_recent_senders():
-    gw = Gateway(
-        settings={"fake": ConnectorSettings("fake", enabled=True, allowed_users={"u1"})}
-    )
+    gw = Gateway(settings={"fake": ConnectorSettings("fake", enabled=True, allowed_users={"u1"})})
     fake = FakeAdapter()
     gw.register(fake)
-    await fake.inject(
-        "hi", user_id="u2", user_name="Bob"
-    )  # unauthorized → dropped but captured
+    await fake.inject("hi", user_id="u2", user_name="Bob")  # unauthorized → dropped but captured
     await fake.inject("yo", user_id="u1", user_name="Al")  # authorized
     recent = gw.recent_senders()
     assert [r["user_id"] for r in recent] == ["u1", "u2"]  # most-recent first
@@ -755,9 +652,7 @@ _NEW_CONNECTORS = {
 def test_new_connector_descriptors_listed(tmp_path):
     from coworker.connectors import connector_list
 
-    by_name = {
-        c["name"]: c for c in connector_list(SecretStore(tmp_path / "secrets.json"))
-    }
+    by_name = {c["name"]: c for c in connector_list(SecretStore(tmp_path / "secrets.json"))}
     for name in _NEW_CONNECTORS:
         assert by_name[name]["available"] is True
         assert by_name[name]["connected"] is False
@@ -796,10 +691,7 @@ def test_new_connectors_connect_and_gate_tools(tmp_path):
 def test_new_tools_error_when_not_connected(tmp_path):
     from coworker.connectors.integration_tools import make_integration_tools
 
-    tools = {
-        t.__name__: t
-        for t in make_integration_tools(SecretStore(tmp_path / "secrets.json"))
-    }
+    tools = {t.__name__: t for t in make_integration_tools(SecretStore(tmp_path / "secrets.json"))}
     assert "not connected" in tools["linear_search_issues"](query="q")["error"]
     assert "not connected" in tools["gitlab_search"](query="q")["error"]
     assert "not connected" in tools["discord_send_message"]("1", "hi")["error"]
@@ -808,10 +700,7 @@ def test_new_tools_error_when_not_connected(tmp_path):
     assert "not connected" in tools["hubspot_search"]("acme")["error"]
     assert "not connected" in tools["posthog_query"]("SELECT 1")["error"]
     assert "not connected" in tools["mixpanel_top_events"]()["error"]
-    assert (
-        "not connected"
-        in tools["amplitude_active_users"]("20260701", "20260707")["error"]
-    )
+    assert "not connected" in tools["amplitude_active_users"]("20260701", "20260707")["error"]
     assert "not connected" in tools["apollo_enrich_company"]("acme.io")["error"]
     assert "not connected" in tools["hunter_verify_email"]("a@b.co")["error"]
     assert "not connected" in tools["dropbox_list_folder"]()["error"]
@@ -860,9 +749,7 @@ def test_new_tools_request_routing(tmp_path, monkeypatch):
     assert calls[-1]["json"]["variables"] == {"term": "crash", "first": 5}
 
     tools["gitlab_get_issue"]("group/repo", 7)
-    assert (
-        calls[-1]["url"] == "https://gitlab.com/api/v4/projects/group%2Frepo/issues/7"
-    )
+    assert calls[-1]["url"] == "https://gitlab.com/api/v4/projects/group%2Frepo/issues/7"
     assert calls[-1]["headers"]["PRIVATE-TOKEN"] == "glpat-x"
 
     tools["discord_send_message"]("123", "x" * 3000)
@@ -891,14 +778,10 @@ def test_new_tools_request_routing(tmp_path, monkeypatch):
     assert calls[-1]["url"] == "https://api.box.com/2.0/files/f1/content"
 
     tools["quickbooks_query"]("SELECT * FROM Invoice", max_results=5)
-    assert (
-        calls[-1]["url"] == "https://quickbooks.api.intuit.com/v3/company/9341453/query"
-    )
+    assert calls[-1]["url"] == "https://quickbooks.api.intuit.com/v3/company/9341453/query"
     assert calls[-1]["params"]["query"] == "SELECT * FROM Invoice MAXRESULTS 5"
     tools["quickbooks_query"]("SELECT * FROM Bill MAXRESULTS 3")
-    assert (
-        calls[-1]["params"]["query"] == "SELECT * FROM Bill MAXRESULTS 3"
-    )  # untouched
+    assert calls[-1]["params"]["query"] == "SELECT * FROM Bill MAXRESULTS 3"  # untouched
 
     tools["quickbooks_get_report"]("ProfitAndLoss", start_date="2026-01-01")
     assert calls[-1]["url"].endswith("/reports/ProfitAndLoss")
@@ -991,10 +874,7 @@ def test_batch2_tools_request_routing(tmp_path, monkeypatch):
 
     tools["notion_query_database"]("db1")
     assert calls[-1]["url"].endswith("/v1/databases/db1/query")
-    assert (
-        "must be a Notion filter"
-        in tools["notion_query_database"]("db1", "nope")["error"]
-    )
+    assert "must be a Notion filter" in tools["notion_query_database"]("db1", "nope")["error"]
 
     tools["notion_create_page"]("pg1", "Weekly notes", "line one\n\nline two")
     assert calls[-1]["json"]["parent"] == {"page_id": "pg1"}
@@ -1056,9 +936,7 @@ def test_batch3_tools_request_routing(tmp_path, monkeypatch):
     assert calls[-1]["params"]["lead_id"] == "lead_1"
 
     tools["close_create_lead"]("Acme", contact_name="Ada", contact_email="a@acme.io")
-    assert calls[-1]["json"]["contacts"] == [
-        {"name": "Ada", "emails": [{"email": "a@acme.io"}]}
-    ]
+    assert calls[-1]["json"]["contacts"] == [{"name": "Ada", "emails": [{"email": "a@acme.io"}]}]
 
     tools["close_update_opportunity"]("opp_1", status_id="stat_won")
     assert calls[-1]["url"].endswith("/opportunity/opp_1/")
@@ -1091,9 +969,7 @@ def test_batch3_tools_request_routing(tmp_path, monkeypatch):
 
     # Docusign: cached account routes straight to the account's base_uri.
     tools["docusign_list_envelopes"](status="completed", since_days=7)
-    assert calls[-1]["url"] == (
-        "https://demo.docusign.net/restapi/v2.1/accounts/acc-1/envelopes"
-    )
+    assert calls[-1]["url"] == ("https://demo.docusign.net/restapi/v2.1/accounts/acc-1/envelopes")
     assert calls[-1]["params"]["status"] == "completed"
 
     tools["docusign_get_envelope"]("env-1")
@@ -1101,9 +977,7 @@ def test_batch3_tools_request_routing(tmp_path, monkeypatch):
     assert calls[-1]["params"] == {"include": "recipients"}
 
     tools["docusign_send_from_template"]("tpl-1", "a@b.co", "Ada", subject="NDA")
-    assert calls[-1]["json"]["templateRoles"] == [
-        {"email": "a@b.co", "name": "Ada", "roleName": "Signer"}
-    ]
+    assert calls[-1]["json"]["templateRoles"] == [{"email": "a@b.co", "name": "Ada", "roleName": "Signer"}]
     assert calls[-1]["json"]["status"] == "sent"
 
     # Canva: bearer token; export is a job POST.
@@ -1249,9 +1123,7 @@ def test_managed_callback_profile_keys_by_account_id(tmp_path):
     )
     out = managed_connect_connector(secrets, "notion", p1)
     assert out["ok"] and out["account_id"] == "ws-1"
-    p2 = managed_profile_from_callback(
-        {"access_token": "t2", "account": "Ops Space", "account_id": "ws-2"}
-    )
+    p2 = managed_profile_from_callback({"access_token": "t2", "account": "Ops Space", "account_id": "ws-2"})
     managed_connect_connector(secrets, "notion", p2)
     assert [a for a, _ in accounts.list_accounts(secrets, "notion")] == ["ws-1", "ws-2"]
     # display names survive; default stays the first workspace
@@ -1308,9 +1180,7 @@ def test_outlook_managed_multi_account_keys_by_email(tmp_path, monkeypatch):
         managed_connect_connector(
             secrets,
             "outlook",
-            managed_profile_from_callback(
-                {"access_token": tok, "account": email, "provider": "microsoft"}
-            ),
+            managed_profile_from_callback({"access_token": tok, "account": email, "provider": "microsoft"}),
         )
     ids = [a for a, _ in accounts.list_accounts(secrets, "outlook")]
     assert ids == ["ops@acme.com", "rohit@openworker.com"], ids
@@ -1398,9 +1268,7 @@ def test_outlook_calendar_tools_hit_the_right_graph_endpoints(tmp_path, monkeypa
     assert "error" in out
 
     # A time-windowed list passes the window through to calendarView.
-    tools["outlook_list_events"](
-        start="2026-07-20T00:00:00Z", end="2026-07-22T00:00:00Z"
-    )
+    tools["outlook_list_events"](start="2026-07-20T00:00:00Z", end="2026-07-22T00:00:00Z")
     assert calls[-1]["params"]["startDateTime"] == "2026-07-20T00:00:00Z"
     assert calls[-1]["params"]["endDateTime"] == "2026-07-22T00:00:00Z"
     assert calls[-1]["params"]["$orderby"] == "start/dateTime"
@@ -1414,12 +1282,8 @@ def test_batch2_account_param_picks_the_profile(tmp_path, monkeypatch):
 
     calls = []
     secrets = SecretStore(tmp_path / "secrets.json")
-    accounts.add_account(
-        secrets, "posthog", "11", {"api_key": "k11", "project_id": "11"}
-    )
-    accounts.add_account(
-        secrets, "posthog", "22", {"api_key": "k22", "project_id": "22"}
-    )
+    accounts.add_account(secrets, "posthog", "11", {"api_key": "k11", "project_id": "11"})
+    accounts.add_account(secrets, "posthog", "22", {"api_key": "k22", "project_id": "22"})
 
     def fake_request(method, url, *, headers=None, params=None, json=None, auth=None):
         calls.append({"url": url, "headers": headers or {}})
@@ -1455,9 +1319,7 @@ def test_hubspot_search_properties_and_filters(tmp_path, monkeypatch):
     )
     body = calls[-1]["json"]
     assert body["properties"] == ["org_type", "check_min", "check_max"]
-    assert body["filterGroups"] == [
-        {"filters": [{"property": "org_type", "operator": "EQ", "value": "VC"}]}
-    ]
+    assert body["filterGroups"] == [{"filters": [{"property": "org_type", "operator": "EQ", "value": "VC"}]}]
     assert body["limit"] == 50 and "query" not in body
 
     tools["hubspot_search"]("acme")  # plain free-text still works
@@ -1469,9 +1331,7 @@ def test_hubspot_search_properties_and_filters(tmp_path, monkeypatch):
     assert "query" in tools["hubspot_search"]()["error"]
     assert len(calls) == n
 
-    tools["hubspot_get_object"](
-        "deals", "42", properties="round,portfolio_company", associations="companies"
-    )
+    tools["hubspot_get_object"]("deals", "42", properties="round,portfolio_company", associations="companies")
     assert calls[-1]["params"] == {
         "properties": "round,portfolio_company",
         "associations": "companies",
@@ -1525,9 +1385,7 @@ def test_gitlab_self_hosted_base_url(tmp_path, monkeypatch):
         {"token": "t", "base_url": "https://git.example.com/", "enabled": True},
     )
     calls = []
-    monkeypatch.setattr(
-        it, "_request", lambda m, url, **kw: calls.append(url) or {"ok": True}
-    )
+    monkeypatch.setattr(it, "_request", lambda m, url, **kw: calls.append(url) or {"ok": True})
     tools = {t.__name__: t for t in it.make_integration_tools(secrets)}
     tools["gitlab_search"]("q")
     assert calls[0] == "https://git.example.com/api/v4/search"
@@ -1542,9 +1400,7 @@ def test_quickbooks_sandbox_environment(tmp_path, monkeypatch):
         {"access_token": "t", "realm_id": "r1", "environment": "sandbox"},
     )
     calls = []
-    monkeypatch.setattr(
-        it, "_request", lambda m, url, **kw: calls.append(url) or {"ok": True}
-    )
+    monkeypatch.setattr(it, "_request", lambda m, url, **kw: calls.append(url) or {"ok": True})
     tools = {t.__name__: t for t in it.make_integration_tools(secrets)}
     tools["quickbooks_list_customers"]()
     assert calls[0] == "https://sandbox-quickbooks.api.intuit.com/v3/company/r1/query"
@@ -1664,9 +1520,7 @@ def test_experimental_connect_requires_optin_and_ack(tmp_path, experimental_desc
     assert res["ok"] is False and "acknowledgment" in res["error"]
     assert "laundry" in res["risk_notice"]  # surfaced so the UI can show it
 
-    res = connect_connector(
-        secrets, "dangerzone", {"token": "t"}, validate=False, acknowledged=True
-    )
+    res = connect_connector(secrets, "dangerzone", {"token": "t"}, validate=False, acknowledged=True)
     assert res["ok"] is True
 
     # turning the setting off hides it (and gates its tools) even though connected
@@ -1678,9 +1532,7 @@ def test_experimental_does_not_gate_regular_connectors(tmp_path):
     from coworker.connectors import connect_connector
 
     secrets = SecretStore(tmp_path / "secrets.json")
-    res = connect_connector(
-        secrets, "github", {"token": "ghp_x"}, validate=False
-    )  # no acknowledged flag
+    res = connect_connector(secrets, "github", {"token": "ghp_x"}, validate=False)  # no acknowledged flag
     assert res["ok"] is True
 
 
@@ -1697,19 +1549,12 @@ def test_experimental_rest_roundtrip(tmp_path, monkeypatch, experimental_descrip
     names = {c["name"] for c in client.get("/v1/connectors").json()["connectors"]}
     assert "dangerzone" not in names
 
-    assert (
-        client.post(
-            "/v1/settings/experimental-connectors", json={"value": True}
-        ).json()["enabled"]
-        is True
-    )
+    assert client.post("/v1/settings/experimental-connectors", json={"value": True}).json()["enabled"] is True
     assert client.get("/v1/settings").json()["experimental_connectors"] is True
     names = {c["name"] for c in client.get("/v1/connectors").json()["connectors"]}
     assert "dangerzone" in names
 
-    r = client.post(
-        "/v1/connectors/dangerzone/connect", json={"fields": {"token": "T"}}
-    ).json()
+    r = client.post("/v1/connectors/dangerzone/connect", json={"fields": {"token": "T"}}).json()
     assert r["ok"] is False and "acknowledgment" in r["error"]
     r = client.post(
         "/v1/connectors/dangerzone/connect",

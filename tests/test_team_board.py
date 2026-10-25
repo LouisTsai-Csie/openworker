@@ -28,6 +28,7 @@ def assigned_item(store, assignee="worker-1"):
 
 # ------------------------------------------------------------------ create_item
 
+
 def test_acceptance_criteria_are_required(store):
     with pytest.raises(BoardError, match="criteria"):
         store.create_item(SPACE, LEAD, title="Vague hope", criteria="  ")
@@ -36,7 +37,10 @@ def test_acceptance_criteria_are_required(store):
 def test_workers_file_items_open_and_unassigned(store):
     mine = assigned_item(store)
     filed = store.create_item(
-        SPACE, WORKER, title="Rounding bug in invoices", criteria="repro + fix",
+        SPACE,
+        WORKER,
+        title="Rounding bug in invoices",
+        criteria="repro + fix",
         parent=mine,
     )
     assert filed["state"] == "open"
@@ -58,12 +62,8 @@ def test_workers_file_items_open_and_unassigned(store):
 
 
 def test_child_inherits_parent_case(store):
-    parent = store.create_item(
-        SPACE, LEAD, title="Root", criteria="c", case="findings"
-    )
-    child = store.create_item(
-        SPACE, LEAD, title="Child", criteria="c", parent=parent["id"]
-    )
+    parent = store.create_item(SPACE, LEAD, title="Root", criteria="c", case="findings")
+    child = store.create_item(SPACE, LEAD, title="Child", criteria="c", parent=parent["id"])
     assert child["case_id"] == "findings"
     assert {"kind": "parent", "item": parent["id"]} in child["links"]
 
@@ -86,6 +86,7 @@ def test_worker_cannot_expand_its_slice_through_a_hidden_parent(store):
 
 
 # ------------------------------------------------------------------- transitions
+
 
 def test_full_happy_path(store):
     item_id = assigned_item(store)
@@ -152,6 +153,7 @@ def test_rework_loop(store):
 
 # ---------------------------------------------------------------- assign / link
 
+
 def test_cannot_assign_closed_items(store):
     item_id = assigned_item(store)
     store.transition(SPACE, LEAD, item_id, "canceled")
@@ -179,9 +181,7 @@ def test_blocked_by_shows_on_the_other_side(store):
     a = store.create_item(SPACE, LEAD, title="A", criteria="c")
     b = store.create_item(SPACE, LEAD, title="B", criteria="c")
     store.link(SPACE, LEAD, a["id"], "blocks", b["id"])
-    assert {"kind": "blocked_by", "item": a["id"]} in store.get_item(
-        SPACE, b["id"], actor=LEAD
-    )["links"]
+    assert {"kind": "blocked_by", "item": a["id"]} in store.get_item(SPACE, b["id"], actor=LEAD)["links"]
 
 
 def test_artifact_refs_accumulate_on_the_item(store):
@@ -189,8 +189,12 @@ def test_artifact_refs_accumulate_on_the_item(store):
     store.transition(SPACE, WORKER, item_id, "in_progress")
     store.comment(SPACE, WORKER, item_id, "fix branch up", refs=["branch:fix/acl"])
     store.transition(
-        SPACE, WORKER, item_id, "review",
-        comment="done", refs=["branch:fix/acl", "report:posture.html"],
+        SPACE,
+        WORKER,
+        item_id,
+        "review",
+        comment="done",
+        refs=["branch:fix/acl", "report:posture.html"],
     )
     item = store.get_item(SPACE, item_id, actor=WORKER)
     assert item["refs"] == ["branch:fix/acl", "report:posture.html"]  # deduped, ordered
@@ -199,6 +203,7 @@ def test_artifact_refs_accumulate_on_the_item(store):
 
 
 # ------------------------------------------------------------- worker visibility
+
 
 def test_worker_sees_only_its_slice(store):
     mine = assigned_item(store, assignee="worker-1")
@@ -250,14 +255,16 @@ def test_worker_comments_only_on_its_slice(store):
 
 # ------------------------------------------------------------------- tool layer
 
+
 def test_tool_sets_are_role_filtered(store):
     lead_names = {tool.__name__ for tool in board_tools(store, space=SPACE, actor=LEAD)}
-    worker_names = {
-        tool.__name__ for tool in board_tools(store, space=SPACE, actor=WORKER)
-    }
+    worker_names = {tool.__name__ for tool in board_tools(store, space=SPACE, actor=WORKER)}
     readers = {"get_item_comments", "get_item_comment", "get_proposal"}
     assert lead_names == {"create_item", "list_items", "get_item", "transition", "comment", "assign", "link"} | readers
-    assert worker_names == {"create_item", "list_items", "get_item", "transition", "comment", "claim", "set_status"} | readers
+    assert (
+        worker_names
+        == {"create_item", "list_items", "get_item", "transition", "comment", "claim", "set_status"} | readers
+    )
 
 
 def test_tools_return_errors_instead_of_raising(store):

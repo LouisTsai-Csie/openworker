@@ -4,6 +4,7 @@ waives the approval card (and ONLY the card), survives sessions, and is revocabl
 The mode matrix here is the executable twin of test_mcp_floor's legacy-flag matrix:
 identical in every cell except who granted the trust.
 """
+
 from __future__ import annotations
 
 import json
@@ -46,9 +47,7 @@ def test_trust_rules_parse_persist_and_revoke(tmp_path):
 def test_trust_accepts_hand_written_globs_and_bare_strings(tmp_path):
     # The card writes exact names; hand-editing may use globs or bare strings.
     path = tmp_path / "ro.json"
-    path.write_text(
-        json.dumps({"trust": ["mcp__notes__*", {"pattern": TOOL}]}), encoding="utf-8"
-    )
+    path.write_text(json.dumps({"trust": ["mcp__notes__*", {"pattern": TOOL}]}), encoding="utf-8")
     store = RiskOverrideStore(path)
     assert store.trusted("mcp__notes__anything")
     assert store.trusted(TOOL)
@@ -89,32 +88,24 @@ def trusted_store(tmp_path) -> RiskOverrideStore:
 
 
 def test_matrix_ask_mode_waives_the_card(tmp_path):
-    d = engine(Mode.INTERACTIVE, tmp_path, trusted_store(tmp_path)).evaluate(
-        TOOL, {}, MCP_META
-    )
+    d = engine(Mode.INTERACTIVE, tmp_path, trusted_store(tmp_path)).evaluate(TOOL, {}, MCP_META)
     assert d.allowed and d.reason == "trusted MCP tool (user trust rule)"
 
 
 def test_matrix_discuss_still_denies(tmp_path):
-    d = engine(Mode.DISCUSS, tmp_path, trusted_store(tmp_path)).evaluate(
-        TOOL, {}, MCP_META
-    )
+    d = engine(Mode.DISCUSS, tmp_path, trusted_store(tmp_path)).evaluate(TOOL, {}, MCP_META)
     assert not d.allowed and not d.needs_user
 
 
 def test_matrix_auto_approve_still_routes_to_the_reviewer(tmp_path):
     # §1.5 v1: user trust does not skip the judge — the decision falls through to
     # needs_user (reviewer-eligible, never human_only).
-    d = engine(Mode.AUTO_APPROVE, tmp_path, trusted_store(tmp_path)).evaluate(
-        TOOL, {}, MCP_META
-    )
+    d = engine(Mode.AUTO_APPROVE, tmp_path, trusted_store(tmp_path)).evaluate(TOOL, {}, MCP_META)
     assert not d.allowed and d.needs_user and not d.human_only
 
 
 def test_matrix_bypass_unchanged(tmp_path):
-    assert engine(Mode.BYPASS_APPROVALS, tmp_path, trusted_store(tmp_path)).evaluate(
-        TOOL, {}, MCP_META
-    ).allowed
+    assert engine(Mode.BYPASS_APPROVALS, tmp_path, trusted_store(tmp_path)).evaluate(TOOL, {}, MCP_META).allowed
 
 
 # -- test-plan #17 (server side): the grant is offered only where the card shows it
@@ -190,9 +181,7 @@ def test_patch_global_server_none_deletes_the_key(tmp_path, monkeypatch):
     from coworker.mcp import config as mcp_config
 
     monkeypatch.setattr(mcp_config, "global_mcp_path", lambda: tmp_path / "mcp.json")
-    mcp_config.put_global_server(
-        "jira", {"url": "https://x/mcp", "requires_approval": False}
-    )
+    mcp_config.put_global_server("jira", {"url": "https://x/mcp", "requires_approval": False})
     assert mcp_config.read_global()["jira"]["requires_approval"] is False
     mcp_config.patch_global_server("jira", {"requires_approval": None})
     assert "requires_approval" not in mcp_config.read_global()["jira"]

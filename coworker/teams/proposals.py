@@ -1,4 +1,5 @@
 """Structured proposal intent. Declarations never grant execution authority."""
+
 from __future__ import annotations
 
 import re
@@ -6,7 +7,12 @@ from copy import deepcopy
 
 
 def obj(properties, required=None):
-    return {"type": "object", "properties": properties, "required": required or list(properties), "additionalProperties": False}
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": required or list(properties),
+        "additionalProperties": False,
+    }
 
 
 TEXT = {"type": "string", "minLength": 1, "maxLength": 600}
@@ -18,38 +24,70 @@ def array(item, minimum=0, maximum=100):
 
 
 GROUP = obj({"id": KEY, "title": TEXT, "summary": TEXT})
-EXTERNAL_ACTIONS = obj({
-    "status": {"type": "string", "enum": ["none", "planned", "undetermined"]},
-    "actions": array(TEXT, maximum=20),
-    "exclusions": array(TEXT, maximum=20),
-    "explanation": TEXT,
-})
-WORK_PROPOSAL_SCHEMA = obj({
-    "title": TEXT, "summary": TEXT,
-    "targets": {**array(TEXT, 1, 20), "description": "Products, repositories, accounts, or environments in scope. Not implementation filenames; put those in individual task descriptions."},
-    "external_actions": EXTERNAL_ACTIONS,
-    "activities": array(GROUP, 1, 12),
-    "workstreams": array(GROUP, 1, 24),
-    "items": array(obj({
-        "key": KEY, "title": TEXT, "criteria": TEXT,
-        "description": {"type": "string", "maxLength": 8000},
-        "case": {"type": "string", "maxLength": 200},
-        "activity": KEY, "workstream": KEY,
-        "depends_on": array(KEY), "verifies": array(KEY),
-    }, ["key", "title", "criteria", "activity", "workstream", "depends_on", "verifies"]), 1),
-    "final_acceptance": obj({"item_key": KEY, "owner": {"type": "string", "enum": ["lead", "assigned_worker"]}}),
-})
-TEAM_PROPOSAL_SCHEMA = obj({
-    "title": TEXT, "summary": TEXT, "groups": array(GROUP, 1, 24),
-    "members": array(obj({
-        "persona": TEXT, "name": TEXT, "model": TEXT, "reason": TEXT,
-        "group": KEY, "item_ids": array({"type": "integer", "minimum": 1}),
-        "connectors": array(TEXT, maximum=30),
-        "connector_reasons": {"type": "object", "additionalProperties": TEXT},
-        "approval_guidance": {"type": "string", "maxLength": 2400},
-    }, ["persona", "name", "reason", "group", "item_ids"]), 1),
-    "enable_chat": {"type": "boolean"},
-})
+EXTERNAL_ACTIONS = obj(
+    {
+        "status": {"type": "string", "enum": ["none", "planned", "undetermined"]},
+        "actions": array(TEXT, maximum=20),
+        "exclusions": array(TEXT, maximum=20),
+        "explanation": TEXT,
+    }
+)
+WORK_PROPOSAL_SCHEMA = obj(
+    {
+        "title": TEXT,
+        "summary": TEXT,
+        "targets": {
+            **array(TEXT, 1, 20),
+            "description": "Products, repositories, accounts, or environments in scope. Not implementation filenames; put those in individual task descriptions.",
+        },
+        "external_actions": EXTERNAL_ACTIONS,
+        "activities": array(GROUP, 1, 12),
+        "workstreams": array(GROUP, 1, 24),
+        "items": array(
+            obj(
+                {
+                    "key": KEY,
+                    "title": TEXT,
+                    "criteria": TEXT,
+                    "description": {"type": "string", "maxLength": 8000},
+                    "case": {"type": "string", "maxLength": 200},
+                    "activity": KEY,
+                    "workstream": KEY,
+                    "depends_on": array(KEY),
+                    "verifies": array(KEY),
+                },
+                ["key", "title", "criteria", "activity", "workstream", "depends_on", "verifies"],
+            ),
+            1,
+        ),
+        "final_acceptance": obj({"item_key": KEY, "owner": {"type": "string", "enum": ["lead", "assigned_worker"]}}),
+    }
+)
+TEAM_PROPOSAL_SCHEMA = obj(
+    {
+        "title": TEXT,
+        "summary": TEXT,
+        "groups": array(GROUP, 1, 24),
+        "members": array(
+            obj(
+                {
+                    "persona": TEXT,
+                    "name": TEXT,
+                    "model": TEXT,
+                    "reason": TEXT,
+                    "group": KEY,
+                    "item_ids": array({"type": "integer", "minimum": 1}),
+                    "connectors": array(TEXT, maximum=30),
+                    "connector_reasons": {"type": "object", "additionalProperties": TEXT},
+                    "approval_guidance": {"type": "string", "maxLength": 2400},
+                },
+                ["persona", "name", "reason", "group", "item_ids"],
+            ),
+            1,
+        ),
+        "enable_chat": {"type": "boolean"},
+    }
+)
 
 
 def _check(value, schema, path):
@@ -97,7 +135,9 @@ def validate_work_proposal(args):
     keys = _unique(args["items"], "key", "items")
     external = args["external_actions"]
     if bool(external["actions"]) != (external["status"] == "planned"):
-        raise ValueError("external_actions.actions must list actions only when status is planned; use explanation for uncertainty")
+        raise ValueError(
+            "external_actions.actions must list actions only when status is planned; use explanation for uncertainty"
+        )
     if args["final_acceptance"]["item_key"] not in keys:
         raise ValueError("final_acceptance.item_key must reference a proposed task")
     for item in args["items"]:
@@ -109,6 +149,7 @@ def validate_work_proposal(args):
                 raise ValueError(f"{item['key']}.{field}: use unique, existing, other task keys")
     graph = {i["key"]: i["depends_on"] for i in args["items"]}
     visited, active = set(), set()
+
     def visit(key):
         if key in active:
             raise ValueError("depends_on contains a cycle; grouping is not sequencing")
@@ -118,6 +159,7 @@ def validate_work_proposal(args):
                 visit(ref)
             active.remove(key)
             visited.add(key)
+
     for key in graph:
         visit(key)
     if acts != {i["activity"] for i in args["items"]} or streams != {i["workstream"] for i in args["items"]}:
@@ -130,9 +172,12 @@ def validate_team_proposal(args):
     groups = _unique(args["groups"], "id", "groups")
     _unique(args["members"], "name", "members")
     names = [m["name"].strip().lower() for m in args["members"]]
-    if len(set(names)) != len(names) or any(not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,23}", name)
-            or name in {"lead", "user", "board"} for name in names):
-        raise ValueError("worker names must be unique mention-safe callnames, max 24 characters; lead/user/board are reserved")
+    if len(set(names)) != len(names) or any(
+        not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,23}", name) or name in {"lead", "user", "board"} for name in names
+    ):
+        raise ValueError(
+            "worker names must be unique mention-safe callnames, max 24 characters; lead/user/board are reserved"
+        )
     for member in args["members"]:
         if member["group"] not in groups:
             raise ValueError("each member must reference a declared group")

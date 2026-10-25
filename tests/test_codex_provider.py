@@ -43,9 +43,7 @@ def _jwt(claims: dict) -> str:
 
 
 def _access(exp_offset: float = 3600, account: str = "acct_1") -> str:
-    return _jwt(
-        {"exp": time.time() + exp_offset, ACCOUNT_CLAIM: {"chatgpt_account_id": account}}
-    )
+    return _jwt({"exp": time.time() + exp_offset, ACCOUNT_CLAIM: {"chatgpt_account_id": account}})
 
 
 def _id_token(email: str = "user@example.com", account: str = "acct_1") -> str:
@@ -73,11 +71,7 @@ def test_pkce_challenge_is_s256_of_verifier():
     import hashlib
 
     verifier, challenge = create_pkce()
-    expected = (
-        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
-        .rstrip(b"=")
-        .decode()
-    )
+    expected = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     assert challenge == expected
     assert create_pkce()[0] != verifier  # fresh randomness per flow
 
@@ -111,9 +105,7 @@ def test_account_id_from_token_claim():
 
 async def _hit_callback(query: str) -> str:
     reader, writer = await asyncio.open_connection("127.0.0.1", codex_auth.CALLBACK_PORT)
-    writer.write(
-        f"GET /auth/callback?{query} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode()
-    )
+    writer.write(f"GET /auth/callback?{query} HTTP/1.1\r\nHost: localhost\r\n\r\n".encode())
     await writer.drain()
     data = await reader.read(-1)
     writer.close()
@@ -199,9 +191,7 @@ async def test_sign_in_port_busy_names_the_usual_holder(tmp_path):
 def test_access_token_fresh_needs_no_refresh(tmp_path, monkeypatch):
     secrets = SecretStore(tmp_path / "s.json")
     _seed(secrets)
-    monkeypatch.setattr(
-        codex_auth, "_token_post", lambda *a, **k: pytest.fail("refresh not needed")
-    )
+    monkeypatch.setattr(codex_auth, "_token_post", lambda *a, **k: pytest.fail("refresh not needed"))
     token, account = CodexTokenStore(secrets).access_token()
     assert token == secrets.get("provider:openai-codex")["tokens"]["access_token"]
     assert account == "acct_1"
@@ -234,9 +224,7 @@ def test_access_token_refreshes_near_expiry(tmp_path, monkeypatch):
 def test_rejected_refresh_blanks_tokens_to_signed_out(tmp_path, monkeypatch):
     secrets = SecretStore(tmp_path / "s.json")
     _seed(secrets, exp_offset=-10)
-    monkeypatch.setattr(
-        codex_auth, "_token_post", lambda *a, **k: _token_response(status=400)
-    )
+    monkeypatch.setattr(codex_auth, "_token_post", lambda *a, **k: _token_response(status=400))
     store = CodexTokenStore(secrets)
     with pytest.raises(CodexSignInRequired):
         store.access_token()
@@ -319,9 +307,7 @@ def test_stream_request_headers_and_body(tmp_path, monkeypatch):
         )
     )
 
-    assert built[0]["api_key"] == secrets.get("provider:openai-codex")["tokens"][
-        "access_token"
-    ]
+    assert built[0]["api_key"] == secrets.get("provider:openai-codex")["tokens"]["access_token"]
     assert built[0]["base_url"] == CODEX_BASE_URL
     headers = built[0]["default_headers"]
     assert headers["chatgpt-account-id"] == "acct_1"
@@ -361,9 +347,7 @@ def test_401_refreshes_once_and_retries_with_new_bearer(tmp_path, monkeypatch):
         "_token_post",
         lambda *a, **k: _token_response(body={"access_token": fresh}),
     )
-    turn = provider.complete(
-        model="gpt-5.2-codex", messages=[{"role": "user", "content": "hi"}]
-    )
+    turn = provider.complete(model="gpt-5.2-codex", messages=[{"role": "user", "content": "hi"}])
     assert turn.text == "after refresh"
     assert len(built) == 2 and built[1]["api_key"] == fresh
 
@@ -372,17 +356,13 @@ def test_429_surfaces_plan_limit_message(tmp_path, monkeypatch):
     fake = _FakeSDKClient(errors=[_status_error(429, "Too Many Requests")])
     provider, _, _ = _provider(tmp_path, monkeypatch, [fake])
     with pytest.raises(RuntimeError, match="plan limit"):
-        provider.complete(
-            model="gpt-5.2-codex", messages=[{"role": "user", "content": "hi"}]
-        )
+        provider.complete(model="gpt-5.2-codex", messages=[{"role": "user", "content": "hi"}])
 
 
 def test_signed_out_provider_raises_typed_error(tmp_path):
     provider = CodexProvider(secrets=SecretStore(tmp_path / "s.json"))
     with pytest.raises(CodexSignInRequired, match="Not signed in"):
-        provider.complete(
-            model="gpt-5.2-codex", messages=[{"role": "user", "content": "hi"}]
-        )
+        provider.complete(model="gpt-5.2-codex", messages=[{"role": "user", "content": "hi"}])
 
 
 # -- registry / matrix ---------------------------------------------------------------

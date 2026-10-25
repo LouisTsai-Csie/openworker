@@ -99,9 +99,7 @@ def should_compact(
     threshold_pct: float = DEFAULT_THRESHOLD_PCT,
     cap_tokens: int = DEFAULT_CAP_TOKENS,
 ) -> bool:
-    return signal >= trigger_tokens(
-        context_window, threshold_pct=threshold_pct, cap_tokens=cap_tokens
-    )
+    return signal >= trigger_tokens(context_window, threshold_pct=threshold_pct, cap_tokens=cap_tokens)
 
 
 # -- state --------------------------------------------------------------------
@@ -213,11 +211,7 @@ _ARTIFACT_HINTS = ("artifact", "publish", "deploy")
 
 def _iter_tool_calls(span: list[dict[str, Any]]):
     """(name, args, result_content) for every tool call in the span, in order."""
-    results = {
-        m.get("tool_call_id"): m.get("content")
-        for m in span
-        if m.get("role") == "tool"
-    }
+    results = {m.get("tool_call_id"): m.get("content") for m in span if m.get("role") == "tool"}
     for msg in span:
         if msg.get("role") != "assistant":
             continue
@@ -457,9 +451,7 @@ def _render_span(span: list[dict[str, Any]], *, budget_chars: int = _SPAN_BUDGET
     return rendered
 
 
-def summarizer_messages(
-    span: list[dict[str, Any]], *, prior_summary: str = ""
-) -> list[dict[str, Any]]:
+def summarizer_messages(span: list[dict[str, Any]], *, prior_summary: str = "") -> list[dict[str, Any]]:
     """The provider-ready messages for the summarizer call. On repeated compaction the
     previous summary is message zero of the new span — summarized along with the turns
     since."""
@@ -470,12 +462,7 @@ def summarizer_messages(
             "summary]\n" + prior_summary + "\n\n[conversation since]\n" + body
         )
     # Delimited, then the instruction restated last — see SUMMARY_TAIL_INSTRUCTION.
-    user = (
-        "**--- BEGIN TRANSCRIPT TO SUMMARIZE ---**\n\n"
-        + body
-        + "\n\n"
-        + SUMMARY_TAIL_INSTRUCTION
-    )
+    user = "**--- BEGIN TRANSCRIPT TO SUMMARIZE ---**\n\n" + body + "\n\n" + SUMMARY_TAIL_INSTRUCTION
     return [
         {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
         {"role": "user", "content": user},
@@ -626,8 +613,7 @@ def compacted_block(state: CompactionState) -> str:
     """The single outbound message standing in for everything before the boundary."""
     parts = [
         "<compacted-history>",
-        "Earlier turns of this session were compacted. The summary below is your memory "
-        "of them.",
+        "Earlier turns of this session were compacted. The summary below is your memory of them.",
         "",
         state.summary_text,
     ]
@@ -692,9 +678,7 @@ def render_transcript(messages: list[dict[str, Any]], upto: int) -> str:
     return "\n".join(lines)
 
 
-def apply_to_outbound(
-    messages: list[dict[str, Any]], state: CompactionState | None
-) -> list[dict[str, Any]]:
+def apply_to_outbound(messages: list[dict[str, Any]], state: CompactionState | None) -> list[dict[str, Any]]:
     """The outbound view: [system?] + the compacted block (as a user message) + the
     verbatim tail. Canonical history is untouched; provider-private sidecars in the
     summarized span vanish with it (replay chains legally restart after a compaction

@@ -56,16 +56,14 @@ class SubscriptionStore:
         )
 
     # -- mutations --------------------------------------------------------------
-    def subscribe(
-        self, session_id: str, channel: str, *, filter: str = "all"
-    ) -> Subscription:
+    def subscribe(self, session_id: str, channel: str, *, filter_mode: str = "all") -> Subscription:
         with self._lock:
             for s in self._subs:
                 if s.session_id == session_id and s.channel == channel:
-                    s.filter = filter
+                    s.filter = filter_mode
                     self._save()
                     return s
-            sub = Subscription(session_id=session_id, channel=channel, filter=filter)
+            sub = Subscription(session_id=session_id, channel=channel, filter=filter_mode)
             self._subs.append(sub)
             self._save()
             return sub
@@ -73,11 +71,7 @@ class SubscriptionStore:
     def unsubscribe(self, session_id: str, channel: str) -> bool:
         with self._lock:
             before = len(self._subs)
-            self._subs = [
-                s
-                for s in self._subs
-                if not (s.session_id == session_id and s.channel == channel)
-            ]
+            self._subs = [s for s in self._subs if not (s.session_id == session_id and s.channel == channel)]
             changed = len(self._subs) != before
             if changed:
                 self._save()
@@ -148,24 +142,16 @@ class ChannelBuffer:
                 data = json.loads(self._path.read_text())
                 # Current format: {"messages": {...}, "names": {...}}; the first shipped
                 # format was the bare messages dict — accept both.
-                msgs_by_chan = (
-                    data.get("messages", data) if isinstance(data, dict) else {}
-                )
-                self._names = (
-                    dict(data.get("names") or {}) if isinstance(data, dict) else {}
-                )
+                msgs_by_chan = data.get("messages", data) if isinstance(data, dict) else {}
+                self._names = dict(data.get("names") or {}) if isinstance(data, dict) else {}
                 for chan, msgs in msgs_by_chan.items():
                     if isinstance(msgs, list):
                         self._by_channel[chan] = deque(msgs[-cap:], maxlen=cap)
             except (OSError, ValueError, AttributeError):
                 pass  # a corrupt buffer must never block startup
 
-    def record(
-        self, channel: str, who: str, text: str, name: str | None = None
-    ) -> None:
-        self._by_channel.setdefault(channel, deque(maxlen=self._cap)).append(
-            {"from": who, "text": text}
-        )
+    def record(self, channel: str, who: str, text: str, name: str | None = None) -> None:
+        self._by_channel.setdefault(channel, deque(maxlen=self._cap)).append({"from": who, "text": text})
         if name:
             self._names[channel] = name
         self._save()

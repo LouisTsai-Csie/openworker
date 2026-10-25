@@ -60,8 +60,7 @@ def head_tail(text: str, keep_bytes: int, *, spill_path: Path | None, total_byte
     tail = raw[-half:].decode("utf-8", errors="ignore") if half else ""
     omitted = max(0, len(raw) - _nbytes(head) - _nbytes(tail))
     where = (
-        f"full text saved to {spill_path} (read it with read_file, or "
-        f"run_shell: sed -n '1,200p' \"{spill_path}\")"
+        f"full text saved to {spill_path} (read it with read_file, or run_shell: sed -n '1,200p' \"{spill_path}\")"
         if spill_path is not None
         else "full text not saved"
     )

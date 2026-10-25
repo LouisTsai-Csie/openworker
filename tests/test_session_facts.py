@@ -51,9 +51,7 @@ def test_capture_collects_roots_remotes_and_hosts(tmp_path):
 
 
 def test_capture_without_git_repo_is_empty_not_an_error(tmp_path):
-    world = session_facts.capture(
-        roots=[RootDir(path=tmp_path, writable=False)], workspace=tmp_path
-    )
+    world = session_facts.capture(roots=[RootDir(path=tmp_path, writable=False)], workspace=tmp_path)
     assert world.remotes == ()
     assert world.roots == ((str(tmp_path), False),)
 
@@ -107,9 +105,7 @@ def test_no_metadata_is_not_ingesting():
 
 
 def test_source_is_hostname_only_never_the_query_string():
-    src = session_facts.ingestion_source(
-        {"url": "https://GitHub.com/search?q=SECRET_FROM_DOTENV"}
-    )
+    src = session_facts.ingestion_source({"url": "https://GitHub.com/search?q=SECRET_FROM_DOTENV"})
     assert src == "github.com"
 
 
@@ -167,7 +163,9 @@ def _engine_with_web_tool(tmp_path, *, facts):
     registry.register(web_fetch, metadata=_Meta(category="web"))
     turns = [
         AssistantTurn(
-            tool_calls=[ToolCall(id="c1", name="web_fetch", arguments={"url": "https://github.com/org/repo/issues/42"})],
+            tool_calls=[
+                ToolCall(id="c1", name="web_fetch", arguments={"url": "https://github.com/org/repo/issues/42"})
+            ],
             finish_reason="tool_calls",
         ),
         AssistantTurn(text="done", finish_reason="stop"),
@@ -176,9 +174,7 @@ def _engine_with_web_tool(tmp_path, *, facts):
     engine = TurnEngine(
         provider=_ScriptedProvider(turns),
         registry=registry,
-        permissions=PermissionEngine(
-            workspace_root=tmp_path, allowed_domains=["github.com"]
-        ),
+        permissions=PermissionEngine(workspace_root=tmp_path, allowed_domains=["github.com"]),
         model="test-model",
         audit_sink=rows.append,
     )

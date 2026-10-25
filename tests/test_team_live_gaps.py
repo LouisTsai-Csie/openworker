@@ -9,8 +9,6 @@ from coworker.teams.store import WORKER_WAITING
 from test_engine import ScriptedProvider, _collect, _engine, _text_turn, _tool_turn
 
 
-
-
 def request_for(manager):
     original = manager.inbox.add_approval(
         "worker",
@@ -66,9 +64,7 @@ def test_reviewer_settings_hot_apply_to_cached_lead_and_worker(manager):
 
 @pytest.mark.parametrize("resolve_first", [False, True])
 @pytest.mark.parametrize("answer", ["allow", "deny"])
-def test_worker_resolution_retires_linked_gate_before_or_after_creation(
-    manager, resolve_first, answer
-):
+def test_worker_resolution_retires_linked_gate_before_or_after_creation(manager, resolve_first, answer):
     original, request = request_for(manager)
     data = manager.approval_prompt_data("lead", request)
     if resolve_first:
@@ -176,9 +172,9 @@ def test_rest_proxy_denial_is_visible_to_another_client_and_survives_reload(mana
 
 def test_lead_proxy_denial_releases_live_engine_without_executing_decision(manager, monkeypatch):
     original, request = request_for(manager)
-    manager.provider = ScriptedProvider([
-        _tool_turn("decide_worker_call", request.arguments), _text_turn("The user denied it.")
-    ])
+    manager.provider = ScriptedProvider(
+        [_tool_turn("decide_worker_call", request.arguments), _text_turn("The user denied it.")]
+    )
     executed = []
     monkeypatch.setattr(manager, "decide_worker_call", lambda *a: executed.append(a))
 
@@ -232,10 +228,14 @@ def test_ordinary_approval_and_completion_carry_the_same_exact_call_id(tmp_path,
         assert request.tool_call_id == "unique-write-call"
         return answer
 
-    engine, _ = _engine(tmp_path, [
-        _tool_turn("write_file", {"path": "result.txt", "content": "sample"}, call_id="unique-write-call"),
-        _text_turn("Finished"),
-    ], approver=approve)
+    engine, _ = _engine(
+        tmp_path,
+        [
+            _tool_turn("write_file", {"path": "result.txt", "content": "sample"}, call_id="unique-write-call"),
+            _text_turn("Finished"),
+        ],
+        approver=approve,
+    )
     events = _collect(engine, "Write the sample file.")
     for kind in ("permission_required", "tool_finished"):
         event = next(e for e in events if e.type.value == kind)
@@ -243,9 +243,7 @@ def test_ordinary_approval_and_completion_carry_the_same_exact_call_id(tmp_path,
     assert (tmp_path / "result.txt").exists() == (answer is ApprovalOutcome.ONCE)
 
 
-def test_background_delivery_enriches_actual_permission_event_and_retires_gate(
-    manager, monkeypatch
-):
+def test_background_delivery_enriches_actual_permission_event_and_retires_gate(manager, monkeypatch):
     original, request = request_for(manager)
     manager.provider = ScriptedProvider(
         [
@@ -262,9 +260,7 @@ def test_background_delivery_enriches_actual_permission_event_and_retires_gate(
 
     async def run():
         manager.register_session_client("lead", receive)
-        delivery = asyncio.create_task(
-            manager.deliver_to_session("lead", "Decide the worker call.")
-        )
+        delivery = asyncio.create_task(manager.deliver_to_session("lead", "Decide the worker call."))
         for _ in range(200):
             if manager.inbox.pending("lead"):
                 break
@@ -285,19 +281,12 @@ def test_lead_self_wake_does_not_enable_general_scheduling(manager):
     lead = manager.get_engine("lead", agent="swe-lead")
     names = set(lead.registry.names())
     assert {"sleep_for", "sleep_until"} <= names
-    assert (
-        not {"create_scheduled_task", "update_scheduled_task", "delete_scheduled_task"}
-        & names
-    )
-    worker = manager.get_engine(
-        "worker", workspace=manager.default_workspace, agent="swe-worker"
-    )
+    assert not {"create_scheduled_task", "update_scheduled_task", "delete_scheduled_task"} & names
+    worker = manager.get_engine("worker", workspace=manager.default_workspace, agent="swe-worker")
     assert "sleep_for" not in worker.registry.names()
 
 
-def test_worker_wait_digest_is_informational_and_wait_only_batch_does_not_wake(
-    manager, monkeypatch
-):
+def test_worker_wait_digest_is_informational_and_wait_only_batch_does_not_wake(manager, monkeypatch):
     team = manager.teams.for_lead_session("lead")
     events = [
         {
@@ -312,17 +301,11 @@ def test_worker_wait_digest_is_informational_and_wait_only_batch_does_not_wake(
     assert "decide_worker_call" not in body and "your decision" not in body
     assert "lead or user" in body and rows[0]["kind"] == "waiting"
     consumed = []
-    monkeypatch.setattr(manager.team_store, "delivery_page", lambda *a, **kw: {
-        "directs": events, "subs": [], "through_seq": 10, "has_more": False})
     monkeypatch.setattr(
-        manager.team_store, "consume_feed", lambda *a: consumed.append(a)
+        manager.team_store,
+        "delivery_page",
+        lambda *a, **kw: {"directs": events, "subs": [], "through_seq": 10, "has_more": False},
     )
-    assert (
-        asyncio.run(
-            manager._drain_team_member(
-                team, session_id="worker", actor="sam", is_lead=False
-            )
-        )
-        == 0
-    )
+    monkeypatch.setattr(manager.team_store, "consume_feed", lambda *a: consumed.append(a))
+    assert asyncio.run(manager._drain_team_member(team, session_id="worker", actor="sam", is_lead=False)) == 0
     assert consumed == [(team.space, "sam", 10)]

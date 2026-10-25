@@ -72,7 +72,7 @@ class MachinePollTransport:
         """Interruptible sleep: close() ends it immediately."""
         try:
             await asyncio.wait_for(self._closed.wait(), timeout=seconds)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
     async def _poll_once(self) -> list[dict[str, Any]] | None:

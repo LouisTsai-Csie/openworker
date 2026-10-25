@@ -43,8 +43,11 @@ def with_mention(item: dict) -> dict:
 
 def mutation_receipt(result: dict) -> dict:
     """Keep full store/GUI projections, but never echo their history to the model."""
-    return {k: result[k] for k in ("error", "id", "item_id", "state", "assignee",
-            "status", "status_ts", "updated_seq", "seq", "kind") if k in result}
+    return {
+        k: result[k]
+        for k in ("error", "id", "item_id", "state", "assignee", "status", "status_ts", "updated_seq", "seq", "kind")
+        if k in result
+    }
 
 
 def item_snapshot(item: dict, *, brief: bool = False) -> dict:
@@ -59,6 +62,7 @@ def item_snapshot(item: dict, *, brief: bool = False) -> dict:
         result["proposal_ref"] = {"item": item["id"], "read_tool": "get_proposal"}
         result.update({k: proposal[k] for k in ("activity", "workstream", "verifies") if k in proposal})
     return with_mention(result)
+
 
 # Explicit schema: the auto-generator's normalizer strips every `title` key to drop
 # pydantic metadata, which also deletes a PARAMETER named `title` from properties.
@@ -145,11 +149,17 @@ def board_tools(
                 raise BoardError("after_item must be a non-negative integer")
             if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
                 raise BoardError("limit must be between 1 and 100")
-            items = [i for i in store.list_items(space, actor, state=state or None, assignee=assignee or None)
-                     if i["id"] > after_item]
+            items = [
+                i
+                for i in store.list_items(space, actor, state=state or None, assignee=assignee or None)
+                if i["id"] > after_item
+            ]
             page = items[:limit]
-            return {"items": [item_snapshot(i, brief=True) for i in page], "has_more": len(items) > limit,
-                    "next_after_item": page[-1]["id"] if page else after_item}
+            return {
+                "items": [item_snapshot(i, brief=True) for i in page],
+                "has_more": len(items) > limit,
+                "next_after_item": page[-1]["id"] if page else after_item,
+            }
         except (BoardError, ValueError) as error:
             return {"error": str(error)}
 
@@ -188,26 +198,29 @@ def board_tools(
         intent and declared external actions. Read once, then only when needed;
         these declarations are NOT permission grants."""
         result = _call(store.get_item, space, item, actor=actor, include_comments=False)
-        return result if "error" in result else {"item": item, "proposal": result.get("proposal"),
-                                                "authority": "intent_not_access_grants"}
+        return (
+            result
+            if "error" in result
+            else {"item": item, "proposal": result.get("proposal"), "authority": "intent_not_access_grants"}
+        )
 
-    def transition(
-        item: int, to: str, comment: str = "", refs: list | None = None
-    ) -> dict:
+    def transition(item: int, to: str, comment: str = "", refs: list | None = None) -> dict:
         """Move a work item to a new state. Workers move their own item to
         in_progress, blocked, or review (attach the blocker or a hand-off summary
         as `comment`, and artifact pointers — branch, report, session — as
         `refs`); done requires review verification first."""
-        return receipt(_call(
-            store.transition,
-            space,
-            actor,
-            item,
-            to,
-            comment=comment,
-            refs=[str(ref) for ref in refs or []],
-            taint=taint(),
-        ))
+        return receipt(
+            _call(
+                store.transition,
+                space,
+                actor,
+                item,
+                to,
+                comment=comment,
+                refs=[str(ref) for ref in refs or []],
+                taint=taint(),
+            )
+        )
 
     def comment(item: int, body: str, refs: list | None = None, needs_attention: bool = False) -> dict:
         """Add a comment to a work item. Comments are durable and attributed —
@@ -216,16 +229,18 @@ def board_tools(
         wake the lead. Set needs_attention=True for an explicit question/decision;
         blockers use transition to blocked. Publish evidence first, then one
         concise transition to review with its artifact refs: that is the handoff."""
-        return receipt(_call(
-            store.comment,
-            space,
-            actor,
-            item,
-            body,
-            refs=[str(ref) for ref in refs or []],
-            taint=taint(),
-            needs_attention=needs_attention,
-        ))
+        return receipt(
+            _call(
+                store.comment,
+                space,
+                actor,
+                item,
+                body,
+                refs=[str(ref) for ref in refs or []],
+                taint=taint(),
+                needs_attention=needs_attention,
+            )
+        )
 
     def claim(item: int) -> dict:
         """Claim an open, unassigned work item for yourself. First claim wins;

@@ -15,7 +15,7 @@ import json
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
 KIND_TIMER = "timer"
@@ -29,7 +29,7 @@ STATE_CANCELLED = "cancelled"
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -83,8 +83,7 @@ class WakeStore:
         temporary = self.path.with_suffix(self.path.suffix + ".tmp")
         temporary.write_text(
             json.dumps(
-                {"wakes": [asdict(w) for w in self._wakes.values()],
-                 "stopped_sessions": sorted(self.stopped_sessions)},
+                {"wakes": [asdict(w) for w in self._wakes.values()], "stopped_sessions": sorted(self.stopped_sessions)},
                 indent=2,
             ),
             encoding="utf-8",
@@ -101,8 +100,7 @@ class WakeStore:
         )
         with self._lock:
             for old in self._wakes.values():
-                if (old.session_id == session_id and old.kind == KIND_TIMER
-                        and old.state in (STATE_PENDING, STATE_DUE)):
+                if old.session_id == session_id and old.kind == KIND_TIMER and old.state in (STATE_PENDING, STATE_DUE):
                     old.state = STATE_CANCELLED
                     old.cancellation_reason = "replaced by a newer sleep"
                     old.context_delivered = True
@@ -111,18 +109,14 @@ class WakeStore:
         return w
 
     def add_completion(self, session_id: str, job_id: str, *, note: str = "") -> Wake:
-        w = Wake(
-            uuid.uuid4().hex, session_id, KIND_COMPLETION, job_id=job_id, note=note
-        )
+        w = Wake(uuid.uuid4().hex, session_id, KIND_COMPLETION, job_id=job_id, note=note)
         with self._lock:
             self._wakes[w.id] = w
             self._save()
         return w
 
     def add_event(self, session_id: str, event_key: str, *, note: str = "") -> Wake:
-        w = Wake(
-            uuid.uuid4().hex, session_id, KIND_EVENT, event_key=event_key, note=note
-        )
+        w = Wake(uuid.uuid4().hex, session_id, KIND_EVENT, event_key=event_key, note=note)
         with self._lock:
             self._wakes[w.id] = w
             self._save()
@@ -137,25 +131,19 @@ class WakeStore:
         for w in snapshot:
             if w.state != STATE_PENDING and w.state != STATE_DUE:
                 continue
-            if (
-                w.kind == KIND_TIMER
-                and w.fire_at
-                and datetime.fromisoformat(w.fire_at) <= now
-            ) or (w.kind in (KIND_COMPLETION, KIND_EVENT) and w.state == STATE_DUE):
+            if (w.kind == KIND_TIMER and w.fire_at and datetime.fromisoformat(w.fire_at) <= now) or (
+                w.kind in (KIND_COMPLETION, KIND_EVENT) and w.state == STATE_DUE
+            ):
                 out.append(w)
         return out
 
     def complete_job(self, job_id: str) -> list[Wake]:
         """Mark completion wakes for ``job_id`` as due (the job exited). Returns them."""
-        return self._mark_due(
-            lambda w: w.kind == KIND_COMPLETION and w.job_id == job_id
-        )
+        return self._mark_due(lambda w: w.kind == KIND_COMPLETION and w.job_id == job_id)
 
     def fire_event(self, event_key: str) -> list[Wake]:
         """Mark on-event wakes for ``event_key`` as due (a connector/webhook fired). Returns them."""
-        return self._mark_due(
-            lambda w: w.kind == KIND_EVENT and w.event_key == event_key
-        )
+        return self._mark_due(lambda w: w.kind == KIND_EVENT and w.event_key == event_key)
 
     def _mark_due(self, pred) -> list[Wake]:
         fired = []
@@ -180,8 +168,7 @@ class WakeStore:
         with self._lock:
             changed = False
             for w in self._wakes.values():
-                if (w.session_id == session_id and w.kind == KIND_TIMER
-                        and w.state in (STATE_PENDING, STATE_DUE)):
+                if w.session_id == session_id and w.kind == KIND_TIMER and w.state in (STATE_PENDING, STATE_DUE):
                     w.state = STATE_CANCELLED
                     w.cancellation_reason = reason
                     changed = True
@@ -199,9 +186,9 @@ class WakeStore:
     def cancelled_context(self, session_id: str) -> list[Wake]:
         with self._lock:
             return [
-                w for w in self._wakes.values()
-                if w.session_id == session_id and w.state == STATE_CANCELLED
-                and not w.context_delivered
+                w
+                for w in self._wakes.values()
+                if w.session_id == session_id and w.state == STATE_CANCELLED and not w.context_delivered
             ]
 
     def acknowledge(self, wake_ids: list[str]) -> None:
@@ -223,8 +210,7 @@ class WakeStore:
             return [
                 w
                 for w in self._wakes.values()
-                if w.state in (STATE_PENDING, STATE_DUE)
-                and (session_id is None or w.session_id == session_id)
+                if w.state in (STATE_PENDING, STATE_DUE) and (session_id is None or w.session_id == session_id)
             ]
 
 
@@ -252,7 +238,7 @@ def selfwake_tools(store: WakeStore, session_id: str) -> list:
         This is an idle check-in deadline, not a persistent appointment."""
         when = datetime.fromisoformat(when_iso)
         if when.tzinfo is None:
-            when = when.replace(tzinfo=timezone.utc)
+            when = when.replace(tzinfo=UTC)
         w = store.add_timer(session_id, when, note=note)
         return {"ok": True, "wake_id": w.id, "fire_at": w.fire_at}
 
