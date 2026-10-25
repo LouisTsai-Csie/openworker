@@ -8,8 +8,8 @@ reproduces the import-graph figures in §3 and §4; the rest are one-line `grep`
 beside the claim. If a number has drifted, the script is the source of truth, not this
 file.
 
-Measured 2026-10-20: `coworker/` is 231 modules / 77,814 lines, `tests/` 218 files /
-56,708 lines, `surfaces/gui` 51,263 lines of TS/TSX.
+Measured 2026-10-25: `coworker/` is 232 modules / 76,514 lines, `tests/` 219 files /
+56,820 lines, `surfaces/gui` 63,088 lines of TS/TSX.
 
 ---
 
@@ -68,7 +68,7 @@ from a layer above it.** That is the whole rule.
   L2  domain        conversations · sessions · inbox · projects ·
                     interactions · compaction · model_config · …         20
   L1  governance    permissions · risk · audit · provenance · …            8
-  L0  foundation    config · secrets · basedir · clock · events · …       11
+  L0  foundation    config · secrets · atomicio · basedir · clock · …      12
 ```
 
 The layering is defined as data in `scripts/import_graph.py` (`LAYERS`), so it can be
@@ -82,10 +82,10 @@ whether a human is watching.
 
 ## 4. Measured conformance
 
-Run `python scripts/import_graph.py` (`--verbose` for every edge). As of 2026-10-20:
+Run `python scripts/import_graph.py` (`--verbose` for every edge). As of 2026-10-25:
 
 ```
-modules 231   module-level edges 471   late edges 294
+modules 232   module-level edges 497   late edges 294
 
 cycles (module-level only) : 1 (2 modules)
 cycles (incl. late imports): 5 (23 modules)
@@ -144,10 +144,16 @@ really a `basedir` concern and sits in the wrong module today).
   own tables. 26 `CREATE TABLE` sites, 25 ad-hoc `ALTER TABLE` migrations, and
   `PRAGMA user_version` is never set. There is no schema version and no migration
   framework.
-- **JSON files** — settings, secrets, personas, skills, team boards. 53 modules call
-  `json.dump`; exactly two writes are atomic (`os.replace`, in `secrets.py` and
-  `sandbox/bundle.py`).
-- **JSONL** — conversation transcripts, appended per message.
+- **JSON files** — settings, secrets, personas, skills, team boards. Every one of the 32
+  whole-file writes, in 25 modules, goes through `coworker.atomicio`: write a temp in the
+  target's own directory, `fsync` it, `os.replace`, then `fsync` the directory. A crash
+  between any two steps leaves the previous complete file.
+  `scripts/check_atomic_writes.py` is the gate (§8).
+- **JSONL** — conversation transcripts, the headless event stream, the remote audit log:
+  6 append sites in 3 modules, deliberately *not* fsynced. An append cannot be torn the
+  way a rewrite can — the worst a power cut does is truncate the final line, which these
+  readers already tolerate — and syncing each one would make every message a disk flush.
+  The whole-file rewrite of a transcript (the compaction shrink) is atomic like the rest.
 
 ## 6. Cross-cutting conventions
 
@@ -169,7 +175,6 @@ Ordered by what it costs to leave alone, not by size.
 
 | # | Debt | Measured | Cost of leaving it |
 |---|---|---|---|
-| D1 | Non-atomic JSON writes | 53 modules write JSON, 2 writes atomic; `_atomic_private_write` (`secrets.py:99`) is correct but has no `fsync` before `os.replace` | **Data loss.** A crash or power cut mid-write leaves a truncated settings/secrets file. |
 | D2 | `SessionManager` god object | 347 methods / 8,357 lines in one class; `__init__` wires 20+ subsystems | Nothing in the server can be tested or changed in isolation. |
 | D3 | No typed API contract | 231 routes, **0** Pydantic models, bodies are raw `dict` | Front end mirrors 217 paths by hand; a shape change breaks it silently. |
 | D4 | Domain failures return HTTP 200 | 229 `{"ok": False}` sites | Clients cannot distinguish "worked" from "refused" by status. |
@@ -181,17 +186,31 @@ Ordered by what it costs to leave alone, not by size.
 | D10 | Tests bound to internals | 90 of 218 test files call a private `_method` | The safety net blocks the refactor it should enable. |
 | D11 | Flat package root | 43 root modules; L0 `secrets.py` and L5 `agent.py` are siblings; `project.py`/`projects.py`, `sessions.py`/`session_facts.py` | Nothing about the file tree tells you the layering. |
 
+**Closed.** D1 (non-atomic JSON writes) was fixed on 2026-10-25 and its row is gone; the
+numbering of the rest is left alone so references to them keep working. The original claim
+— "53 modules write JSON, 2 writes atomic" — counted modules that merely *mention*
+`json.dumps`, most of which serialise for the wire or a log line and never touch a file.
+Measured by AST instead, the tree had 36 JSON file writes in 24 modules: 30 whole-file
+replaces, of which 7 already did temp-then-rename, plus 6 appends. None of the renames
+fsynced, so the swap could reach the disk ahead of the bytes and a power cut could leave a
+complete-looking file of zeros — the failure the register attributed only to `secrets.py`
+was in every one of them. All 30, plus `secrets.py` and the `sandbox/bundle.py` zipapp, now
+go through `coworker.atomicio`.
+
 ## 8. Keeping this true
 
-This file is only useful if it cannot drift. Two mechanisms:
+This file is only useful if it cannot drift. Three mechanisms, all in the CI `lint` job:
 
 1. **`scripts/import_graph.py` exits non-zero** when there is an import-time cycle or a
-   module-level layer violation. Wire it into the `lint` job, or replace it with
-   `import-linter` driving the same `LAYERS` table, and the layering in §3 becomes a CI
-   gate rather than a description.
+   module-level layer violation, which makes the layering in §3 a gate rather than a
+   description. (It could equally be `import-linter` driving the same `LAYERS` table.)
 2. **The existing ratchets only shrink.** `pyproject.toml` already does this for mypy
    (70 modules) and ruff's per-file ignores — entries are deleted as they are burned down,
    never re-added. Hold new debt to the same rule.
+3. **`scripts/check_atomic_writes.py` exits non-zero** on a JSON write that does not go
+   through `coworker.atomicio`, and on an allowed-append entry that no longer matches
+   anything. Both halves matter: the first stops D1 growing back one new store at a time,
+   the second stops the exception list outliving the code it describes.
 
 When you change the layering, change `LAYERS` in the script first and let the numbers in
 §4 fall out of a re-run. Do not hand-edit them.
