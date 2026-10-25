@@ -17,13 +17,17 @@ the persona-loading path never touches this file (see ``PERMISSIONS-AND-INBOX.md
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
+from typing import Any
 from collections.abc import Callable
 
 from coworker.atomicio import atomic_write_json
 from coworker.risk import RiskClass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,6 +41,50 @@ def _specificity(pattern: str) -> int:
     literal = sum(1 for c in pattern if c not in "*?[]")
     exact = 0 if any(c in pattern for c in "*?[") else 1000
     return literal + exact
+
+
+def _parse(data: Any) -> tuple[list[str], list[_Rule], list[tuple[str, str]]]:
+    """Split a loaded file into (trust patterns, rules, refusals).
+
+    Raises on a shape it does not understand — a list, a string, a rule whose fields are
+    the wrong type — so `_load` can treat the whole file as unreadable instead of
+    half-applying it. Individually malformed *rules* are still skipped rather than
+    failing the file; the distinction is between a file that is not an override file and
+    an override file with one bad line in it.
+    """
+    # Trust entries: {"pattern": "..."} dicts (the written form) or bare strings.
+    trust: list[str] = []
+    seen: set[str] = set()
+    for entry in data.get("trust", []) or []:
+        pattern = str(entry.get("pattern", "")) if isinstance(entry, dict) else str(entry)
+        if pattern and pattern not in seen:
+            seen.add(pattern)
+            trust.append(pattern)
+    rules: list[_Rule] = []
+    rejected: list[tuple[str, str]] = []
+    for r in data.get("rules", []):
+        try:
+            rule = _Rule(str(r["pattern"]), RiskClass(str(r["risk"])))
+        except (KeyError, ValueError):
+            continue  # skip malformed rules rather than failing the whole store
+        # OPE-136: an explicitly MCP-targeting rule may not sink a tool below
+        # EXTERNAL — the floor in risk.classify would silently ignore it anyway,
+        # and a rule that reads one way in the file but acts another is worse than
+        # a refused rule. (Generic globs that merely HAPPEN to match mcp__ names
+        # load normally; the classify floor neutralizes the loosening for those.)
+        if rule.pattern.startswith("mcp__") and rule.risk in (
+            RiskClass.READ,
+            RiskClass.EGRESS,
+        ):
+            rejected.append(
+                (
+                    rule.pattern,
+                    "MCP tools cannot be reclassified below external (OPE-136) — use a trust rule to stop the asking",
+                )
+            )
+            continue
+        rules.append(rule)
+    return trust, rules, rejected
 
 
 class RiskOverrideStore:
@@ -53,38 +101,19 @@ class RiskOverrideStore:
     def _load(self) -> list[_Rule]:
         if not (self.path and self.path.is_file()):
             return []
-        data = json.loads(self.path.read_text(encoding="utf-8"))
-        # Trust entries: {"pattern": "..."} dicts (the written form) or bare strings.
-        seen: set[str] = set()
-        for entry in data.get("trust", []) or []:
-            pattern = str(entry.get("pattern", "")) if isinstance(entry, dict) else str(entry)
-            if pattern and pattern not in seen:
-                seen.add(pattern)
-                self._trust.append(pattern)
-        rules = []
-        for r in data.get("rules", []):
-            try:
-                rule = _Rule(str(r["pattern"]), RiskClass(str(r["risk"])))
-            except (KeyError, ValueError):
-                continue  # skip malformed rules rather than failing the whole store
-            # OPE-136: an explicitly MCP-targeting rule may not sink a tool below
-            # EXTERNAL — the floor in risk.classify would silently ignore it anyway,
-            # and a rule that reads one way in the file but acts another is worse than
-            # a refused rule. (Generic globs that merely HAPPEN to match mcp__ names
-            # load normally; the classify floor neutralizes the loosening for those.)
-            if rule.pattern.startswith("mcp__") and rule.risk in (
-                RiskClass.READ,
-                RiskClass.EGRESS,
-            ):
-                self.rejected.append(
-                    (
-                        rule.pattern,
-                        "MCP tools cannot be reclassified below external "
-                        "(OPE-136) — use a trust rule to stop the asking",
-                    )
-                )
-                continue
-            rules.append(rule)
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            trust, rules, rejected = _parse(data)
+        except (OSError, ValueError, TypeError, AttributeError):
+            # A corrupt file must never block startup (#204). Starting with no overrides
+            # is also the SAFE direction for a permissions store: every tool falls back
+            # to its default risk class, so the user is asked MORE often, never less.
+            # The file itself is left alone — `save()` only rewrites it once the user
+            # edits a rule, so a hand-editing typo stays recoverable.
+            logger.warning("%s is unreadable; starting with no overrides or trust rules", self.path)
+            return []
+        self._trust.extend(trust)
+        self.rejected.extend(rejected)
         return rules
 
     def save(self) -> None:
