@@ -14,6 +14,7 @@ import os
 import zipfile
 from pathlib import Path
 
+from coworker.atomicio import atomic_path
 from coworker.secrets import state_dir
 
 _PACKAGE = "owrunner"  # the name the runner package has inside the zipapp
@@ -84,16 +85,16 @@ def build_runner_zipapp(dest_dir: Path | None = None) -> Path:
     target = dest_dir / f"runner-{digest.hexdigest()[:12]}.pyz"
     if target.exists():
         return target
-    tmp = target.with_suffix(f".tmp{os.getpid()}")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("__main__.py", _MAIN)
-        for src in sources:
-            zf.write(src, f"{_PACKAGE}/{src.name}")
-        # `from ..agents import ...` inside the toolkits resolves to this stand-in.
-        zf.writestr(f"{_PACKAGE}/agents.py", _AGENTS_STANDIN)
-        zf.writestr(f"{_PACKAGE}/aisuite_toolkits/__init__.py", "")
-        for src in toolkits:
-            zf.write(src, f"{_PACKAGE}/aisuite_toolkits/{src.name}")
-    os.chmod(tmp, 0o644)
-    os.replace(tmp, target)
+    with atomic_path(target) as tmp:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("__main__.py", _MAIN)
+            for src in sources:
+                zf.write(src, f"{_PACKAGE}/{src.name}")
+            # `from ..agents import ...` inside the toolkits resolves to this stand-in.
+            zf.writestr(f"{_PACKAGE}/agents.py", _AGENTS_STANDIN)
+            zf.writestr(f"{_PACKAGE}/aisuite_toolkits/__init__.py", "")
+            for src in toolkits:
+                zf.write(src, f"{_PACKAGE}/aisuite_toolkits/{src.name}")
+        # mkstemp creates 0600; the runner is mounted into images and must stay readable.
+        os.chmod(tmp, 0o644)
     return target
