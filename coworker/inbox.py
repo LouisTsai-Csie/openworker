@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -30,6 +31,9 @@ from pathlib import Path
 from typing import Any
 
 from coworker.atomicio import atomic_write_json
+
+logger = logging.getLogger(__name__)
+
 
 KIND_APPROVAL = "approval"
 KIND_QUESTION = "question"
@@ -116,11 +120,15 @@ class InboxStore:
 
     # -- persistence ------------------------------------------------------------
     def _load(self) -> None:
-        if self.path and self.path.is_file():
+        if not (self.path and self.path.is_file()):
+            return
+        try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            for raw in data.get("items", []):
-                item = InboxItem(**raw)
-                self._items[item.id] = item
+            items = {item.id: item for item in (InboxItem(**raw) for raw in data.get("items", []))}
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with an empty wait queue", self.path)
+            return
+        self._items.update(items)
 
     def _save(self) -> None:
         if not self.path:

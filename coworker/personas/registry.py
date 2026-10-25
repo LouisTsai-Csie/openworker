@@ -13,6 +13,7 @@ working. Disable/surface only affect what the *new-session* picker offers.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 from dataclasses import dataclass, field
@@ -24,6 +25,8 @@ from coworker.agents.code import CODE_CAPABILITIES, code_agent
 from coworker.agents.cowork import COWORK_CAPABILITIES, cowork_agent
 from coworker.atomicio import atomic_write_json
 from coworker.personas.manifest import PersonaManifest, load_manifest_file
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_PERSONA_ID = "cowork"
 
@@ -214,12 +217,21 @@ class PersonaRegistry:
                 self._load_dir(sub, builtin=False)
 
     def _load_state(self) -> None:
-        if self.state_path and self.state_path.is_file():
+        if not (self.state_path and self.state_path.is_file()):
+            return
+        try:
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
-            self._enabled = dict(data.get("enabled", {}))
-            self._surfaced = dict(data.get("surfaced", {}))
-            self._installed_meta = dict(data.get("installed_meta", {}))
-            self._default = data.get("default", DEFAULT_PERSONA_ID)
+            enabled = dict(data.get("enabled", {}))
+            surfaced = dict(data.get("surfaced", {}))
+            installed_meta = dict(data.get("installed_meta", {}))
+            default = data.get("default", DEFAULT_PERSONA_ID)
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with the built-in persona defaults", self.state_path)
+            return
+        self._enabled = enabled
+        self._surfaced = surfaced
+        self._installed_meta = installed_meta
+        self._default = default
 
     def save(self) -> None:
         if not self.state_path:

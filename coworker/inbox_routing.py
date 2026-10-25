@@ -12,6 +12,7 @@ module stays testable without touching Slack/Telegram.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 from dataclasses import asdict, dataclass
@@ -19,6 +20,9 @@ from pathlib import Path
 from collections.abc import Callable
 
 from coworker.atomicio import atomic_write_json
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_INBOX = "default"
 # Embeds the item id in a delivered message. Emitted as [ow:…] since the bot's rebrand
@@ -44,13 +48,19 @@ class InboxRouting:
         self._load()
 
     def _load(self) -> None:
-        if self.path and self.path.is_file():
+        if not (self.path and self.path.is_file()):
+            return
+        try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            for raw in data.get("bindings", []):
-                b = InboxBinding(**raw)
-                self._bindings[b.name] = b
-            self._persona_default = dict(data.get("persona_default", {}))
-            self._session_override = dict(data.get("session_override", {}))
+            bindings = {b.name: b for b in (InboxBinding(**raw) for raw in data.get("bindings", []))}
+            persona_default = dict(data.get("persona_default", {}))
+            session_override = dict(data.get("session_override", {}))
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with just the default inbox", self.path)
+            return
+        self._bindings.update(bindings)
+        self._persona_default = persona_default
+        self._session_override = session_override
 
     def _save(self) -> None:
         if not self.path:

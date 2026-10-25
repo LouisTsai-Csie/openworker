@@ -12,12 +12,16 @@ visibility/debugging surface, not a queue — entries are read in the GUI, not r
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from coworker.atomicio import atomic_write_json
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -38,9 +42,15 @@ class UnroutedStore:
         self._load()
 
     def _load(self) -> None:
-        if self.path and self.path.is_file():
+        if not (self.path and self.path.is_file()):
+            return
+        try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            self._items = [UnroutedItem(**raw) for raw in data.get("items", [])]
+            items = [UnroutedItem(**raw) for raw in data.get("items", [])]
+        except (OSError, ValueError, TypeError, AttributeError):
+            logger.warning("%s is unreadable; starting with no unrouted messages", self.path)
+            return
+        self._items = items
 
     def _save(self) -> None:
         if not self.path:
