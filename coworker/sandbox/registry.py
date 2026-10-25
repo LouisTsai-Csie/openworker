@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from coworker.dbschema import ensure_version
 from coworker.secrets import state_dir
 
 log = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ class SandboxRegistry:
         self.id = registry_id(self.path)
         self._lock = threading.Lock()
         with self._connect() as db:
+            ensure_version(db)
             db.executescript(_SCHEMA)
 
     def _connect(self) -> sqlite3.Connection:

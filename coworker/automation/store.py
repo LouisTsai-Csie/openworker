@@ -16,6 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from coworker.automation.models import ScheduledTask, TaskRun
+from coworker.dbschema import ensure_version
 
 
 def compute_next_run(task: ScheduledTask, *, after: float | None = None) -> float | None:
@@ -75,6 +76,8 @@ class TaskStore:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(self.path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Before any DDL: an older build must stop here, not write to a newer file.
+        ensure_version(self._conn)
         self._init()
 
     def _init(self) -> None:
