@@ -28,6 +28,7 @@ from collections.abc import Callable
 
 import aisuite as ai
 
+from coworker.atomicio import atomic_write_json
 from coworker.secrets import state_dir
 from coworker.skills.base import _parse_skill
 
@@ -259,11 +260,7 @@ class SkillStore:
                 disabled.discard(name)
             else:
                 disabled.add(name)
-            self._settings_path.parent.mkdir(parents=True, exist_ok=True)
-            self._settings_path.write_text(
-                json.dumps({"disabled": sorted(disabled)}, indent=2),
-                encoding="utf-8",
-            )
+            atomic_write_json(self._settings_path, {"disabled": sorted(disabled)})
 
     # -- uploads: stage → preview → confirm -----------------------------------------
     def stage_upload(self, data: bytes, filename: str = "") -> dict[str, Any]:
@@ -409,8 +406,7 @@ class SessionSkillStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps({"sessions": self._rows}, indent=2), encoding="utf-8")
+        atomic_write_json(self.path, {"sessions": self._rows})
 
     def get(self, session_id: str) -> dict[str, bool]:
         return dict(self._rows.get(session_id, {}))

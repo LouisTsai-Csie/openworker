@@ -25,6 +25,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from collections.abc import Callable
 
+from coworker.atomicio import atomic_write_json
+
 
 @dataclass
 class Subscription:
@@ -49,11 +51,7 @@ class SubscriptionStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"subscriptions": [asdict(s) for s in self._subs]}, indent=2),
-            encoding="utf-8",
-        )
+        atomic_write_json(self.path, {"subscriptions": [asdict(s) for s in self._subs]})
 
     # -- mutations --------------------------------------------------------------
     def subscribe(self, session_id: str, channel: str, *, filter_mode: str = "all") -> Subscription:
@@ -160,16 +158,14 @@ class ChannelBuffer:
         if self._path is None:
             return
         try:
-            tmp = self._path.with_suffix(".tmp")
-            tmp.write_text(
-                json.dumps(
-                    {
-                        "messages": {c: list(m) for c, m in self._by_channel.items()},
-                        "names": self._names,
-                    }
-                )
+            atomic_write_json(
+                self._path,
+                {
+                    "messages": {c: list(m) for c, m in self._by_channel.items()},
+                    "names": self._names,
+                },
+                indent=None,
             )
-            tmp.replace(self._path)
         except OSError:
             pass  # persistence is best-effort; the in-memory buffer stays authoritative
 

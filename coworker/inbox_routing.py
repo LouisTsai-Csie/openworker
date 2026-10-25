@@ -18,6 +18,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from collections.abc import Callable
 
+from coworker.atomicio import atomic_write_json
+
 DEFAULT_INBOX = "default"
 # Embeds the item id in a delivered message. Emitted as [ow:…] since the bot's rebrand
 # to OpenWorker (2026-07-22); the legacy [ocw:…] spelling stays parseable so replies to
@@ -53,17 +55,13 @@ class InboxRouting:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps(
-                {
-                    "bindings": [asdict(b) for b in self._bindings.values()],
-                    "persona_default": self._persona_default,
-                    "session_override": self._session_override,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        atomic_write_json(
+            self.path,
+            {
+                "bindings": [asdict(b) for b in self._bindings.values()],
+                "persona_default": self._persona_default,
+                "session_override": self._session_override,
+            },
         )
 
     # -- config -----------------------------------------------------------------

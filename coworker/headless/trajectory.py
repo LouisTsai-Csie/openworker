@@ -22,6 +22,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
+from coworker.atomicio import atomic_write_json
 from coworker.headless.pricing import estimate_cost
 
 SCHEMA_VERSION = "ATIF-v1.7"
@@ -203,6 +204,4 @@ def build_trajectory(
 
 
 def write_trajectory(path: str | Path, trajectory: dict[str, Any]) -> None:
-    p = Path(path)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(trajectory, indent=1, default=str), encoding="utf-8")
+    atomic_write_json(path, trajectory, indent=1, default=str)

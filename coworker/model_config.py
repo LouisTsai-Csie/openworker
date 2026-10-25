@@ -29,6 +29,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from coworker.atomicio import atomic_write_text
 from coworker.providers.recommended import recommendation_for
 from coworker.secrets import state_dir
 
@@ -60,11 +61,7 @@ def load() -> dict[str, dict[str, Any]]:
 
 
 def _save(records: dict[str, dict[str, Any]]) -> None:
-    path = _path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    atomic_write_text(_path(), json.dumps(records, indent=2, sort_keys=True) + "\n")
 
 
 def get(model: str) -> dict[str, Any]:

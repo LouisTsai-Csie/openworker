@@ -18,6 +18,7 @@ import threading
 from collections.abc import Mapping
 from pathlib import Path
 
+from coworker.atomicio import atomic_write_text
 from coworker.sessions import SessionRecord
 
 # A session id becomes a filename (`<id>.jsonl`) and a scratch dir name, so it must be a
@@ -328,16 +329,12 @@ class ConversationStore:
             if len(record.messages) > existing:
                 self._append(sid, record.messages[existing:])
             elif len(record.messages) < existing:  # rare; not append-only
-                # Atomic rewrite: write the full log to a temp file, then replace in one
-                # step. An in-place open(..., "w") truncates the file immediately, so a
-                # crash mid-rewrite would erase the conversation history (same
-                # tmp-then-replace pattern as subscriptions.ChannelBuffer._save).
-                path = self._file(sid)
-                tmp = path.with_suffix(".tmp")
-                with open(tmp, "w", encoding="utf-8") as f:
-                    for m in record.messages:
-                        f.write(json.dumps(m) + "\n")
-                tmp.replace(path)
+                # Atomic rewrite. An in-place open(..., "w") truncates the file
+                # immediately, so a crash mid-rewrite would erase the conversation
+                # history — the most valuable data the app holds. Buffering the whole log
+                # is affordable here precisely because this is the SHRINK path: the result
+                # is smaller than the file already on disk, which load() reads whole.
+                atomic_write_text(self._file(sid), "".join(json.dumps(m) + "\n" for m in record.messages))
 
             title = record.title or title_from(record.messages)
             self._conn.execute(

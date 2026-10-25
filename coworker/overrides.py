@@ -22,6 +22,7 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 from collections.abc import Callable
 
+from coworker.atomicio import atomic_write_json
 from coworker.risk import RiskClass
 
 
@@ -89,16 +90,12 @@ class RiskOverrideStore:
     def save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps(
-                {
-                    "rules": [{"pattern": r.pattern, "risk": r.risk.value} for r in self._rules],
-                    "trust": [{"pattern": p} for p in self._trust],
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        atomic_write_json(
+            self.path,
+            {
+                "rules": [{"pattern": r.pattern, "risk": r.risk.value} for r in self._rules],
+                "trust": [{"pattern": p} for p in self._trust],
+            },
         )
 
     def set_rule(self, pattern: str, risk: RiskClass | str) -> None:

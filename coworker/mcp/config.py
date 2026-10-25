@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from coworker.atomicio import atomic_write_json
 from coworker.secrets import SecretStore, state_dir
 
 _HTTP_TYPES = {"http", "https", "sse", "streamable-http", "streamable_http"}
@@ -114,11 +115,7 @@ def read_global() -> dict[str, dict[str, Any]]:
 
 
 def _write_global(servers: dict[str, dict[str, Any]]) -> None:
-    path = global_mcp_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps({"mcpServers": servers}, indent=2), encoding="utf-8")
-    tmp.replace(path)
+    atomic_write_json(global_mcp_path(), {"mcpServers": servers})
 
 
 def put_global_server(name: str, config: dict[str, Any]) -> None:

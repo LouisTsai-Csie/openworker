@@ -26,6 +26,8 @@ import json
 import threading
 from pathlib import Path
 
+from coworker.atomicio import atomic_write_json
+
 
 class PersonaConnectionStore:
     """``{persona_id: {connector: bool}}`` — the per-persona default on/off for each connector."""
@@ -46,11 +48,7 @@ class PersonaConnectionStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"personas": self._rows}, indent=2),
-            encoding="utf-8",
-        )
+        atomic_write_json(self.path, {"personas": self._rows})
 
     # -- queries ----------------------------------------------------------------
     def get(self, persona_id: str) -> dict[str, bool]:
@@ -116,11 +114,7 @@ class SessionConnectionStore:
     def _save(self) -> None:
         if not self.path:
             return
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps({"sessions": self._rows}, indent=2),
-            encoding="utf-8",
-        )
+        atomic_write_json(self.path, {"sessions": self._rows})
 
     # -- queries ----------------------------------------------------------------
     def get(self, session_id: str) -> dict[str, bool]:

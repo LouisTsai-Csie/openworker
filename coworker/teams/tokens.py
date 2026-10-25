@@ -21,6 +21,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
+from coworker.atomicio import atomic_write_json
 from coworker.teams.model import Actor, Role
 
 _TOKEN_PREFIX = "owb_"  # OpenWorker board — greppable in configs, meaningless to guess
@@ -83,10 +84,7 @@ class BoardTokens:
             return {}
 
     def _save(self, entries: dict[str, dict[str, Any]]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(entries, indent=2))
-        tmp.replace(self.path)
+        atomic_write_json(self.path, entries)
 
 
 def _digest(token: str) -> str:
